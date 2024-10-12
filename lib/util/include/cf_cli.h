@@ -1,5 +1,5 @@
 /**
- * @brief CLI-related utils implementation file
+ * @brief CLI-related utils declaration file
  */
 
 #ifndef CF_CLI_H_

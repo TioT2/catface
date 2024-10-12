@@ -55,10 +55,10 @@
             ]
         },
         {
-            "name": "(gdb) Launch VM",
+            "name": "(gdb) Launch executor",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/build/app/vm/cf_vm",
+            "program": "${workspaceRoot}/build/app/executor/cf_executor",
             "preLaunchTask": "CMake: build",
             "args": [],
             "externalConsole": false,

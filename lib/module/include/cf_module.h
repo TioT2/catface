@@ -1,6 +1,9 @@
 /**
- * @brief CF binary module basic functions declaration module.
+ * @brief CF binary module basic functions declaration file
  */
+
+#ifndef CF_MODULE_H_
+#define CF_MODULE_H_
 
 #include <stdint.h>
 #include <stdio.h>
@@ -85,5 +88,7 @@ const char * cfModuleReadStatusStr( CfModuleReadStatus status );
  * @return corresponding string. In case of invalid status returns "<invalid>"
  */
 const char * cfModuleWriteStatusStr( CfModuleWriteStatus status );
+
+#endif // !defined(CF_MODULE_H_)
 
 // cf_module.h

@@ -1,5 +1,5 @@
 /**
- * @brief hasher implementation module
+ * @brief hasher declaration file
  */
 
 #ifndef CF_HASH_H_

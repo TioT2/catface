@@ -1,3 +1,7 @@
+/**
+ * @brief stack utility declaration file
+ */
+
 #ifndef CF_STACK_H_
 #define CF_STACK_H_
 

@@ -1,5 +1,5 @@
 /**
- * @brief CfModule to CfAsm and CfAsm to CfModule converters implementation module
+ * @brief CfModule to CfAsm and CfAsm to CfModule converters declaratoin files
  */
 
 #ifndef CF_ASM_H_

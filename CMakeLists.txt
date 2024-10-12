@@ -9,6 +9,6 @@ add_subdirectory(lib/asm)
 add_subdirectory(lib/vm)
 
 # compile applications
-add_subdirectory(app/vm)
+add_subdirectory(app/executor)
 add_subdirectory(app/assembler)
 add_subdirectory(app/disassembler)

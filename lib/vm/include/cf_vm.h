@@ -1,3 +1,7 @@
+/**
+ * @brief virtual machine declaration file
+ */
+
 #ifndef CF_VM_H_
 #define CF_VM_H_
 
@@ -11,10 +15,10 @@
 typedef enum __CfPanicReason {
     CF_PANIC_REASON_UNKNOWN_OPCODE,      ///< unknown instruction passed
     CF_PANIC_REASON_UNREACHABLE,         ///< unreachable
-    CF_PANIC_REASON_UNKNOWN_INT,         ///< unknown interrupt
     CF_PANIC_REASON_INTERNAL_ERROR,      ///< VM internal error
     CF_PANIC_REASON_NO_OPERANDS,         ///< no arguments on stack
     CF_PANIC_REASON_UNKNOWN_SYSTEM_CALL, ///< invalid index of systemcall
+    CF_PANIC_REASON_UNEXPECTED_CODE_END, ///< unexpected end of bytecode
 } CfPanicReason;
 
 /// @brief description of occured panic
@@ -24,15 +28,11 @@ typedef struct __CfPanicInfo {
 
     union {
         struct {
-            uint32_t interrupt; ///< interrupt index
-        } unknownInt;
-
-        struct {
             uint16_t opcode; ///< the unknown opcode
         } unknownOpcode;
 
         struct {
-            uint32_t index; ///< unknown systemcall
+            uint64_t index; ///< unknown systemcall
         } unknownSystemCall;
     };
 } CfPanicInfo;
@@ -64,7 +64,7 @@ typedef struct __CfSandbox {
      * @brief panic handle function
      * 
      * @param userContextPtr pointer to some user context
-     * @param panicInfo useful information for panic
+     * @param panicInfo useful information for panic (non-null)
      */
     void (*handlePanic)( void *userContextPtr, const CfPanicInfo *panicInfo );
 } CfSandbox;

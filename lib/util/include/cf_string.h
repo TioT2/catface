@@ -1,5 +1,5 @@
 /**
- * @brief string-related utilities implementation file
+ * @brief string-related utilities declaration file
  */
 
 #ifndef CF_STRING_H_
