@@ -1,2 +1,2 @@
 # catface
-(MIPT Educational project) Virtual machine/Assembling/Disassembling library.
+Tiny stack-based VM created for educational purposes

@@ -1,0 +1,17 @@
+; CATFACE ASM FILE
+
+; bit of obvious ASM code.
+; R64 type just represents 64-bit sequence with undefined type.
+; instructions that operates on some (defined) stack data mainly
+; will have 't_' (where t: r32/64, i32/64, f32/64) prefix
+; any other instructions have no types (like halt/unreachable/syscall)
+r64_push   10
+r64_push   40
+r64_push   2
+i64_div_u
+i64_add
+
+; syscall instruction is made to call some functions from outside of sandbox
+; "syscall <- 1 n" just outputs n interpreting it as signed i64 number
+r64_push   1
+syscall
