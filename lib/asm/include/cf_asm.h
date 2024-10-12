@@ -7,6 +7,10 @@
 
 #include <cf_module.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// Assembling status
 typedef enum __CfAssemblyStatus {
     CF_ASSEMBLY_STATUS_OK,                  ///< all's ok
@@ -97,6 +101,10 @@ void cfAssemblyDetailsDump( FILE *out, CfAssemblyStatus status, const CfAssembly
  * @param[in]     details corresponding assembly details (non-null)
  */
 void cfDisassemblyDetailsDump( FILE *out, CfDisassemblyStatus status, const CfDisassemblyDetails *details );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // !defined(CF_ASM_H_)
 

@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "cstdlib": "cpp"
+        "cstdlib": "cpp",
+        "cf_module.h": "c"
     }
 }

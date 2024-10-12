@@ -9,6 +9,10 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// @brief SHA256 hash representation structure
 typedef struct __CfHash {
     uint32_t hash[8]; ///< hash numbers
@@ -33,6 +37,10 @@ CfHash cfHash( const void *data, const size_t size );
  * @return true if lhs and rhs hashes are same
  */
 bool cfHashCompare( const CfHash *lhs, const CfHash *rhs );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // !defined(CF_HASH_H_)
 

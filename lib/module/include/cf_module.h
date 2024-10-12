@@ -8,8 +8,12 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// @brief Instruction header representation enumeration
-typedef enum __CfOpcode: uint16_t {
+typedef enum __CfOpcode {
     CF_OPCODE_UNREACHABLE, ///< unreachable instruction, calls panic
     CF_OPCODE_I64_ADD,     ///< 64-bit integer addition
     CF_OPCODE_I64_SUB,     ///< 64-bit integer substraction
@@ -88,6 +92,10 @@ const char * cfModuleReadStatusStr( CfModuleReadStatus status );
  * @return corresponding string. In case of invalid status returns "<invalid>"
  */
 const char * cfModuleWriteStatusStr( CfModuleWriteStatus status );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // !defined(CF_MODULE_H_)
 

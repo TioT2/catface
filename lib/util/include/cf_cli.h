@@ -7,6 +7,11 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct __CfCommandLineOptionInfo {
     const char * shortName;  ///< short command name (used starting with '-', nullable)
@@ -32,6 +37,10 @@ bool cfParseCommandLineOptions(
     const CfCommandLineOptionInfo *optionInfos,
     int *optionIndices
 );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // !defined(CF_CLI_H_)
 

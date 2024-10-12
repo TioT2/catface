@@ -17,7 +17,7 @@ CfStack cfStackCtor( size_t elementSize ) {
     if (stk == NULL)
         return CF_STACK_NULL;
 
-    *stk = CfStackImpl {
+    *stk = (CfStackImpl){
         .size = 0,
         .elemSize = elementSize,
         .capacity = 0,

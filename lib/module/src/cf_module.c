@@ -4,7 +4,7 @@
 #include "cf_module.h"
 #include "cf_hash.h"
 
-const uint64_t CF_MODULE_MAGIC = *(const uint64_t *)"CATFACE\0";
+const uint64_t CF_MODULE_MAGIC = 0x0045434146544143; // "CATFACE\0" as char
 
 typedef struct __CfModuleHeader {
     uint64_t magic;      ///< module magic number

@@ -26,7 +26,7 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
 
 #define OFFSET ((size_t)(instructionCounter - (const uint8_t *)module->code))
 
-#define PANIC(...) { panicInfo = { __VA_ARGS__ }; goto cfModuleExec_HANDLE_PANIC; }
+#define PANIC(...) { panicInfo = (CfPanicInfo){ __VA_ARGS__ }; goto cfModuleExec_HANDLE_PANIC; }
 
     // this name inspired by x86v7 architecture
     const uint8_t *instructionCounter = (const uint8_t *)module->code;

@@ -1,8 +1,9 @@
-file(GLOB_RECURSE "vm_source"  CONFIGURE_DEPENDS
-    src/*.cpp
+file(GLOB_RECURSE "source" CONFIGURE_DEPENDS
+    src/*.c
 )
+set_source_files_properties(${source} PROPERTIES LANGUAGE ${CF_LANGUAGE})
 
-add_library("vm" STATIC ${vm_source})
+add_library("vm" STATIC ${source})
 target_include_directories("vm" PUBLIC include)
 set_property(TARGET "vm" PROPERTY CXX_STANDARD 20)
 

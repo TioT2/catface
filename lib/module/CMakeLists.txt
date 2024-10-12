@@ -1,6 +1,8 @@
 file(GLOB_RECURSE "src" CONFIGURE_DEPENDS
-    src/*.cpp
+    src/*.c
 )
+
+set_source_files_properties(${source} include/*.h PROPERTIES LANGUAGE ${CF_LANGUAGE})
 
 add_library("module" STATIC ${src})
 target_include_directories("module" PUBLIC include)

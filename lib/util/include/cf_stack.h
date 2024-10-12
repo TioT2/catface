@@ -8,11 +8,16 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// @brief stack handle representation typedef
 typedef size_t CfStack;
 
-/// @brief stack null reference
-const size_t CF_STACK_NULL = 0;
+/// @brief stack null reference.
+/// @note using macro is REQUIRED because C don't likes constants defined in header files
+#define CF_STACK_NULL 0
 
 typedef enum __CfPopStatus {
     CF_STACK_OK,             ///< succeeded
@@ -87,5 +92,9 @@ size_t cfStackGetSize( CfStack stack );
  * @return operation status
  */
 CfStackStatus cfStackPushArrayReversed( CfStack *stack, const void *array, size_t elementCount );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // !defiend(CF_STACK_H_)

@@ -62,11 +62,11 @@ int main( const int argc, const char **argv ) {
     }
 
     // it's obviously NOT overengineering
-    const int optionCount = 1;
-    const CfCommandLineOptionInfo optionInfos[optionCount] = {
+    const CfCommandLineOptionInfo optionInfos[1] = {
         {"h", "help",   0},
     };
-    int optionIndices[optionCount];
+    int optionIndices[1];
+    const size_t optionCount = 1;
     if (!cfParseCommandLineOptions(argc - 2, argv + 1, optionCount, optionInfos, optionIndices)) {
         // it's ok for cli utils to display something in stdout, so corresponding error message is already displayed.
         return 0;

@@ -11,6 +11,10 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// @brief reason of occured panic
 typedef enum __CfPanicReason {
     CF_PANIC_REASON_UNKNOWN_OPCODE,      ///< unknown instruction passed
@@ -76,6 +80,10 @@ typedef struct __CfSandbox {
  * @param[in] sandbox connection of VM with environment (non-null)
  */
 void cfModuleExec( const CfModule *module, const CfSandbox *sandbox );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // !defined(CF_VM_H_)
 
