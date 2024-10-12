@@ -11,3 +11,4 @@ add_subdirectory(lib/vm)
 # compile applications
 add_subdirectory(app/vm)
 add_subdirectory(app/assembler)
+add_subdirectory(app/disassembler)
