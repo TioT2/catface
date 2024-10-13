@@ -21,36 +21,84 @@ CfDisassemblyStatus cfDisassemble( const CfModule *module, char **dest, CfDisass
         bytecode += 2;
 
         switch (opcode) {
-        case CF_OPCODE_UNREACHABLE : {
+        case CF_OPCODE_UNREACHABLE    : {
             strcpy(line, "unreachable");
             break;
         }
-        case CF_OPCODE_I64_ADD     : {
+        case CF_OPCODE_SYSCALL        : {
+            strcpy(line, "syscall");
+            break;
+        }
+        case CF_OPCODE_I64_ADD        : {
             strcpy(line, "i64_add");
             break;
         }
-        case CF_OPCODE_I64_SUB     : {
+        case CF_OPCODE_I64_SUB        : {
             strcpy(line, "i64_sub");
             break;
         }
-        case CF_OPCODE_I64_MUL_S   : {
+        case CF_OPCODE_I64_SHL        : {
+            strcpy(line, "i64_shl");
+            break;
+        }
+        case CF_OPCODE_I64_MUL_S      : {
             strcpy(line, "i64_mul_s");
             break;
         }
-        case CF_OPCODE_I64_DIV_S   : {
-            strcpy(line, "i64_div_s");
-            break;
-        }
-        case CF_OPCODE_I64_MUL_U   : {
+        case CF_OPCODE_I64_MUL_U      : {
             strcpy(line, "i64_mul_u");
             break;
         }
-        case CF_OPCODE_I64_DIV_U   : {
+        case CF_OPCODE_I64_DIV_S      : {
+            strcpy(line, "i64_div_s");
+            break;
+        }
+        case CF_OPCODE_I64_DIV_U      : {
             strcpy(line, "i64_div_u");
             break;
         }
-        case CF_OPCODE_R64_PUSH    : {
-            strcpy(line, "r64_push    0x");
+        case CF_OPCODE_I64_SHR_S      : {
+            strcpy(line, "i64_shr_s");
+            break;
+        }
+        case CF_OPCODE_I64_SHR_U      : {
+            strcpy(line, "i64_shr_u");
+            break;
+        }
+        case CF_OPCODE_I64_FROM_F64_S : {
+            strcpy(line, "i64_from_f64_s");
+            break;
+        }
+        case CF_OPCODE_I64_FROM_F64_U : {
+            strcpy(line, "i64_from_f64_u");
+            break;
+        }
+        case CF_OPCODE_F64_ADD        : {
+            strcpy(line, "f64_add");
+            break;
+        }
+        case CF_OPCODE_F64_SUB        : {
+            strcpy(line, "f64_sub");
+            break;
+        }
+        case CF_OPCODE_F64_MUL        : {
+            strcpy(line, "f64_mul");
+            break;
+        }
+        case CF_OPCODE_F64_DIV        : {
+            strcpy(line, "f64_div");
+            break;
+        }
+        case CF_OPCODE_F64_FROM_I64_S : {
+            strcpy(line, "f64_from_i64_s");
+            break;
+        }
+        case CF_OPCODE_F64_FROM_I64_U : {
+            strcpy(line, "f64_from_i64_u");
+            break;
+        }
+        case CF_OPCODE_R64_PUSH       : {
+            strcpy(line, "r64_push       0x");
             // then read constant
             if (bytecodeEnd - bytecode < 8) {
                 cfStackDtor(outStack);
@@ -66,18 +114,14 @@ CfDisassemblyStatus cfDisassemble( const CfModule *module, char **dest, CfDisass
                 if (hexDigit < 10) digit = '0' + hexDigit;
                 else               digit = 'A' + hexDigit - 10;
 
-                line[14 + i] = digit;
+                line[17 + i] = digit;
             }
-            line[30] = '\0';
+            line[33] = '\0';
 
             break;
         }
-        case CF_OPCODE_R64_POP     : {
+        case CF_OPCODE_R64_POP        : {
             strcpy(line, "r64_pop");
-            break;
-        }
-        case CF_OPCODE_SYSCALL     : {
-            strcpy(line, "syscall");
             break;
         }
 

@@ -14,22 +14,42 @@ extern "C" {
 
 /// @brief Instruction header representation enumeration
 typedef enum __CfOpcode {
-    CF_OPCODE_UNREACHABLE, ///< unreachable instruction, calls panic
-    CF_OPCODE_I64_ADD,     ///< 64-bit integer addition
-    CF_OPCODE_I64_SUB,     ///< 64-bit integer substraction
-    CF_OPCODE_I64_MUL_S,   ///< signed i64 multiplication
-    CF_OPCODE_I64_DIV_S,   ///< signed i64 division
-    CF_OPCODE_I64_MUL_U,   ///< unsigned i64 multiplication
-    CF_OPCODE_I64_DIV_U,   ///< unsigned i64 division
-    CF_OPCODE_R64_PUSH,    ///< 64-bit literal pushing function
-    CF_OPCODE_R64_POP,     ///< 64-bit literal popping function
-    CF_OPCODE_SYSCALL,     ///< function by pre-defined index from without of sandbox calling function
+    // system instructions
+    CF_OPCODE_UNREACHABLE,    ///< unreachable instruction, calls panic
+    CF_OPCODE_SYSCALL,        ///< function by pre-defined index from without of sandbox calling function
+
+    // i64 common instructions
+    CF_OPCODE_I64_ADD,        ///< 64-bit integer addition
+    CF_OPCODE_I64_SUB,        ///< 64-bit integer substraction
+    CF_OPCODE_I64_SHL,        ///< 64-bit integer left shifting instruction
+
+    // i64 signed/unsigned instructions
+    CF_OPCODE_I64_MUL_S,      ///< signed   i64 multiplication
+    CF_OPCODE_I64_MUL_U,      ///< unsigned i64 multiplication
+    CF_OPCODE_I64_DIV_S,      ///< signed   i64 division
+    CF_OPCODE_I64_DIV_U,      ///< unsigned i64 division
+    CF_OPCODE_I64_SHR_S,      ///< signed   i64 left shifing instruction
+    CF_OPCODE_I64_SHR_U,      ///< unsigned i64 left shifting instruction
+    CF_OPCODE_I64_FROM_F64_S, ///< signed   i64 from f64 truncation function
+    CF_OPCODE_I64_FROM_F64_U, ///< unsigned i64 from f64 truncation function
+
+    // f64 arithmetical instructions
+    CF_OPCODE_F64_ADD,        ///< f64 addition instruction
+    CF_OPCODE_F64_SUB,        ///< f64 substraction instruction
+    CF_OPCODE_F64_MUL,        ///< f64 multiplication instruction
+    CF_OPCODE_F64_DIV,        ///< f64 division instruction
+    CF_OPCODE_F64_FROM_I64_S, ///< signed   i64 into f64 conversion instruction
+    CF_OPCODE_F64_FROM_I64_U, ///< unsigned i64 into f64 conversion instruction
+
+    // common 64-bit instructions
+    CF_OPCODE_R64_PUSH,       ///< 64-bit literal pushing function
+    CF_OPCODE_R64_POP,        ///< 64-bit literal popping function
 } CfOpcode;
 
 /// @brief CF compiled module represetnation structure
 typedef struct __CfModule {
-    void   *code;       ///< module bytecode
-    size_t  codeLength; ///< module bytecode length
+    void    *code;        ///< module bytecode
+    size_t   codeLength;  ///< module bytecode length
 } CfModule;
 
 /// @brief module reading status

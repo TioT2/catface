@@ -43,7 +43,7 @@ typedef struct __CfPanicInfo {
 
 /// @brief sandbox description structure.
 /// Actually, this structure is temporary and (then functions will be introduced)
-/// will be partially (readInt64 and writeInt64 fields) replaced by import table.
+/// will be partially (readF64 and writeF64 fields) replaced by import table.
 typedef struct __CfSandbox {
     void *userContextPtr; ///< some pointer user may pass into this structure
 
@@ -54,15 +54,15 @@ typedef struct __CfSandbox {
      * 
      * @return some 64-bit integer
      */
-    int64_t (*readInt64)( void *userContextPtr );
+    double (*readFloat64)( void *userContextPtr );
 
     /**
      * @brief 64-bit integer outputting function
      * 
      * @param userContextPtr pointer to some user context
-     * @param i              integer to write to output
+     * @param number         number to write to output
      */
-    void (*writeInt64)( void *userContextPtr, int64_t i );
+    void (*writeFloat64)( void *userContextPtr, double number );
 
     /**
      * @brief panic handle function

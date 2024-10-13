@@ -47,6 +47,10 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
         instructionCounter += 2;
 
         switch ((CfOpcode)opcode) {
+
+        /***
+         * Integer instructions
+         ***/
         case CF_OPCODE_I64_ADD     : {
             uint64_t lhs, rhs;
 
@@ -68,6 +72,17 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
 
             break;
         }
+
+        case CF_OPCODE_I64_SHL     : {
+            uint64_t lhs, rhs;
+
+            POP(rhs);
+            POP(lhs);
+            lhs <<= rhs;
+            PUSH(lhs);
+            break;
+        }
+
         case CF_OPCODE_I64_MUL_S   : {
             int64_t lhs, rhs;
 
@@ -78,16 +93,7 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
 
             break;
         }
-        case CF_OPCODE_I64_DIV_S   : {
-            int64_t lhs, rhs;
 
-            POP(rhs);
-            POP(lhs);
-            lhs /= rhs;
-            PUSH(lhs);
-
-            break;
-        }
         case CF_OPCODE_I64_MUL_U   : {
             uint64_t lhs, rhs;
 
@@ -98,6 +104,18 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
 
             break;
         }
+
+        case CF_OPCODE_I64_DIV_S   : {
+            int64_t lhs, rhs;
+
+            POP(rhs);
+            POP(lhs);
+            lhs /= rhs;
+            PUSH(lhs);
+
+            break;
+        }
+
         case CF_OPCODE_I64_DIV_U   : {
             uint64_t lhs, rhs;
 
@@ -108,6 +126,107 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
 
             break;
         }
+
+        case CF_OPCODE_I64_SHR_S: {
+            int64_t lhs, rhs;
+
+            POP(rhs);
+            POP(lhs);
+            lhs >>= rhs;
+            PUSH(lhs);
+        }
+
+        case CF_OPCODE_I64_SHR_U: {
+            uint64_t lhs, rhs;
+
+            POP(rhs);
+            POP(lhs);
+            lhs >>= rhs;
+            PUSH(lhs);
+        }
+
+        case CF_OPCODE_I64_FROM_F64_S: {
+            double f64;
+            int64_t i64;
+
+            POP(f64);
+            i64 = f64;
+            PUSH(i64);
+        }
+
+        case CF_OPCODE_I64_FROM_F64_U: {
+            double f64;
+            uint64_t i64;
+
+            POP(f64);
+            i64 = f64;
+            PUSH(i64);
+        }
+
+        /***
+         * Floating-point instructions
+         ***/
+        case CF_OPCODE_F64_ADD: {
+            double lhs, rhs;
+
+            POP(lhs);
+            POP(rhs);
+            lhs += rhs;
+            PUSH(lhs);
+            break;
+        }
+
+        case CF_OPCODE_F64_SUB: {
+            double lhs, rhs;
+
+            POP(lhs);
+            POP(rhs);
+            lhs -= rhs;
+            PUSH(lhs);
+            break;
+        }
+
+        case CF_OPCODE_F64_MUL: {
+            double lhs, rhs;
+
+            POP(lhs);
+            POP(rhs);
+            lhs *= rhs;
+            PUSH(lhs);
+            break;
+        }
+
+        case CF_OPCODE_F64_DIV: {
+            double lhs, rhs;
+
+            POP(lhs);
+            POP(rhs);
+            lhs /= rhs;
+            PUSH(lhs);
+            break;
+        }
+
+        case CF_OPCODE_F64_FROM_I64_S: {
+            int64_t i64;
+            double f64;
+
+            POP(i64);
+            f64 = i64;
+            PUSH(f64);
+            break;
+        }
+
+        case CF_OPCODE_F64_FROM_I64_U: {
+            uint64_t i64;
+            double f64;
+
+            POP(i64);
+            f64 = i64;
+            PUSH(f64);
+            break;
+        }
+
+
         case CF_OPCODE_R64_PUSH    : {
             if (instructionCounter + 8 > instructionCounterEnd)
                 PANIC(
@@ -131,21 +250,21 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
 
             /// TODO: remove this sh*tcode then import tables will be added.
             switch (index) {
-            // readInt64
+            // readFloat64
             case 0: {
-                uint64_t value = 0xDEDC0DE;
-                if (sandbox->readInt64 != NULL)
-                    value = sandbox->readInt64(sandbox->userContextPtr);
+                double value = 0.304780;
+                if (sandbox->readFloat64 != NULL)
+                    value = sandbox->readFloat64(sandbox->userContextPtr);
                 PUSH(value);
                 break;
             }
 
-            // writeInt64
+            // writeFloat64
             case 1: {
-                int64_t argument;
+                double argument;
                 POP(argument);
-                if (sandbox->writeInt64 != NULL)
-                    sandbox->writeInt64(sandbox->userContextPtr, argument);
+                if (sandbox->writeFloat64 != NULL)
+                    sandbox->writeFloat64(sandbox->userContextPtr, argument);
                 break;
             }
 

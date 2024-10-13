@@ -26,22 +26,22 @@ void printHelp( void ) {
  * @return parsed int64 if succeeded and -1 otherwise
  * (there is only one reason for this - user functions cannot propagate panic yet).
  */
-int64_t readInt64( void *context ) {
-    int64_t num;
-    if (scanf("%ld", &num) != 1)
+double readFloat64( void *context ) {
+    double num;
+    if (scanf("%lf", &num) != 1)
         return -1;
     return num;
-} // readInt64
+} // readFloat64
 
 /**
  * @brief int64 to stdin writing function
  * 
  * @param context sandbox user context
- * @param num     number to write
+ * @param number  number to write
  */
-void writeInt64( void *context, int64_t num ) {
-    printf("%ld", num);
-} // writeInt64
+void writeFloat64( void *context, double number ) {
+    printf("%lf", number);
+} // writeFloat64
 
 /**
  * @brief vm panic handling function
@@ -107,8 +107,8 @@ int main( const int argc, const char **argv ) {
 
     CfSandbox sandbox = {
         .userContextPtr = NULL,
-        .readInt64 = readInt64,
-        .writeInt64 = writeInt64,
+        .readFloat64 = readFloat64,
+        .writeFloat64 = writeFloat64,
         .handlePanic = handlePanic,
     };
 

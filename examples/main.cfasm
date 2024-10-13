@@ -5,13 +5,15 @@
 ; instructions that operates on some (defined) stack data mainly
 ; will have 't_' (where t: r32/64, i32/64, f32/64) prefix
 ; any other instructions have no types (like halt/unreachable/syscall)
-r64_push   10
-r64_push   40
-r64_push   2
+
+r64_push       10
+r64_push       40
+r64_push       2
 i64_div_u
 i64_add
+f64_from_i64_u
 
 ; syscall instruction is made to call some functions from outside of sandbox
-; "syscall <- 1 n" just outputs n interpreting it as signed i64 number
-r64_push   1
+; "syscall <- 1 n" just outputs n interpreting it as f64 number
+r64_push       1
 syscall

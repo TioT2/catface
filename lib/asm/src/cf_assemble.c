@@ -1,30 +1,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <math.h>
 
 #include "cf_asm.h"
 #include "cf_stack.h"
 #include "cf_string.h"
-
-/**
- * @brief decimal number parsing function
- * 
- * @param[in] begin allowed parsing range begin
- * @param[in] end   allowed parsing range end
- * 
- * @return parsed number if input string starts from digit and 0 if not.
- */
-static uint64_t cfAsmParseDecimal( const char *begin, const char *end ) {
-    uint64_t result = 0;
-
-    while (begin != end && *begin >= '0' && *begin <= '9') {
-        result *= 10;
-        result += *begin - '0';
-        begin++;
-    }
-
-    return result;
-} // cfAsmParseDecimal
 
 /**
  * @brief hexadecimal number parsing function
@@ -57,6 +38,61 @@ static uint64_t cfAsmParseHexadecmial( const char *begin, const char *end ) {
     return result;
 } // cfAsmParseHexadecimal
 
+typedef struct __CfAsmDecimal {
+    uint64_t integer;          ///< integer part
+    bool     fractionalIsSome; ///< fracitonal part parsing started
+    double   fractional;       ///< fractional part
+    bool     exponentIsSome;   ///< exponential part parsing started
+    int64_t  exponent;         ///< exponential part
+} CfAsmDecimal;
+
+static CfAsmDecimal cfAsmParseDecimal( const char *begin, const char *end ) {
+    CfAsmDecimal result = {0};
+
+    // parse integer
+    while (begin != end && *begin >= '0' && *begin <= '9') {
+        result.integer *= 10;
+        result.integer += *begin - '0';
+        begin++;
+    }
+
+    // parse floating part
+    if (begin != end && *begin == '.') {
+        begin++;
+        result.fractionalIsSome = true;
+
+        double exp = 0.1;
+
+        while (begin != end && *begin >= '0' && *begin <= '9') {
+            result.fractional += exp * double(*begin - '0');
+            exp *= 0.1;
+            begin++;
+        }
+    }
+
+    // parse exponential part
+    if (begin != end && *begin == 'e') {
+        int64_t sign = 1;
+        result.exponentIsSome = true;
+
+        if (begin != end) {
+            if (*begin == '-')
+                begin++, sign = -1;
+            else if (*begin == '+')
+                begin++;
+        }
+
+        while (begin != end && *begin >= '0' && *begin <= '9') {
+            result.exponent *= 10;
+            result.exponent += *begin - '0';
+            begin++;
+        }
+        result.exponent *= sign;
+    }
+
+    return result;
+} // cfAsmParseDecimal
+
 /**
  * @brief R64 literal parsing function
  * 
@@ -76,8 +112,14 @@ static uint64_t cfAsmParseR64( const char *begin, const char *end ) {
 
     if (cfStrStartsWith(begin, "0x"))
         result = cfAsmParseHexadecmial(begin + 2, end);
-    else
-        result = cfAsmParseDecimal(begin, end);
+    else {
+        CfAsmDecimal decimal = cfAsmParseDecimal(begin, end);
+
+        if (decimal.fractionalIsSome || decimal.exponentIsSome)
+            *(double *)&result = (decimal.integer + decimal.fractional) * powl(10.0, decimal.exponent);
+        else
+            result = decimal.integer;
+    }
 
     return result;
 } // cfAsmParseR64
@@ -118,6 +160,8 @@ CfAssemblyStatus cfAssemble( const char *text, size_t codeLen, CfModule *dst, Cf
             dataBuffer[0] = CF_OPCODE_I64_ADD;
         } else if (cfStrStartsWith(lineBegin, "i64_sub")) {
             dataBuffer[0] = CF_OPCODE_I64_SUB;
+        } else if (cfStrStartsWith(lineBegin, "i64_shl")) {
+            dataBuffer[0] = CF_OPCODE_I64_SHL;
         } else if (cfStrStartsWith(lineBegin, "i64_mul_s")) {
             dataBuffer[0] = CF_OPCODE_I64_MUL_S;
         } else if (cfStrStartsWith(lineBegin, "i64_mul_u")) {
@@ -126,6 +170,26 @@ CfAssemblyStatus cfAssemble( const char *text, size_t codeLen, CfModule *dst, Cf
             dataBuffer[0] = CF_OPCODE_I64_DIV_S;
         } else if (cfStrStartsWith(lineBegin, "i64_div_u")) {
             dataBuffer[0] = CF_OPCODE_I64_DIV_U;
+        } else if (cfStrStartsWith(lineBegin, "i64_shr_s")) {
+            dataBuffer[0] = CF_OPCODE_I64_SHR_S;
+        } else if (cfStrStartsWith(lineBegin, "i64_shr_u")) {
+            dataBuffer[0] = CF_OPCODE_I64_SHR_U;
+        } else if (cfStrStartsWith(lineBegin, "i64_from_f64_s")) {
+            dataBuffer[0] = CF_OPCODE_I64_FROM_F64_S;
+        } else if (cfStrStartsWith(lineBegin, "i64_from_f64_u")) {
+            dataBuffer[0] = CF_OPCODE_I64_FROM_F64_U;
+        } else if (cfStrStartsWith(lineBegin, "f64_add")) {
+            dataBuffer[0] = CF_OPCODE_F64_ADD;
+        } else if (cfStrStartsWith(lineBegin, "f64_sub")) {
+            dataBuffer[0] = CF_OPCODE_F64_SUB;
+        } else if (cfStrStartsWith(lineBegin, "f64_mul")) {
+            dataBuffer[0] = CF_OPCODE_F64_MUL;
+        } else if (cfStrStartsWith(lineBegin, "f64_div")) {
+            dataBuffer[0] = CF_OPCODE_F64_DIV;
+        } else if (cfStrStartsWith(lineBegin, "f64_from_i64_s")) {
+            dataBuffer[0] = CF_OPCODE_F64_FROM_I64_S;
+        } else if (cfStrStartsWith(lineBegin, "f64_from_i64_u")) {
+            dataBuffer[0] = CF_OPCODE_F64_FROM_I64_U;
         } else if (cfStrStartsWith(lineBegin, "r64_push")) {
             // read r64 constant
             dataBuffer[0] = CF_OPCODE_R64_PUSH;
