@@ -7,6 +7,57 @@
 #include "cf_string.h"
 
 /**
+ * @brief decimal number parsing function
+ * 
+ * @param[in] begin allowed parsing range begin
+ * @param[in] end   allowed parsing range end
+ * 
+ * @return parsed number if input string starts from digit and 0 if not.
+ */
+static uint64_t cfAsmParseDecimal( const char *begin, const char *end ) {
+    uint64_t result = 0;
+
+    while (begin != end && *begin >= '0' && *begin <= '9') {
+        result *= 10;
+        result += *begin - '0';
+        begin++;
+    }
+
+    return result;
+} // cfAsmParseDecimal
+
+/**
+ * @brief hexadecimal number parsing function
+ * 
+ * @param[in] begin allowed parsing range begin
+ * @param[in] end   allowed parsing range end
+ * 
+ * @return parsed number if input string starts from hex digit and 0 if not.
+ */
+static uint64_t cfAsmParseHexadecmial( const char *begin, const char *end ) {
+    uint64_t result = 0;
+
+    while (begin != end) {
+        const char ch = *begin++;
+        uint64_t digit;
+
+        if (ch >= '0' && ch <= '9') {
+            digit = ch - '0';
+        } else if (ch >= 'A' && ch <= 'F') {
+            digit = ch - 'A' + 10;
+        } else if (ch >= 'a' && ch <= 'f') {
+            digit = ch - 'a' + 10;
+        } else {
+            break;
+        }
+
+        result = result * 16 + digit;
+    }
+
+    return result;
+} // cfAsmParseHexadecimal
+
+/**
  * @brief R64 literal parsing function
  * 
  * @param[in] begin parsed string begin
@@ -15,25 +66,18 @@
  * @note the strange combination of arugments is required because
  * function usage suggests that input string may be not null-terminated.
  * 
- * @todo create normal error handling and split this function in many more compact ones.
- * 
  * @return parsed literal. in case if string empty, returns 0...
  */
 static uint64_t cfAsmParseR64( const char *begin, const char *end ) {
     assert(begin != NULL);
     assert(end != NULL);
 
-    uint64_t result = 0;
+    uint64_t result;
 
-    // at least now only decimal constants are supported.
-    while (begin != end && (*begin == ' ' || *begin == '\t'))
-        begin++;
-
-    while (begin != end && *begin >= '0' && *begin <= '9') {
-        result *= 10;
-        result += *begin - '0';
-        begin++;
-    }
+    if (cfStrStartsWith(begin, "0x"))
+        result = cfAsmParseHexadecmial(begin + 2, end);
+    else
+        result = cfAsmParseDecimal(begin, end);
 
     return result;
 } // cfAsmParseR64
@@ -86,8 +130,13 @@ CfAssemblyStatus cfAssemble( const char *text, size_t codeLen, CfModule *dst, Cf
             // read r64 constant
             dataBuffer[0] = CF_OPCODE_R64_PUSH;
 
-            // read 64 bit constant
-            uint64_t r64 = cfAsmParseR64(lineBegin + strlen("r64_push") + 1, lineEnd);
+            // remove spaces from start
+            const char *constBegin = lineBegin + strlen("r64_push") + 1;
+            while (constBegin <= lineEnd && *constBegin == ' ' || *constBegin == '\t')
+                constBegin++;
+
+            // read 64-bit constant
+            uint64_t r64 = cfAsmParseR64(constBegin, lineEnd);
 
             dataBuffer[1] = (r64 >>  0) & 0xFFFF;
             dataBuffer[2] = (r64 >> 16) & 0xFFFF;

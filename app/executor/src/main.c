@@ -82,14 +82,12 @@ void handlePanic( void *context, const CfPanicInfo *panicInfo ) {
 } // handlePanic
 
 int main( const int argc, const char **argv ) {
-    // if (argc < 2) {
-    //     printHelp();
-    //     return 0;
-    // }
+    if (argc < 2) {
+        printHelp();
+        return 0;
+    }
 
     const char *modulePath = argv[1];
-
-    modulePath = "examples/main.cfmod";
 
     CfModule module;
     FILE *inputFile = fopen(modulePath, "rb");
