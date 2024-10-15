@@ -71,17 +71,30 @@ void handlePanic( void *context, const CfPanicInfo *panicInfo ) {
         break;
     }
     case CF_PANIC_REASON_UNKNOWN_SYSTEM_CALL : {
-        printf("unknown system call (%lu).", panicInfo->unknownSystemCall.index);
+        printf("unknown system call (%u).", panicInfo->unknownSystemCall.index);
         break;
     }
     case CF_PANIC_REASON_UNEXPECTED_CODE_END : {
         printf("unexpected code end.");
         break;
     }
+    case CF_PANIC_REASON_UNKNOWN_REGISTER    : {
+        printf("unknown register: %d.", panicInfo->unknownRegister.index);
+        break;
+    }
+    case CF_PANIC_REASON_STACK_UNDERFLOW     : {
+        printf("operand stack underflow.");
+        break;
+    }
     }
 } // handlePanic
 
-int main( const int argc, const char **argv ) {
+int main( const int _argc, const char **_argv ) {
+    // const int argc = 2;
+    // const char *argv[] = { "qq", "examples/fisqrt.cfmod" };
+    const int argc = _argc;
+    const char **argv = _argv;
+
     if (argc < 2) {
         printHelp();
         return 0;
@@ -106,7 +119,7 @@ int main( const int argc, const char **argv ) {
     }
 
     CfSandbox sandbox = {
-        .userContextPtr = NULL,
+        .userContextPtr = &module,
         .readFloat64 = readFloat64,
         .writeFloat64 = writeFloat64,
         .handlePanic = handlePanic,
@@ -114,6 +127,7 @@ int main( const int argc, const char **argv ) {
 
     cfModuleExec(&module, &sandbox);
     cfModuleDtor(&module);
+    printf("\n");
 
     return 0;
 } // main

@@ -1,0 +1,35 @@
+; Fast inverse square root calculation program
+
+; ask sandbox to get f64 from stdin
+syscall 0
+pop  ax
+
+; fast inverse square root's 'evil bit hack'
+push 0x5F3759DF
+push ax
+push 1
+shr
+sub
+pop  bx
+
+; multiply x to 0.5
+push ax
+push 0.5
+fmul
+pop  ax
+
+; newtonian iteration
+push 1.5
+push bx
+push bx
+fmul
+push ax
+fmul
+fsub
+push bx
+fmul
+pop  bx
+
+; ask sandbox to display f64 to stdout
+push bx
+syscall 1

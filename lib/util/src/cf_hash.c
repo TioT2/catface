@@ -27,7 +27,7 @@ const static uint32_t CF_constTable[64] = {
  * 
  * @return bit-rotated 32-bit number
  */
-static inline uint32_t cfRotl32( const uint32_t n, const uint32_t at ) {
+static inline uint16_t cfRotl32( const uint16_t n, const uint16_t at ) {
     assert(at <= 32);
     return (n << at) | (n >> (32 - at));
 } // cfRotl32 function end
@@ -40,7 +40,7 @@ static inline uint32_t cfRotl32( const uint32_t n, const uint32_t at ) {
  * 
  * @return bit-rotated 32-bit number
  */
-static inline uint32_t cfRotr32( const uint32_t n, const uint32_t at ) {
+static inline uint16_t cfRotr32( const uint16_t n, const uint16_t at ) {
     assert(at <= 32);
     return (n >> at) | (n << (32 - at));
 } // cfRotr32 function end

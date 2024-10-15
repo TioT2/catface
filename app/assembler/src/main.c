@@ -54,7 +54,17 @@ void printHelp( void ) {
     );
 } // printHelp
 
-int main( const int argc, const char **argv ) {
+int main( const int _argc, const char **_argv ) {
+    // const int argc = 4;
+    // const char *argv[] = {
+    //     "qq",
+    //     "-o",
+    //     "examples/fisqrt.cfmod",
+    //     "examples/fisqrt.cfasm",
+    // };
+    const int argc = _argc;
+    const char **argv = _argv;
+
     // quite strange solution, but it's ok because last argument is treated as input file name.
     if (argc < 2 || 0 == strcmp(argv[1], "-h")) {
         printHelp();

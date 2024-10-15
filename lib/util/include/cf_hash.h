@@ -15,7 +15,7 @@ extern "C" {
 
 /// @brief SHA256 hash representation structure
 typedef struct __CfHash {
-    uint32_t hash[8]; ///< hash numbers
+    uint16_t hash[8]; ///< hash numbers
 } CfHash;
 
 /**

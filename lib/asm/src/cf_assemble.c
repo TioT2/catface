@@ -10,16 +10,17 @@
 /**
  * @brief hexadecimal number parsing function
  * 
- * @param[in] begin allowed parsing range begin
- * @param[in] end   allowed parsing range end
+ * @param[in]  begin allowed parsing range begin
+ * @param[in]  end   allowed parsing range end
+ * @param[out] dst   parsing destination (nullable)
  * 
- * @return parsed number if input string starts from hex digit and 0 if not.
+ * @return pointer to character after last parsed.
  */
-static uint64_t cfAsmParseHexadecmial( const char *begin, const char *end ) {
+static const char * cfAsmParseHexadecmialInteger( const char *begin, const char *end, uint64_t *dst ) {
     uint64_t result = 0;
 
     while (begin != end) {
-        const char ch = *begin++;
+        const char ch = *begin;
         uint64_t digit;
 
         if (ch >= '0' && ch <= '9') {
@@ -32,11 +33,47 @@ static uint64_t cfAsmParseHexadecmial( const char *begin, const char *end ) {
             break;
         }
 
+        begin++;
         result = result * 16 + digit;
     }
 
-    return result;
-} // cfAsmParseHexadecimal
+    if (dst != NULL)
+        *dst = result;
+
+    return begin;
+} // cfAsmParseHexadecimalInteger
+
+/**
+ * @brief hexadecimal number parsing function
+ * 
+ * @param[in]  begin allowed parsing range begin
+ * @param[in]  end   allowed parsing range end
+ * @param[out] dst   parsing destination (nullable)
+ * 
+ * @return pointer to character after last parsed.
+ */
+static const char * cfAsmParseDecimalInteger( const char *begin, const char *end, uint64_t *dst ) {
+    uint64_t result = 0;
+
+    while (begin != end) {
+        const char ch = *begin;
+        uint64_t digit;
+
+        if (ch >= '0' && ch <= '9') {
+            digit = ch - '0';
+        } else {
+            break;
+        }
+
+        result = result * 10 + digit;
+        begin++;
+    }
+
+    if (dst != NULL)
+        *dst = result;
+
+    return begin;
+} // cfAsmParseDecimalInteger
 
 typedef struct __CfAsmDecimal {
     uint64_t integer;          ///< integer part
@@ -46,28 +83,23 @@ typedef struct __CfAsmDecimal {
     int64_t  exponent;         ///< exponential part
 } CfAsmDecimal;
 
-static CfAsmDecimal cfAsmParseDecimal( const char *begin, const char *end ) {
+static const char * cfAsmParseDecimal( const char *begin, const char *end, CfAsmDecimal *dst ) {
     CfAsmDecimal result = {0};
+    const char *newBegin;
 
-    // parse integer
-    while (begin != end && *begin >= '0' && *begin <= '9') {
-        result.integer *= 10;
-        result.integer += *begin - '0';
-        begin++;
-    }
+    newBegin = cfAsmParseDecimalInteger(begin, end, &result.integer);
+    begin = newBegin;
 
     // parse floating part
     if (begin != end && *begin == '.') {
         begin++;
         result.fractionalIsSome = true;
 
-        double exp = 0.1;
-
-        while (begin != end && *begin >= '0' && *begin <= '9') {
-            result.fractional += exp * double(*begin - '0');
-            exp *= 0.1;
-            begin++;
-        }
+        uint64_t frac;
+        // parse fractional
+        newBegin = cfAsmParseDecimalInteger(begin, end, &frac);
+        result.fractional = frac * powl(10.0, -double(newBegin - begin));
+        begin = newBegin;
     }
 
     // parse exponential part
@@ -82,15 +114,16 @@ static CfAsmDecimal cfAsmParseDecimal( const char *begin, const char *end ) {
                 begin++;
         }
 
-        while (begin != end && *begin >= '0' && *begin <= '9') {
-            result.exponent *= 10;
-            result.exponent += *begin - '0';
-            begin++;
-        }
-        result.exponent *= sign;
+        uint64_t unsignedExponent;
+        newBegin = cfAsmParseDecimalInteger(begin, end, &unsignedExponent);
+        result.exponent = int64_t(unsignedExponent) * sign;
+        begin = newBegin;
     }
 
-    return result;
+    if (dst != NULL)
+        *dst = result;
+
+    return begin;
 } // cfAsmParseDecimal
 
 /**
@@ -104,120 +137,217 @@ static CfAsmDecimal cfAsmParseDecimal( const char *begin, const char *end ) {
  * 
  * @return parsed literal. in case if string empty, returns 0...
  */
-static uint64_t cfAsmParseR64( const char *begin, const char *end ) {
+static uint32_t cfAsmParseR32( const char *begin, const char *end ) {
     assert(begin != NULL);
     assert(end != NULL);
 
-    uint64_t result;
+    uint32_t result;
 
-    if (cfStrStartsWith(begin, "0x"))
-        result = cfAsmParseHexadecmial(begin + 2, end);
-    else {
-        CfAsmDecimal decimal = cfAsmParseDecimal(begin, end);
+    // remove heading spaces
+    while (begin < end && (*begin == ' ' || *begin == '\t'))
+        begin++;
 
-        if (decimal.fractionalIsSome || decimal.exponentIsSome)
-            *(double *)&result = (decimal.integer + decimal.fractional) * powl(10.0, decimal.exponent);
+    if (cfStrStartsWith(begin, "0x")) {
+        uint64_t result64;
+        cfAsmParseHexadecmialInteger(begin + 2, end, &result64);
+        result = result64;
+    } else {
+        CfAsmDecimal decimal;
+        cfAsmParseDecimal(begin, end, &decimal);
+
+        if (decimal.exponentIsSome || decimal.fractionalIsSome)
+            *(float *)&result = (decimal.integer + decimal.fractional) * powl(10.0, decimal.exponent);
         else
             result = decimal.integer;
     }
 
     return result;
-} // cfAsmParseR64
+} // cfAsmParseR32
 
-CfAssemblyStatus cfAssemble( const char *text, size_t codeLen, CfModule *dst, CfAssemblyDetails *details ) {
-    assert(text != NULL);
-    assert(dst != NULL);
+static uint32_t cfAsmParseInteger( const char *begin, const char *end ) {
+    uint64_t result;
 
-    const char *const textEnd = text + codeLen;
+    // remove heading spaces
+    while (begin < end && (*begin == ' ' || *begin == '\t'))
+        begin++;
 
-    const char *lineBegin = text;
-    const char *lineEnd = text;
-    CfStack stack = cfStackCtor(sizeof(uint16_t));
+    if (cfStrStartsWith(begin, "0x"))
+        cfAsmParseHexadecmialInteger(begin, end, &result);
+    else
+        cfAsmParseDecimalInteger(begin, end, &result);
+    return result;
+} // cfAsmParseInteger
 
-    while (lineBegin < textEnd) {
-        lineEnd = lineBegin;
-        while (lineEnd < textEnd && *lineEnd != '\n')
+typedef struct __CfAsmLineIterator {
+    const char *textCurr;
+    const char *textEnd;
+} CfAsmLineIterator;
+
+bool cfAsmLineIteratorNext(
+    CfAsmLineIterator *self,
+    const char **dstBegin,
+    const char **dstEnd
+) {
+    const char *begin;
+    const char *end;
+
+    do {
+        if (self->textCurr >= self->textEnd)
+            return false;
+
+        // find line end
+        const char *lineEnd = self->textCurr;
+        while (lineEnd < self->textEnd && *lineEnd != '\n')
             lineEnd++;
 
-        const char *commentStart = lineBegin;
+        // find comment start
+        const char *commentStart = self->textCurr;
         while (commentStart < lineEnd && *commentStart != ';')
             commentStart++;
 
-        while (lineBegin < commentStart && (*lineBegin == '\t' || *lineBegin == ' '))
-            lineBegin++;
+        begin = self->textCurr;
+        end = commentStart;
 
-        if (lineBegin == commentStart) {
-            lineBegin = lineEnd + 1;
-            continue;
+        // trim leading spaces
+        while (begin < end && *begin == ' ' || *begin == '\t')
+            begin++;
+
+        // trim trailing spaces
+        while (begin < end && *end == ' ' || *end == '\t')
+            end--;
+
+        self->textCurr = lineEnd + 1;
+    } while (end == begin);
+
+    *dstBegin = begin;
+    *dstEnd   = end;
+
+    return true;
+}
+
+CfAssemblyStatus cfAssemble( const char *text, size_t textLen, CfModule *dst, CfAssemblyDetails *details ) {
+    assert(text != NULL);
+    assert(dst != NULL);
+
+    CfAsmLineIterator lineIter = {
+        .textCurr = text,
+        .textEnd = text + textLen,
+    };
+    const char *lineBegin = NULL;
+    const char *lineEnd = NULL;
+
+    uint16_t frameSize = 0;
+
+    // parse declarations
+    bool codeLineAlreadyGot = false;
+    while (cfAsmLineIteratorNext(&lineIter, &lineBegin, &lineEnd)) {
+        // then some line isn't valid declaration
+        if (*lineBegin != '.') {
+            codeLineAlreadyGot = true;
+            break;
         }
 
-        // This solution is quite bad, because
-        uint16_t dataBuffer[16];
+        // parse declaration
+        if (cfStrStartsWith(lineBegin + 1, "frame_size")) {
+            // skip spaces
+            const char *intBegin = lineBegin + 11;
+            while (intBegin < lineEnd && (*intBegin == ' ' || *intBegin == '\t'))
+                intBegin++;
+
+            // parse size
+            frameSize = cfAsmParseInteger(intBegin, lineEnd);
+        } else {
+            // unknown declaration occured
+            if (details != NULL) {
+                details->unknownDeclaration.lineBegin = lineBegin;
+                details->unknownDeclaration.lineEnd = lineEnd;
+            }
+            return CF_ASSEMBLY_STATUS_UNKNOWN_DECLARATION;
+        }
+    }
+
+    CfStack stack = cfStackCtor(sizeof(uint8_t));
+
+    if (stack == CF_STACK_NULL)
+        return CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
+
+    // parse code
+    while (codeLineAlreadyGot || cfAsmLineIteratorNext(&lineIter, &lineBegin, &lineEnd)) {
+        codeLineAlreadyGot = false;
+
+        uint8_t dataBuffer[16];
         size_t dataElementCount = 1;
 
         // then try to parse expression
-               if (cfStrStartsWith(lineBegin, "i64_add")) {
-            dataBuffer[0] = CF_OPCODE_I64_ADD;
-        } else if (cfStrStartsWith(lineBegin, "i64_sub")) {
-            dataBuffer[0] = CF_OPCODE_I64_SUB;
-        } else if (cfStrStartsWith(lineBegin, "i64_shl")) {
-            dataBuffer[0] = CF_OPCODE_I64_SHL;
-        } else if (cfStrStartsWith(lineBegin, "i64_mul_s")) {
-            dataBuffer[0] = CF_OPCODE_I64_MUL_S;
-        } else if (cfStrStartsWith(lineBegin, "i64_mul_u")) {
-            dataBuffer[0] = CF_OPCODE_I64_MUL_U;
-        } else if (cfStrStartsWith(lineBegin, "i64_div_s")) {
-            dataBuffer[0] = CF_OPCODE_I64_DIV_S;
-        } else if (cfStrStartsWith(lineBegin, "i64_div_u")) {
-            dataBuffer[0] = CF_OPCODE_I64_DIV_U;
-        } else if (cfStrStartsWith(lineBegin, "i64_shr_s")) {
-            dataBuffer[0] = CF_OPCODE_I64_SHR_S;
-        } else if (cfStrStartsWith(lineBegin, "i64_shr_u")) {
-            dataBuffer[0] = CF_OPCODE_I64_SHR_U;
-        } else if (cfStrStartsWith(lineBegin, "i64_from_f64_s")) {
-            dataBuffer[0] = CF_OPCODE_I64_FROM_F64_S;
-        } else if (cfStrStartsWith(lineBegin, "i64_from_f64_u")) {
-            dataBuffer[0] = CF_OPCODE_I64_FROM_F64_U;
-        } else if (cfStrStartsWith(lineBegin, "f64_add")) {
-            dataBuffer[0] = CF_OPCODE_F64_ADD;
-        } else if (cfStrStartsWith(lineBegin, "f64_sub")) {
-            dataBuffer[0] = CF_OPCODE_F64_SUB;
-        } else if (cfStrStartsWith(lineBegin, "f64_mul")) {
-            dataBuffer[0] = CF_OPCODE_F64_MUL;
-        } else if (cfStrStartsWith(lineBegin, "f64_div")) {
-            dataBuffer[0] = CF_OPCODE_F64_DIV;
-        } else if (cfStrStartsWith(lineBegin, "f64_from_i64_s")) {
-            dataBuffer[0] = CF_OPCODE_F64_FROM_I64_S;
-        } else if (cfStrStartsWith(lineBegin, "f64_from_i64_u")) {
-            dataBuffer[0] = CF_OPCODE_F64_FROM_I64_U;
-        } else if (cfStrStartsWith(lineBegin, "r64_push")) {
-            // read r64 constant
-            dataBuffer[0] = CF_OPCODE_R64_PUSH;
+               if (cfStrStartsWith(lineBegin, "add")) {
+            dataBuffer[0] = CF_OPCODE_ADD;
+        } else if (cfStrStartsWith(lineBegin, "sub")) {
+            dataBuffer[0] = CF_OPCODE_SUB;
+        } else if (cfStrStartsWith(lineBegin, "shl")) {
+            dataBuffer[0] = CF_OPCODE_SHL;
+        } else if (cfStrStartsWith(lineBegin, "imul")) {
+            dataBuffer[0] = CF_OPCODE_IMUL;
+        } else if (cfStrStartsWith(lineBegin, "mul")) {
+            dataBuffer[0] = CF_OPCODE_MUL;
+        } else if (cfStrStartsWith(lineBegin, "idiv")) {
+            dataBuffer[0] = CF_OPCODE_IDIV;
+        } else if (cfStrStartsWith(lineBegin, "div")) {
+            dataBuffer[0] = CF_OPCODE_DIV;
+        } else if (cfStrStartsWith(lineBegin, "shr")) {
+            dataBuffer[0] = CF_OPCODE_SHR;
+        } else if (cfStrStartsWith(lineBegin, "sar")) {
+            dataBuffer[0] = CF_OPCODE_SAR;
+        } else if (cfStrStartsWith(lineBegin, "ftoi")) {
+            dataBuffer[0] = CF_OPCODE_FTOI;
+        } else if (cfStrStartsWith(lineBegin, "fadd")) {
+            dataBuffer[0] = CF_OPCODE_FADD;
+        } else if (cfStrStartsWith(lineBegin, "fsub")) {
+            dataBuffer[0] = CF_OPCODE_FSUB;
+        } else if (cfStrStartsWith(lineBegin, "fmul")) {
+            dataBuffer[0] = CF_OPCODE_FMUL;
+        } else if (cfStrStartsWith(lineBegin, "fdiv")) {
+            dataBuffer[0] = CF_OPCODE_FDIV;
+        } else if (cfStrStartsWith(lineBegin, "itof")) {
+            dataBuffer[0] = CF_OPCODE_ITOF;
+        } else if (cfStrStartsWith(lineBegin, "push")) {
+            // try to parse register
+            lineBegin += strlen("push");
+            while (lineBegin < lineEnd && *lineBegin == ' ' || *lineBegin == '\t')
+                lineBegin++;
+            if (lineBegin + 1 < lineEnd && *lineBegin >= 'a' && *lineBegin <= 'd' && lineBegin[1] == 'x') {
+                dataBuffer[0] = CF_OPCODE_PUSH_R;
+                dataBuffer[1] = *lineBegin - 'a';
+                dataElementCount = 2;
+            } else {
+                dataBuffer[0] = CF_OPCODE_PUSH;
+                *(uint32_t *)(dataBuffer + 1) = cfAsmParseR32(lineBegin, lineEnd);
+                dataElementCount = 5;
+            }
 
-            // remove spaces from start
-            const char *constBegin = lineBegin + strlen("r64_push") + 1;
-            while (constBegin <= lineEnd && *constBegin == ' ' || *constBegin == '\t')
-                constBegin++;
+        } else if (cfStrStartsWith(lineBegin, "pop")) {
 
-            // read 64-bit constant
-            uint64_t r64 = cfAsmParseR64(constBegin, lineEnd);
+            // try to parse register
+            lineBegin += strlen("pop");
+            while (lineBegin < lineEnd && *lineBegin == ' ' || *lineBegin == '\t')
+                lineBegin++;
 
-            dataBuffer[1] = (r64 >>  0) & 0xFFFF;
-            dataBuffer[2] = (r64 >> 16) & 0xFFFF;
-            dataBuffer[3] = (r64 >> 32) & 0xFFFF;
-            dataBuffer[4] = (r64 >> 48) & 0xFFFF;
-
-            dataElementCount = 5;
-        } else if (cfStrStartsWith(lineBegin, "r64_pop")) {
-            dataBuffer[0] = CF_OPCODE_R64_POP;
+            if (lineBegin + 1 < lineEnd && *lineBegin >= 'a' && *lineBegin <= 'd' && lineBegin[1] == 'x') {
+                dataBuffer[0] = CF_OPCODE_POP_R;
+                dataBuffer[1] = *lineBegin - 'a';
+                dataElementCount = 2;
+            } else {
+                dataBuffer[0] = CF_OPCODE_POP;
+            }
         } else if (cfStrStartsWith(lineBegin, "syscall")) {
             dataBuffer[0] = CF_OPCODE_SYSCALL;
+            *(uint32_t *)(dataBuffer + 1) = cfAsmParseR32(lineBegin + strlen("syscall"), lineEnd);
+            dataElementCount = 5;
         } else if (cfStrStartsWith(lineBegin, "unreachable")) {
             dataBuffer[0] = CF_OPCODE_UNREACHABLE;
         } else {
             if (details != NULL) {
                 details->unknownInstruction.lineBegin = lineBegin;
-                details->unknownInstruction.lineEnd   = commentStart;
+                details->unknownInstruction.lineEnd   = lineEnd;
             }
 
             cfStackDtor(stack);
@@ -230,18 +360,16 @@ CfAssemblyStatus cfAssemble( const char *text, size_t codeLen, CfModule *dst, Cf
             cfStackDtor(stack);
             return CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
         }
-
-        // do necessary calculations
-        lineBegin = lineEnd + 1;
     }
 
-    uint16_t *code = NULL;
+    uint8_t *code = NULL;
     if (!cfStackToArray(stack, (void **)&code)) {
         cfStackDtor(stack);
         return CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
     }
     dst->code = code;
-    dst->codeLength = cfStackGetSize(stack) * sizeof(uint16_t);
+    dst->codeLength = cfStackGetSize(stack) * sizeof(uint8_t);
+    dst->frameSize = frameSize;
 
     cfStackDtor(stack);
     return CF_ASSEMBLY_STATUS_OK;

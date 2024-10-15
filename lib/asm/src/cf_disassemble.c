@@ -13,12 +13,22 @@ CfDisassemblyStatus cfDisassemble( const CfModule *module, char **dest, CfDisass
     const uint8_t *bytecode = (const uint8_t *)module->code;
     const uint8_t *bytecodeEnd = bytecode + module->codeLength;
 
-    char line[64] = {0};
+    char line[256] = {0};
     const size_t lineLengthMax = sizeof(line);
 
-    while (bytecode + 2 <= bytecodeEnd) {
-        uint16_t opcode = *bytecode;
-        bytecode += 2;
+    // display framesize
+    if (module->frameSize != 0) {
+        size_t len = sprintf(line, ".frame_size     0x%08X\n", module->frameSize);
+        line[len] = '\n';
+
+        if (cfStackPushArrayReversed(&outStack, line, len + 1) != CF_STACK_OK) {
+            cfStackDtor(outStack);
+            return CF_DISASSEMBLY_STATUS_INTERNAL_ERROR;
+        }
+    }
+
+    while (bytecode < bytecodeEnd) {
+        uint8_t opcode = *bytecode++;
 
         switch (opcode) {
         case CF_OPCODE_UNREACHABLE    : {
@@ -26,102 +36,110 @@ CfDisassemblyStatus cfDisassemble( const CfModule *module, char **dest, CfDisass
             break;
         }
         case CF_OPCODE_SYSCALL        : {
-            strcpy(line, "syscall");
-            break;
-        }
-        case CF_OPCODE_I64_ADD        : {
-            strcpy(line, "i64_add");
-            break;
-        }
-        case CF_OPCODE_I64_SUB        : {
-            strcpy(line, "i64_sub");
-            break;
-        }
-        case CF_OPCODE_I64_SHL        : {
-            strcpy(line, "i64_shl");
-            break;
-        }
-        case CF_OPCODE_I64_MUL_S      : {
-            strcpy(line, "i64_mul_s");
-            break;
-        }
-        case CF_OPCODE_I64_MUL_U      : {
-            strcpy(line, "i64_mul_u");
-            break;
-        }
-        case CF_OPCODE_I64_DIV_S      : {
-            strcpy(line, "i64_div_s");
-            break;
-        }
-        case CF_OPCODE_I64_DIV_U      : {
-            strcpy(line, "i64_div_u");
-            break;
-        }
-        case CF_OPCODE_I64_SHR_S      : {
-            strcpy(line, "i64_shr_s");
-            break;
-        }
-        case CF_OPCODE_I64_SHR_U      : {
-            strcpy(line, "i64_shr_u");
-            break;
-        }
-        case CF_OPCODE_I64_FROM_F64_S : {
-            strcpy(line, "i64_from_f64_s");
-            break;
-        }
-        case CF_OPCODE_I64_FROM_F64_U : {
-            strcpy(line, "i64_from_f64_u");
-            break;
-        }
-        case CF_OPCODE_F64_ADD        : {
-            strcpy(line, "f64_add");
-            break;
-        }
-        case CF_OPCODE_F64_SUB        : {
-            strcpy(line, "f64_sub");
-            break;
-        }
-        case CF_OPCODE_F64_MUL        : {
-            strcpy(line, "f64_mul");
-            break;
-        }
-        case CF_OPCODE_F64_DIV        : {
-            strcpy(line, "f64_div");
-            break;
-        }
-        case CF_OPCODE_F64_FROM_I64_S : {
-            strcpy(line, "f64_from_i64_s");
-            break;
-        }
-        case CF_OPCODE_F64_FROM_I64_U : {
-            strcpy(line, "f64_from_i64_u");
-            break;
-        }
-        case CF_OPCODE_R64_PUSH       : {
-            strcpy(line, "r64_push       0x");
-            // then read constant
-            if (bytecodeEnd - bytecode < 8) {
+            if (bytecodeEnd - bytecode < 4) {
                 cfStackDtor(outStack);
                 return CF_DISASSEMBLY_STATUS_UNEXPECTED_CODE_END;
             }
-            uint64_t r64 = *(const uint64_t *)bytecode;
-            bytecode += 8;
 
-            for (size_t i = 0; i < 16; i++) {
-                uint64_t hexDigit = (r64 >> ((15 - i) * 4)) & 0xF;
-                char digit;
-
-                if (hexDigit < 10) digit = '0' + hexDigit;
-                else               digit = 'A' + hexDigit - 10;
-
-                line[17 + i] = digit;
-            }
-            line[33] = '\0';
-
+            sprintf(line, "syscall %d", *(const uint32_t *)bytecode);
+            bytecode += 4;
             break;
         }
-        case CF_OPCODE_R64_POP        : {
-            strcpy(line, "r64_pop");
+        case CF_OPCODE_ADD        : {
+            strcpy(line, "add");
+            break;
+        }
+        case CF_OPCODE_SUB        : {
+            strcpy(line, "sub");
+            break;
+        }
+        case CF_OPCODE_SHL        : {
+            strcpy(line, "shl");
+            break;
+        }
+        case CF_OPCODE_IMUL      : {
+            strcpy(line, "imul");
+            break;
+        }
+        case CF_OPCODE_MUL      : {
+            strcpy(line, "mul");
+            break;
+        }
+        case CF_OPCODE_IDIV      : {
+            strcpy(line, "idiv");
+            break;
+        }
+        case CF_OPCODE_DIV      : {
+            strcpy(line, "div");
+            break;
+        }
+        case CF_OPCODE_SHR      : {
+            strcpy(line, "shr");
+            break;
+        }
+        case CF_OPCODE_SAR      : {
+            strcpy(line, "sar");
+            break;
+        }
+        case CF_OPCODE_FTOI: {
+            strcpy(line, "ftoi");
+            break;
+        }
+        case CF_OPCODE_FADD: {
+            strcpy(line, "fadd");
+            break;
+        }
+        case CF_OPCODE_FSUB: {
+            strcpy(line, "fsub");
+            break;
+        }
+        case CF_OPCODE_FMUL: {
+            strcpy(line, "fmul");
+            break;
+        }
+        case CF_OPCODE_FDIV: {
+            strcpy(line, "fdiv");
+            break;
+        }
+        case CF_OPCODE_ITOF: {
+            strcpy(line, "itof");
+            break;
+        }
+        case CF_OPCODE_PUSH: {
+            // then read constant
+            if (bytecodeEnd - bytecode < 4) {
+                cfStackDtor(outStack);
+                return CF_DISASSEMBLY_STATUS_UNEXPECTED_CODE_END;
+            }
+            uint64_t r32 = *(const uint32_t *)bytecode;
+            bytecode += 4;
+
+            snprintf(line, sizeof(line), "push 0x%08lX", r32);
+            break;
+        }
+
+        case CF_OPCODE_POP: {
+            strcpy(line, "pop");
+            break;
+        }
+
+        case CF_OPCODE_PUSH_R: {
+            if (bytecodeEnd - bytecode < 1) {
+                cfStackDtor(outStack);
+                return CF_DISASSEMBLY_STATUS_UNEXPECTED_CODE_END;
+            }
+            uint8_t reg = *bytecode++;
+            sprintf(line, "push %cx", 'a' + reg);
+            break;
+        }
+
+        case CF_OPCODE_POP_R: {
+            if (bytecodeEnd - bytecode < 1) {
+                cfStackDtor(outStack);
+                return CF_DISASSEMBLY_STATUS_UNEXPECTED_CODE_END;
+            }
+            uint8_t reg = *bytecode++;
+            sprintf(line, "pop  %cx", 'a' + reg);
             break;
         }
 

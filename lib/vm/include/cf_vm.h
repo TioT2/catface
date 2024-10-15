@@ -17,12 +17,14 @@ extern "C" {
 
 /// @brief reason of occured panic
 typedef enum __CfPanicReason {
-    CF_PANIC_REASON_UNKNOWN_OPCODE,      ///< unknown instruction passed
-    CF_PANIC_REASON_UNREACHABLE,         ///< unreachable
-    CF_PANIC_REASON_INTERNAL_ERROR,      ///< VM internal error
-    CF_PANIC_REASON_NO_OPERANDS,         ///< no arguments on stack
-    CF_PANIC_REASON_UNKNOWN_SYSTEM_CALL, ///< invalid index of systemcall
-    CF_PANIC_REASON_UNEXPECTED_CODE_END, ///< unexpected end of bytecode
+    CF_PANIC_REASON_UNKNOWN_OPCODE,       ///< unknown instruction passed
+    CF_PANIC_REASON_UNREACHABLE,          ///< unreachable
+    CF_PANIC_REASON_INTERNAL_ERROR,       ///< VM internal error
+    CF_PANIC_REASON_NO_OPERANDS,          ///< no arguments on stack
+    CF_PANIC_REASON_UNKNOWN_SYSTEM_CALL,  ///< invalid index of systemcall
+    CF_PANIC_REASON_UNEXPECTED_CODE_END,  ///< unexpected end of bytecode
+    CF_PANIC_REASON_UNKNOWN_REGISTER,     ///< unknown register index
+    CF_PANIC_REASON_STACK_UNDERFLOW,      ///< operand stack underflow
 } CfPanicReason;
 
 /// @brief description of occured panic
@@ -32,12 +34,16 @@ typedef struct __CfPanicInfo {
 
     union {
         struct {
-            uint16_t opcode; ///< the unknown opcode
+            uint8_t opcode; ///< the unknown opcode
         } unknownOpcode;
 
         struct {
-            uint64_t index; ///< unknown systemcall
+            uint32_t index; ///< unknown systemcall
         } unknownSystemCall;
+
+        struct {
+            uint32_t index; ///< register index
+        } unknownRegister;
     };
 } CfPanicInfo;
 

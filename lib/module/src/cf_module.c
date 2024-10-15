@@ -10,6 +10,7 @@ typedef struct __CfModuleHeader {
     uint64_t magic;      ///< module magic number
     uint64_t codeLength; ///< module length
     CfHash   codeHash;   ///< module bytecode hash
+    uint16_t frameSize;  ///< module stackframe size
 } CfModuleHeader;
 
 CfModuleReadStatus cfModuleRead( FILE *file, CfModule *dst ) {
@@ -41,6 +42,7 @@ CfModuleReadStatus cfModuleRead( FILE *file, CfModule *dst ) {
 
     dst->code = code;
     dst->codeLength = header.codeLength;
+    dst->frameSize = header.frameSize;
 
     return CF_MODULE_READ_STATUS_OK;
 } // cfModuleRead
@@ -53,6 +55,7 @@ CfModuleWriteStatus cfModuleWrite( const CfModule *module, FILE *dst ) {
         .magic = CF_MODULE_MAGIC,
         .codeLength = module->codeLength,
         .codeHash = cfHash(module->code, module->codeLength),
+        .frameSize = module->frameSize,
     };
 
     if (sizeof(moduleHeader) != fwrite(&moduleHeader, 1, sizeof(moduleHeader), dst))
