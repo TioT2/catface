@@ -78,12 +78,6 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
             .reason = CF_PANIC_REASON_INTERNAL_ERROR,
         );
     
-    frame = calloc(module->frameSize, sizeof(uint8_t));
-    if (frame == NULL)
-        PANIC(
-            .reason = CF_PANIC_REASON_INTERNAL_ERROR,
-        );
-
     while (instructionCounter < instructionCounterEnd) {
         uint8_t opcode = *instructionCounter++;
 
@@ -169,7 +163,7 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
         }
 
         case CF_OPCODE_SHR: {
-            int32_t lhs, rhs;
+            uint32_t lhs, rhs;
 
             POP(rhs);
             POP(lhs);
@@ -207,8 +201,8 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
         case CF_OPCODE_FADD: {
             float lhs, rhs;
 
-            POP(lhs);
             POP(rhs);
+            POP(lhs);
             lhs += rhs;
             PUSH(lhs);
             break;
@@ -217,8 +211,8 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
         case CF_OPCODE_FSUB: {
             float lhs, rhs;
 
-            POP(lhs);
             POP(rhs);
+            POP(lhs);
             lhs -= rhs;
             PUSH(lhs);
             break;
@@ -227,8 +221,8 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
         case CF_OPCODE_FMUL: {
             float lhs, rhs;
 
-            POP(lhs);
             POP(rhs);
+            POP(lhs);
             lhs *= rhs;
             PUSH(lhs);
             break;
@@ -237,8 +231,8 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
         case CF_OPCODE_FDIV: {
             float lhs, rhs;
 
-            POP(lhs);
             POP(rhs);
+            POP(lhs);
             lhs /= rhs;
             PUSH(lhs);
             break;

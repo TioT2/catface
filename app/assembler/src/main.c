@@ -55,15 +55,15 @@ void printHelp( void ) {
 } // printHelp
 
 int main( const int _argc, const char **_argv ) {
-    // const int argc = 4;
-    // const char *argv[] = {
-    //     "qq",
-    //     "-o",
-    //     "examples/fisqrt.cfmod",
-    //     "examples/fisqrt.cfasm",
-    // };
-    const int argc = _argc;
-    const char **argv = _argv;
+    const int argc = 4;
+    const char *argv[] = {
+        "qq",
+        "-o",
+        "examples/fisqrt.cfmod",
+        "examples/fisqrt.cfasm",
+    };
+    // const int argc = _argc;
+    // const char **argv = _argv;
 
     // quite strange solution, but it's ok because last argument is treated as input file name.
     if (argc < 2 || 0 == strcmp(argv[1], "-h")) {
@@ -100,15 +100,15 @@ int main( const int _argc, const char **_argv ) {
     if (optionIndices[0] != -1)
         options.outputFileName = argv[optionIndices[0] + 1];
 
-    char *initialText = NULL;
-    size_t initialTextLen = 0;
+    char *text = NULL;
+    size_t textLen = 0;
 
     FILE *input = fopen(options.inputFileName, "r");
     if (input == NULL) {
         printf("input file opening error: %s\n", strerror(errno));
         return 0;
     }
-    bool readSuccess = readFile(input, &initialText, &initialTextLen);
+    bool readSuccess = readFile(input, &text, &textLen);
     fclose(input);
 
     if (!readSuccess) {
@@ -118,13 +118,17 @@ int main( const int _argc, const char **_argv ) {
 
     CfModule module;
     CfAssemblyDetails assemblyDetails;
-    CfAssemblyStatus assemblyStatus = cfAssemble(initialText, initialTextLen, &module, &assemblyDetails);
+    CfAssemblyStatus assemblyStatus = cfAssemble(
+        (CfStringSlice){text, text + textLen},
+        &module,
+        &assemblyDetails
+    );
 
     if (assemblyStatus != CF_ASSEMBLY_STATUS_OK) {
         printf("assembling failed.\n");
         cfAssemblyDetailsDump(stdout, assemblyStatus, &assemblyDetails);
         printf("\n");
-        free(initialText);
+        free(text);
         return 0;
     }
 
@@ -138,13 +142,13 @@ int main( const int _argc, const char **_argv ) {
         printf("module to output file writing error: %s\n", cfModuleWriteStatusStr(moduleWriteStatus));
 
         fclose(output);
-        free(initialText);
+        free(text);
         cfModuleDtor(&module);
         return 0;
     }
     fclose(output);
 
-    free(initialText);
+    free(text);
     cfModuleDtor(&module);
 
     return 0;

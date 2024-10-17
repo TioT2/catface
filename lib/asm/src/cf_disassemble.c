@@ -16,17 +16,6 @@ CfDisassemblyStatus cfDisassemble( const CfModule *module, char **dest, CfDisass
     char line[256] = {0};
     const size_t lineLengthMax = sizeof(line);
 
-    // display framesize
-    if (module->frameSize != 0) {
-        size_t len = sprintf(line, ".frame_size     0x%08X\n", module->frameSize);
-        line[len] = '\n';
-
-        if (cfStackPushArrayReversed(&outStack, line, len + 1) != CF_STACK_OK) {
-            cfStackDtor(outStack);
-            return CF_DISASSEMBLY_STATUS_INTERNAL_ERROR;
-        }
-    }
-
     while (bytecode < bytecodeEnd) {
         uint8_t opcode = *bytecode++;
 

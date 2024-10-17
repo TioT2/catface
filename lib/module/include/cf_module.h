@@ -55,7 +55,6 @@ typedef enum __CfOpcode {
 typedef struct __CfModule {
     void    *code;       ///< module bytecode
     size_t   codeLength; ///< module bytecode length
-    uint16_t frameSize;  ///< ???
 } CfModule;
 
 /// @brief module reading status

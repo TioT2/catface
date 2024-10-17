@@ -44,16 +44,16 @@ void cfAssemblyDetailsDump(
     switch (status) {
     case CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION: {
         fprintf(out, "unknown insturction: %.*s",
-            (int)(details->unknownInstruction.lineEnd - details->unknownInstruction.lineBegin),
-            details->unknownInstruction.lineBegin
+            (int)(details->unknownInstruction.end - details->unknownInstruction.begin),
+            details->unknownInstruction.begin
         );
         break;
     }
 
     case CF_ASSEMBLY_STATUS_UNKNOWN_DECLARATION: {
         fprintf(out, "unknown declaration: %.*s",
-            (int)(details->unknownDeclaration.lineEnd - details->unknownDeclaration.lineBegin),
-            details->unknownDeclaration.lineBegin
+            (int)(details->unknownDeclaration.end - details->unknownDeclaration.begin),
+            details->unknownDeclaration.begin
         );
         break;
     }

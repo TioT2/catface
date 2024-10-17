@@ -7,372 +7,363 @@
 #include "cf_stack.h"
 #include "cf_string.h"
 
-/**
- * @brief hexadecimal number parsing function
- * 
- * @param[in]  begin allowed parsing range begin
- * @param[in]  end   allowed parsing range end
- * @param[out] dst   parsing destination (nullable)
- * 
- * @return pointer to character after last parsed.
- */
-static const char * cfAsmParseHexadecmialInteger( const char *begin, const char *end, uint64_t *dst ) {
-    uint64_t result = 0;
-
-    while (begin != end) {
-        const char ch = *begin;
-        uint64_t digit;
-
-        if (ch >= '0' && ch <= '9') {
-            digit = ch - '0';
-        } else if (ch >= 'A' && ch <= 'F') {
-            digit = ch - 'A' + 10;
-        } else if (ch >= 'a' && ch <= 'f') {
-            digit = ch - 'a' + 10;
-        } else {
-            break;
-        }
-
-        begin++;
-        result = result * 16 + digit;
-    }
-
-    if (dst != NULL)
-        *dst = result;
-
-    return begin;
-} // cfAsmParseHexadecimalInteger
-
-/**
- * @brief hexadecimal number parsing function
- * 
- * @param[in]  begin allowed parsing range begin
- * @param[in]  end   allowed parsing range end
- * @param[out] dst   parsing destination (nullable)
- * 
- * @return pointer to character after last parsed.
- */
-static const char * cfAsmParseDecimalInteger( const char *begin, const char *end, uint64_t *dst ) {
-    uint64_t result = 0;
-
-    while (begin != end) {
-        const char ch = *begin;
-        uint64_t digit;
-
-        if (ch >= '0' && ch <= '9') {
-            digit = ch - '0';
-        } else {
-            break;
-        }
-
-        result = result * 10 + digit;
-        begin++;
-    }
-
-    if (dst != NULL)
-        *dst = result;
-
-    return begin;
-} // cfAsmParseDecimalInteger
-
-typedef struct __CfAsmDecimal {
-    uint64_t integer;          ///< integer part
-    bool     fractionalIsSome; ///< fracitonal part parsing started
-    double   fractional;       ///< fractional part
-    bool     exponentIsSome;   ///< exponential part parsing started
-    int64_t  exponent;         ///< exponential part
-} CfAsmDecimal;
-
-static const char * cfAsmParseDecimal( const char *begin, const char *end, CfAsmDecimal *dst ) {
-    CfAsmDecimal result = {0};
-    const char *newBegin;
-
-    newBegin = cfAsmParseDecimalInteger(begin, end, &result.integer);
-    begin = newBegin;
-
-    // parse floating part
-    if (begin != end && *begin == '.') {
-        begin++;
-        result.fractionalIsSome = true;
-
-        uint64_t frac;
-        // parse fractional
-        newBegin = cfAsmParseDecimalInteger(begin, end, &frac);
-        result.fractional = frac * powl(10.0, -double(newBegin - begin));
-        begin = newBegin;
-    }
-
-    // parse exponential part
-    if (begin != end && *begin == 'e') {
-        int64_t sign = 1;
-        result.exponentIsSome = true;
-
-        if (begin != end) {
-            if (*begin == '-')
-                begin++, sign = -1;
-            else if (*begin == '+')
-                begin++;
-        }
-
-        uint64_t unsignedExponent;
-        newBegin = cfAsmParseDecimalInteger(begin, end, &unsignedExponent);
-        result.exponent = int64_t(unsignedExponent) * sign;
-        begin = newBegin;
-    }
-
-    if (dst != NULL)
-        *dst = result;
-
-    return begin;
-} // cfAsmParseDecimal
-
-/**
- * @brief R64 literal parsing function
- * 
- * @param[in] begin parsed string begin
- * @param[in] end   parsing string end
- * 
- * @note the strange combination of arugments is required because
- * function usage suggests that input string may be not null-terminated.
- * 
- * @return parsed literal. in case if string empty, returns 0...
- */
-static uint32_t cfAsmParseR32( const char *begin, const char *end ) {
-    assert(begin != NULL);
-    assert(end != NULL);
-
-    uint32_t result;
-
-    // remove heading spaces
-    while (begin < end && (*begin == ' ' || *begin == '\t'))
-        begin++;
-
-    if (cfStrStartsWith(begin, "0x")) {
-        uint64_t result64;
-        cfAsmParseHexadecmialInteger(begin + 2, end, &result64);
-        result = result64;
-    } else {
-        CfAsmDecimal decimal;
-        cfAsmParseDecimal(begin, end, &decimal);
-
-        if (decimal.exponentIsSome || decimal.fractionalIsSome)
-            *(float *)&result = (decimal.integer + decimal.fractional) * powl(10.0, decimal.exponent);
-        else
-            result = decimal.integer;
-    }
-
-    return result;
-} // cfAsmParseR32
-
-static uint32_t cfAsmParseInteger( const char *begin, const char *end ) {
-    uint64_t result;
-
-    // remove heading spaces
-    while (begin < end && (*begin == ' ' || *begin == '\t'))
-        begin++;
-
-    if (cfStrStartsWith(begin, "0x"))
-        cfAsmParseHexadecmialInteger(begin, end, &result);
-    else
-        cfAsmParseDecimalInteger(begin, end, &result);
-    return result;
-} // cfAsmParseInteger
-
-typedef struct __CfAsmLineIterator {
-    const char *textCurr;
-    const char *textEnd;
-} CfAsmLineIterator;
-
-bool cfAsmLineIteratorNext(
-    CfAsmLineIterator *self,
-    const char **dstBegin,
-    const char **dstEnd
+bool cfAsmNextLine(
+    CfStringSlice *self,
+    CfStringSlice *dst
 ) {
-    const char *begin;
-    const char *end;
+    CfStringSlice slice;
 
     do {
-        if (self->textCurr >= self->textEnd)
+        if (self->begin >= self->end)
             return false;
 
         // find line end
-        const char *lineEnd = self->textCurr;
-        while (lineEnd < self->textEnd && *lineEnd != '\n')
+        const char *lineEnd = self->begin;
+        while (lineEnd < self->end && *lineEnd != '\n')
             lineEnd++;
 
         // find comment start
-        const char *commentStart = self->textCurr;
+        const char *commentStart = self->begin;
         while (commentStart < lineEnd && *commentStart != ';')
             commentStart++;
 
-        begin = self->textCurr;
-        end = commentStart;
+        slice.begin = self->begin;
+        slice.end = commentStart;
 
         // trim leading spaces
-        while (begin < end && *begin == ' ' || *begin == '\t')
-            begin++;
+        while (slice.begin < slice.end && *slice.begin == ' ' || *slice.begin == '\t')
+            slice.begin++;
 
         // trim trailing spaces
-        while (begin < end && *end == ' ' || *end == '\t')
-            end--;
+        while (slice.begin < slice.end && *slice.end == ' ' || *slice.end == '\t')
+            slice.end--;
 
-        self->textCurr = lineEnd + 1;
-    } while (end == begin);
+        self->begin = lineEnd + 1;
+    } while (slice.end == slice.begin);
 
-    *dstBegin = begin;
-    *dstEnd   = end;
+    *dst = slice;
 
     return true;
-}
+} // cfAsmNextLine
 
-CfAssemblyStatus cfAssemble( const char *text, size_t textLen, CfModule *dst, CfAssemblyDetails *details ) {
-    assert(text != NULL);
-    assert(dst != NULL);
+/// @brief fixup representation structure
+typedef struct __CfAsmFixup {
+    uint32_t *codePtr;     ///< pointer to code section to insert label to
+    const char *labelName; ///< name of label to insert
+} CfAsmFixup;
 
-    CfAsmLineIterator lineIter = {
-        .textCurr = text,
-        .textEnd = text + textLen,
+/**
+ * @brief check if character can belong to ident
+ */
+static bool cfAsmIsIdentCharacter( const char ch ) {
+    return
+        (ch >= 'a' && ch <= 'z') ||
+        (ch >= 'A' && ch <= 'Z') ||
+        (ch >= '0' && ch <= '9') ||
+        (ch == '_')
+    ;
+} // cfAsmIsIdentCharacter
+
+typedef enum __CfAsmTokenType {
+    CF_ASM_TOKEN_TYPE_IDENT,         ///< ident
+    CF_ASM_TOKEN_TYPE_INTEGER,       ///< number
+    CF_ASM_TOKEN_TYPE_COLON,         ///< colon
+    CF_ASM_TOKEN_TYPE_FLOATING,      ///< floating
+    CF_ASM_TOKEN_TYPE_LEFT_BRACKET,  ///< left bracket
+    CF_ASM_TOKEN_TYPE_RIGHT_BRACKET, ///< right bracket
+} CfAsmTokenType;
+
+/// @brief token tagged union
+typedef struct __CfAsmToken {
+    CfAsmTokenType type; ///< type
+
+    union {
+        CfStringSlice ident; ///< ident slice
+        uint64_t integer;    ///< integer number
+        double floating;     ///< floating point number
     };
-    const char *lineBegin = NULL;
-    const char *lineEnd = NULL;
+} CfAsmToken;
 
-    uint16_t frameSize = 0;
+bool cfAsmNextToken( CfStringSlice *line, CfAsmToken *dst ) {
+    if (line->begin < line->end && *line->begin == ';')
+        return false;
 
-    // parse declarations
-    bool codeLineAlreadyGot = false;
-    while (cfAsmLineIteratorNext(&lineIter, &lineBegin, &lineEnd)) {
-        // then some line isn't valid declaration
-        if (*lineBegin != '.') {
-            codeLineAlreadyGot = true;
-            break;
-        }
+    while (line->begin < line->end && *line->begin == ' ' || *line->begin == '\t')
+        line->begin++;
 
-        // parse declaration
-        if (cfStrStartsWith(lineBegin + 1, "frame_size")) {
-            // skip spaces
-            const char *intBegin = lineBegin + 11;
-            while (intBegin < lineEnd && (*intBegin == ' ' || *intBegin == '\t'))
-                intBegin++;
+    if (line->begin >= line->end)
+        return false;
+    char first = *line->begin;
 
-            // parse size
-            frameSize = cfAsmParseInteger(intBegin, lineEnd);
+    if (first == '[') {
+        line->begin++;
+        dst->type = CF_ASM_TOKEN_TYPE_LEFT_BRACKET;
+        return true;
+    }
+
+    if (first == ']') {
+        line->begin++;
+        dst->type = CF_ASM_TOKEN_TYPE_RIGHT_BRACKET;
+        return true;
+    }
+
+    if (first == ':') {
+        line->begin++;
+        dst->type = CF_ASM_TOKEN_TYPE_COLON;
+        return true;
+    }
+
+    // parse number
+    if (first >= '0' && first <= '9') {
+        if (line->begin + 1 < line->end && line->begin[1] == 'x') {
+            // parse hexadecimal
+            uint64_t res;
+            *line = cfSliceParseHexadecmialInteger(
+                (CfStringSlice){line->begin + 2, line->end},
+                &res
+            );
+
+            dst->type = CF_ASM_TOKEN_TYPE_INTEGER;
+            dst->integer = res;
+            return true;
         } else {
-            // unknown declaration occured
-            if (details != NULL) {
-                details->unknownDeclaration.lineBegin = lineBegin;
-                details->unknownDeclaration.lineEnd = lineEnd;
+            // parse decimal (or floating)
+            CfParsedDecimal res;
+
+            *line = cfSliceParseDecimal(*line, &res);
+            if (res.exponentStarted || res.fractionalStarted) {
+                dst->type = CF_ASM_TOKEN_TYPE_FLOATING;
+                dst->floating = (res.integer + res.fractional) * powl(10.0, res.exponent);
+            } else {
+                dst->type = CF_ASM_TOKEN_TYPE_INTEGER;
+                dst->integer = res.integer;
             }
-            return CF_ASSEMBLY_STATUS_UNKNOWN_DECLARATION;
+
+            return true;
         }
     }
 
-    CfStack stack = cfStackCtor(sizeof(uint8_t));
+    if (first >= 'a' && first <= 'z' || first >= 'A' && first <= 'Z' || first == '_') {
+        CfStringSlice ident = {line->begin, line->begin};
 
-    if (stack == CF_STACK_NULL)
-        return CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
+        while (ident.end < line->end && cfAsmIsIdentCharacter(*ident.end))
+            ident.end++;
+
+        dst->floating = CF_ASM_TOKEN_TYPE_IDENT;
+        dst->ident = ident;
+
+        line->begin = ident.end;
+        return true;
+    }
+
+    // unknown token
+    return false;
+} // cfAsmNextToken
+
+/**
+ * @brief register from string slice parsing function
+ * 
+ * @param[in] slice slice to parse register from
+ * 
+ * @return register index + 1 if success, 0 otherwise
+ * (yes, it's quite strange solution, but in this case this ### is somehow reliable.)
+ */
+static uint32_t cfAsmParseRegister( CfStringSlice slice ) {
+    if (slice.begin + 2 != slice.end)
+        return 0;
+
+    uint16_t bs = *(const uint16_t *)slice.begin;
+
+    if (bs == *(const uint16_t *)"ax") return 1;
+    if (bs == *(const uint16_t *)"bx") return 2;
+    if (bs == *(const uint16_t *)"cx") return 3;
+    if (bs == *(const uint16_t *)"dx") return 4;
+
+    return 0;
+} // cfAsmParseRegister
+
+CfAssemblyStatus cfAssemble( CfStringSlice text, CfModule *dst, CfAssemblyDetails *details ) {
+    assert(dst != NULL);
+
+    CfStringSlice line;
+    CfStack stack = CF_STACK_NULL;
+    CfStack fixupStack = CF_STACK_NULL;
+    CfAssemblyStatus resultStatus = CF_ASSEMBLY_STATUS_OK;
+
+    stack = cfStackCtor(sizeof(uint8_t));
+    fixupStack = cfStackCtor(sizeof(CfAsmFixup));
+    resultStatus = CF_ASSEMBLY_STATUS_OK;
+
+    if (stack == CF_STACK_NULL || fixupStack == CF_STACK_NULL) {
+        resultStatus = CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
+        goto cfAssemble__end;
+    }
 
     // parse code
-    while (codeLineAlreadyGot || cfAsmLineIteratorNext(&lineIter, &lineBegin, &lineEnd)) {
-        codeLineAlreadyGot = false;
-
+    while (cfAsmNextLine(&text, &line)) {
         uint8_t dataBuffer[16];
         size_t dataElementCount = 1;
 
-        // then try to parse expression
-               if (cfStrStartsWith(lineBegin, "add")) {
+        CfAsmToken token = {};
+        CfStringSlice tokenSlice = line;
+
+        // There's no starting token in line
+        if (!cfAsmNextToken(&tokenSlice, &token))
+            continue;
+
+        if (token.type != CF_ASM_TOKEN_TYPE_IDENT) {
+            if (details != NULL)
+                details->unknownInstruction = line;
+            resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION;
+            goto cfAssemble__end;
+        }
+
+        // then try to parse opcode
+               if (cfSliceStartsWith(token.ident, "add")) {
             dataBuffer[0] = CF_OPCODE_ADD;
-        } else if (cfStrStartsWith(lineBegin, "sub")) {
+        } else if (cfSliceStartsWith(token.ident, "sub")) {
             dataBuffer[0] = CF_OPCODE_SUB;
-        } else if (cfStrStartsWith(lineBegin, "shl")) {
+        } else if (cfSliceStartsWith(token.ident, "shl")) {
             dataBuffer[0] = CF_OPCODE_SHL;
-        } else if (cfStrStartsWith(lineBegin, "imul")) {
+        } else if (cfSliceStartsWith(token.ident, "imul")) {
             dataBuffer[0] = CF_OPCODE_IMUL;
-        } else if (cfStrStartsWith(lineBegin, "mul")) {
+        } else if (cfSliceStartsWith(token.ident, "mul")) {
             dataBuffer[0] = CF_OPCODE_MUL;
-        } else if (cfStrStartsWith(lineBegin, "idiv")) {
+        } else if (cfSliceStartsWith(token.ident, "idiv")) {
             dataBuffer[0] = CF_OPCODE_IDIV;
-        } else if (cfStrStartsWith(lineBegin, "div")) {
+        } else if (cfSliceStartsWith(token.ident, "div")) {
             dataBuffer[0] = CF_OPCODE_DIV;
-        } else if (cfStrStartsWith(lineBegin, "shr")) {
+        } else if (cfSliceStartsWith(token.ident, "shr")) {
             dataBuffer[0] = CF_OPCODE_SHR;
-        } else if (cfStrStartsWith(lineBegin, "sar")) {
+        } else if (cfSliceStartsWith(token.ident, "sar")) {
             dataBuffer[0] = CF_OPCODE_SAR;
-        } else if (cfStrStartsWith(lineBegin, "ftoi")) {
+        } else if (cfSliceStartsWith(token.ident, "ftoi")) {
             dataBuffer[0] = CF_OPCODE_FTOI;
-        } else if (cfStrStartsWith(lineBegin, "fadd")) {
+        } else if (cfSliceStartsWith(token.ident, "fadd")) {
             dataBuffer[0] = CF_OPCODE_FADD;
-        } else if (cfStrStartsWith(lineBegin, "fsub")) {
+        } else if (cfSliceStartsWith(token.ident, "fsub")) {
             dataBuffer[0] = CF_OPCODE_FSUB;
-        } else if (cfStrStartsWith(lineBegin, "fmul")) {
+        } else if (cfSliceStartsWith(token.ident, "fmul")) {
             dataBuffer[0] = CF_OPCODE_FMUL;
-        } else if (cfStrStartsWith(lineBegin, "fdiv")) {
+        } else if (cfSliceStartsWith(token.ident, "fdiv")) {
             dataBuffer[0] = CF_OPCODE_FDIV;
-        } else if (cfStrStartsWith(lineBegin, "itof")) {
+        } else if (cfSliceStartsWith(token.ident, "itof")) {
             dataBuffer[0] = CF_OPCODE_ITOF;
-        } else if (cfStrStartsWith(lineBegin, "push")) {
-            // try to parse register
-            lineBegin += strlen("push");
-            while (lineBegin < lineEnd && *lineBegin == ' ' || *lineBegin == '\t')
-                lineBegin++;
-            if (lineBegin + 1 < lineEnd && *lineBegin >= 'a' && *lineBegin <= 'd' && lineBegin[1] == 'x') {
+        } else if (cfSliceStartsWith(token.ident, "push")) {
+            if (
+                !cfAsmNextToken(&tokenSlice, &token) ||
+                (true
+                    && token.type != CF_ASM_TOKEN_TYPE_INTEGER
+                    && token.type != CF_ASM_TOKEN_TYPE_FLOATING
+                    && token.type != CF_ASM_TOKEN_TYPE_IDENT
+                )
+            ) {
+                if (details != NULL)
+                    details->unknownInstruction = line;
+                resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION;
+                goto cfAssemble__end;
+            }
+
+            if (token.type == CF_ASM_TOKEN_TYPE_IDENT) {
+                // use ident
                 dataBuffer[0] = CF_OPCODE_PUSH_R;
-                dataBuffer[1] = *lineBegin - 'a';
+
+                uint32_t reg = cfAsmParseRegister(token.ident);
+
+                if (reg == 0) {
+                    if (details != NULL)
+                        details->unknownRegister = token.ident;
+                    resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_REGISTER;
+                    goto cfAssemble__end;
+                }
+
+                dataBuffer[1] = reg - 1;
                 dataElementCount = 2;
             } else {
                 dataBuffer[0] = CF_OPCODE_PUSH;
-                *(uint32_t *)(dataBuffer + 1) = cfAsmParseR32(lineBegin, lineEnd);
+                // parse some numeric token
+
+                if (token.type == CF_ASM_TOKEN_TYPE_INTEGER)
+                    *(uint32_t *)(dataBuffer + 1) = token.integer;
+                else
+                    *(float *)(dataBuffer + 1) = token.floating;
                 dataElementCount = 5;
             }
 
-        } else if (cfStrStartsWith(lineBegin, "pop")) {
+        } else if (cfSliceStartsWith(token.ident, "pop")) {
+            if (cfAsmNextToken(&tokenSlice, &token)) {
+                if (token.type != CF_ASM_TOKEN_TYPE_IDENT) {
+                    if (details != NULL)
+                        details->unknownInstruction = line;
+                    resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION;
+                    goto cfAssemble__end;
+                }
 
-            // try to parse register
-            lineBegin += strlen("pop");
-            while (lineBegin < lineEnd && *lineBegin == ' ' || *lineBegin == '\t')
-                lineBegin++;
-
-            if (lineBegin + 1 < lineEnd && *lineBegin >= 'a' && *lineBegin <= 'd' && lineBegin[1] == 'x') {
                 dataBuffer[0] = CF_OPCODE_POP_R;
-                dataBuffer[1] = *lineBegin - 'a';
+
+                uint32_t reg = cfAsmParseRegister(token.ident);
+
+                if (reg == 0) {
+                    if (details != NULL)
+                        details->unknownRegister = line;
+                    resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_REGISTER;
+                    goto cfAssemble__end;
+                }
+
+                dataBuffer[1] = reg - 1;
                 dataElementCount = 2;
             } else {
                 dataBuffer[0] = CF_OPCODE_POP;
             }
-        } else if (cfStrStartsWith(lineBegin, "syscall")) {
+
+        } else
+        if (cfSliceStartsWith(token.ident, "syscall")) {
             dataBuffer[0] = CF_OPCODE_SYSCALL;
-            *(uint32_t *)(dataBuffer + 1) = cfAsmParseR32(lineBegin + strlen("syscall"), lineEnd);
+            if (
+                !cfAsmNextToken(&tokenSlice, &token) ||
+                token.type != CF_ASM_TOKEN_TYPE_INTEGER
+            ) {
+                if (details != NULL)
+                    details->unknownInstruction = line;
+                resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION;
+                goto cfAssemble__end;
+            }
+
+            *(uint32_t *)(dataBuffer + 1) = token.integer;
             dataElementCount = 5;
-        } else if (cfStrStartsWith(lineBegin, "unreachable")) {
+        } else if (cfSliceStartsWith(token.ident, "unreachable")) {
             dataBuffer[0] = CF_OPCODE_UNREACHABLE;
         } else {
             if (details != NULL) {
-                details->unknownInstruction.lineBegin = lineBegin;
-                details->unknownInstruction.lineEnd   = lineEnd;
+                details->unknownInstruction = line;
             }
 
-            cfStackDtor(stack);
-            return CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION;
+            resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION;
+            goto cfAssemble__end;
         }
 
         // append element to stack
         CfStackStatus status = cfStackPushArrayReversed(&stack, &dataBuffer, dataElementCount);
         if (status != CF_STACK_OK) {
-            cfStackDtor(stack);
-            return CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
+            resultStatus = CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
+            goto cfAssemble__end;
         }
     }
 
-    uint8_t *code = NULL;
-    if (!cfStackToArray(stack, (void **)&code)) {
-        cfStackDtor(stack);
-        return CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
+    {
+        uint8_t *code = NULL;
+        if (!cfStackToArray(stack, (void **)&code)) {
+            resultStatus = CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
+            goto cfAssemble__end;
+        }
+        dst->code = code;
+        dst->codeLength = cfStackGetSize(stack) * sizeof(uint8_t);
     }
-    dst->code = code;
-    dst->codeLength = cfStackGetSize(stack) * sizeof(uint8_t);
-    dst->frameSize = frameSize;
 
+cfAssemble__end:
     cfStackDtor(stack);
-    return CF_ASSEMBLY_STATUS_OK;
+    cfStackDtor(fixupStack);
+    return resultStatus;
 } // cfAssemble
 
 // cf_asm.cpp

@@ -90,10 +90,10 @@ void handlePanic( void *context, const CfPanicInfo *panicInfo ) {
 } // handlePanic
 
 int main( const int _argc, const char **_argv ) {
-    // const int argc = 2;
-    // const char *argv[] = { "qq", "examples/fisqrt.cfmod" };
-    const int argc = _argc;
-    const char **argv = _argv;
+    const int argc = 2;
+    const char *argv[] = { "qq", "examples/fisqrt.cfmod" };
+    // const int argc = _argc;
+    // const char **argv = _argv;
 
     if (argc < 2) {
         printHelp();

@@ -6,10 +6,33 @@
 #define CF_ASM_H_
 
 #include <cf_module.h>
+#include <cf_string.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+// registers:
+// r0 zero 
+// r1 ax   
+// r2 bx   
+// r3 cx   
+// r4 dx   
+// r5 vid  
+// r6 
+// r7 
+
+/// @brief push and pop compressed instruction representation structure
+typedef struct __CfInstructionPushPop {
+    uint8_t opcode    : 8;     ///< instruciton opcode
+    struct {
+        uint8_t action    : 1; ///< push then 1, pop then 0
+        uint8_t imm       : 2; ///< immediate space requirement, 0 => 0, 1 => 4, 2 => 8
+        uint8_t reg_index : 3; ///< target register index, 0 => zero, 1 => ax, 2 => bx, 3 => cx, 4 => dx
+        uint8_t access    : 1; ///< register index
+        uint8_t is_next   : 1; ///< if true next desc is valid, if not - not.
+    } desc[3];
+} CfInstructionPushPop;
 
 /// Assembling status
 typedef enum __CfAssemblyStatus {
@@ -18,32 +41,28 @@ typedef enum __CfAssemblyStatus {
     CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION, ///< unknown instruction occured
     CF_ASSEMBLY_STATUS_UNEXPECTED_TEXT_END, ///< unexpected text end (missing something)
     CF_ASSEMBLY_STATUS_UNKNOWN_DECLARATION, ///< unknown declaration
+    CF_ASSEMBLY_STATUS_UNKNOWN_LABEL,       ///< unknown label
+    CF_ASSEMBLY_STATUS_UNKNOWN_REGISTER,    ///< unknown register
 } CfAssemblyStatus;
 
 /// @brief detailed info about assembling process
 typedef union __CfAssemblyDetails {
-    struct {
-        const char *lineBegin; ///< begin of line unknown instruction occured
-        const char *lineEnd;   ///< end of line unknown instruction occured
-    } unknownInstruction;
-
-    struct {
-        const char *lineBegin; ///< begin of line unknown declaration occured
-        const char *lineEnd;   ///< end of line unknown declaration occured
-    } unknownDeclaration;
+    CfStringSlice unknownInstruction;
+    CfStringSlice unknownDeclaration;
+    CfStringSlice unknownLabel;
+    CfStringSlice unknownRegister;
 } CfAssemblyDetails;
 
 /**
- * @brief text assembling function
+ * @brief text slice assembling function
  * 
- * @param[in]  text       code to assembly (non-null)
- * @param[in]  textLength code length
+ * @param[in]  text       code to assembly (valid)
  * @param[out] dst        assembling destination (non-null)
  * @param[out] details    detailed info about assembling process (nullable)
  * 
  * @return assembling status
  */
-CfAssemblyStatus cfAssemble( const char *text, size_t textLength, CfModule *dst, CfAssemblyDetails *details );
+CfAssemblyStatus cfAssemble( CfStringSlice text, CfModule *dst, CfAssemblyDetails *details );
 
 /// @brief general disassembling process status
 typedef enum __CfDisassemblyStatus {
