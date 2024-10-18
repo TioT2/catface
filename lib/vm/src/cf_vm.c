@@ -130,7 +130,7 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
 
     const uint8_t *instructionCounter = instructionCounterBegin;
 
-    CfRegisters registers;
+    CfRegisters registers = {0};
     CfPanicInfo panicInfo;
 
     CfStack stack = cfStackCtor(sizeof(uint32_t));
@@ -313,37 +313,32 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
         }
 
         case CF_OPCODE_PUSH    : {
-            // so-called TMP solution)))
-            PANIC(
-                .reason = CF_PANIC_REASON_INTERNAL_ERROR
-            );
-
             CfPushPopInfo info;
             READ(info);
 
-            /// TODO Finish push/pop instructions
-            if (info.doReadImmediate) {
+            if (info.isMemoryAccess)
+                PANIC(.reason = CF_PANIC_REASON_INTERNAL_ERROR);
 
-            } else {
-                
-            }
+            uint32_t imm = 0;
+            if (info.doReadImmediate)
+                READ(imm);
+            imm += registers.indexed[info.registerIndex];
+            PUSH(imm);
             break;
         }
 
         case CF_OPCODE_POP     : {
-            PANIC(
-                .reason = CF_PANIC_REASON_INTERNAL_ERROR
-            );
-
-            // so-called TMP solution)))
-            assert(false);
-
             CfPushPopInfo info;
             READ(info);
 
-            /// TODO Finish push/pop instructions
+            if (info.doReadImmediate || info.isMemoryAccess)
+                PANIC(.reason = CF_PANIC_REASON_INTERNAL_ERROR);
+
+            uint32_t value;
+            POP(value);
+
             if (info.registerIndex >= 2)
-                POP(registers.indexed[info.registerIndex]);
+                registers.indexed[info.registerIndex] = value;
             break;
         }
 
