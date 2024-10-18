@@ -25,11 +25,12 @@ typedef struct __CfStringSlice {
 /**
  * @brief string slice printing function
  * 
+ * @param[in] file  file to print slice to
  * @param[in] slice slice to print
  * 
  * @return count of characters printed.
  */
-int cfPrintSlice( CfStr slice );
+int cfWriteStr( FILE *file, CfStr slice );
 
 /**
  * @brief slice starting with zero-terminated string checking function

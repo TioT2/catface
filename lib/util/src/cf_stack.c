@@ -15,7 +15,7 @@ CfStack cfStackCtor( size_t elementSize ) {
     CfStackImpl *stk = (CfStackImpl *)calloc(1, sizeof(CfStackImpl));
 
     if (stk == NULL)
-        return CF_STACK_NULL;
+        return NULL;
 
     *stk = (CfStackImpl){
         .size = 0,
@@ -36,7 +36,7 @@ CfStackStatus cfStackPush( CfStack *handle, const void *const data ) {
 
 CfStackStatus cfStackPop( CfStack *handle, void *const data ) {
     assert(handle != NULL);
-    assert(*handle != CF_STACK_NULL);
+    assert(*handle != NULL);
 
     CfStackImpl *self = (CfStackImpl *)*handle;
 
@@ -53,7 +53,7 @@ CfStackStatus cfStackPop( CfStack *handle, void *const data ) {
 } // cfStackPop
 
 bool cfStackToArray( CfStack stack, void **dst ) {
-    assert(stack != CF_STACK_NULL);
+    assert(stack != NULL);
     assert(dst != NULL);
 
     CfStackImpl *impl = (CfStackImpl *)stack;
@@ -72,7 +72,7 @@ bool cfStackToArray( CfStack stack, void **dst ) {
 } // cfStackToArray
 
 size_t cfStackGetSize( CfStack stack ) {
-    assert(stack != CF_STACK_NULL);
+    assert(stack != NULL);
 
     return ((CfStackImpl *)stack)->size;
 } // cfStackGetSize

@@ -25,6 +25,7 @@ typedef enum __CfPanicReason {
     CF_PANIC_REASON_UNEXPECTED_CODE_END,  ///< unexpected end of bytecode
     CF_PANIC_REASON_UNKNOWN_REGISTER,     ///< unknown register index
     CF_PANIC_REASON_STACK_UNDERFLOW,      ///< operand stack underflow
+    CF_PANIC_REASON_CALL_STACK_UNDERFLOW, ///< call stack underflow
 } CfPanicReason;
 
 /// @brief description of occured panic

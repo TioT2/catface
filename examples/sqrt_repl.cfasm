@@ -1,0 +1,83 @@
+; REPL fast inverse square root calculation program
+
+call _start
+jmp end
+
+; INTERNAL FUNCTION of _fast_inv_sqrt
+_fast_inv_sqrt_newt_iteration:
+    push 1.5
+    push bx
+    push bx
+    fmul
+    push ax
+    fmul
+    fsub
+    push bx
+    fmul
+    pop  bx
+ret
+
+; fast inverse square root calculation function
+; arguments: ax - value to calculate square root of
+; violates: ax, bx
+; in case of negative value, returns 0xFFFFFFFF
+_fast_inv_sqrt:
+    ; move error value to bx
+    push 0xFFFFFFFF
+    pop  bx
+
+    ; check if ax >= 0.0
+    push ax
+    push 0.0
+    fcmp
+    jl _fast_inv_sqrt__end
+
+    ; fast inverse square root's 'evil bit hack'
+    push 0x5F3759DF
+    push ax
+    push 1
+    shr
+    sub
+    pop  bx
+    
+    ; multiply x to 0.5
+    push ax
+    push 0.5
+    fmul
+    pop  ax
+
+    ; two newtonian iterations
+    call _fast_inv_sqrt_newt_iteration
+    call _fast_inv_sqrt_newt_iteration
+
+    _fast_inv_sqrt__end:
+    ; set return value
+    push bx
+    pop  ax
+ret
+
+; main function
+_start:
+    _start__start:
+
+    ; get value from user
+    syscall 0
+    pop  ax
+
+    call _fast_inv_sqrt
+
+    ; compare result with 0xFFFFFFFF
+    push 0xFFFFFFFF
+    push ax
+    cmp
+    je _start__end
+
+    ; print value and continue loop
+    push ax
+    syscall 1
+    jmp _start__start
+
+    _start__end:
+ret
+
+end:

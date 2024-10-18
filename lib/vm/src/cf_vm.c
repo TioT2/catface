@@ -5,6 +5,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+// TODO Split this fckng function into structure + set of little functions (?)
+
 void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
     assert(module != NULL);
     assert(module->code != NULL);
@@ -70,23 +72,25 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
     const uint8_t *instructionCounter = instructionCounterBegin;
 
     CfRegisters registers;
-
-    CfStack stack = CF_STACK_NULL;
     CfPanicInfo panicInfo;
 
-    stack = cfStackCtor(sizeof(uint32_t));
-    if (stack == CF_STACK_NULL)
+    CfStack stack = cfStackCtor(sizeof(uint32_t));
+    CfStack callStack = cfStackCtor(sizeof(uint8_t *));
+
+    if (stack == NULL || callStack == NULL)
         PANIC(
             .reason = CF_PANIC_REASON_INTERNAL_ERROR,
         );
     
     while (instructionCounter < instructionCounterEnd) {
-        uint8_t opcode = 0x1F & *instructionCounter++;
+        uint8_t opcode = *instructionCounter++;
 
         switch ((CfOpcode)opcode) {
         /***
          * Integer instructions
          ***/
+
+        // TODO Standardize binary operations?
         case CF_OPCODE_ADD     : {
             uint32_t lhs, rhs;
 
@@ -335,6 +339,33 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
             break;
         }
 
+        case CF_OPCODE_CALL: {
+            uint32_t point;
+            READ(point);
+
+            if (CF_STACK_OK != cfStackPush(&callStack, &instructionCounter))
+                PANIC(.reason = CF_PANIC_REASON_INTERNAL_ERROR);
+            instructionCounter = instructionCounterBegin + point;
+            break;
+        }
+
+        case CF_OPCODE_RET: {
+            uint8_t *newInstructionCounter = NULL;
+            CfStackStatus status = cfStackPop(&callStack, &newInstructionCounter);
+
+            // panic if not ok
+            if (status != CF_STACK_OK) {
+                CfPanicReason reason = CF_PANIC_REASON_INTERNAL_ERROR;
+                if (status == CF_STACK_NO_VALUES)
+                    reason = CF_PANIC_REASON_CALL_STACK_UNDERFLOW;
+                PANIC(.reason = reason);
+            }
+
+            instructionCounter = newInstructionCounter;
+
+            break;
+        }
+
         case CF_OPCODE_CMP: {
             uint32_t lhs, rhs;
 
@@ -435,6 +466,7 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
 cfModuleExec__cleanup:
 
     cfStackDtor(stack);
+    cfStackDtor(callStack);
     return;
 
 cfModuleExec__handle_panic:
@@ -447,4 +479,8 @@ cfModuleExec__handle_panic:
 #undef POP
 #undef OFFSET
 #undef PANIC
+#undef READ
+#undef READ_REGISTER
 } // cfModuleExec
+
+// cf_vm.c

@@ -4,9 +4,9 @@
 
 #include "cf_string.h"
 
-int cfPrintSlice( CfStr slice ) {
-    return printf("%*s", (int)(slice.end - slice.begin), slice.begin);
-} // cfPrintSlice
+int cfWriteStr( FILE *file, CfStr slice ) {
+    return fprintf(file, "%*s", (int)(slice.end - slice.begin), slice.begin);
+} // cfWriteStr
 
 bool cfStrStartsWith( CfStr slice, const char *start ) {
     if (slice.begin >= slice.end)

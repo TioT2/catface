@@ -131,7 +131,8 @@ CfDisassemblyStatus cfDisassemble( const CfModule *module, char **dest, CfDisass
         case CF_OPCODE_JGE:
         case CF_OPCODE_JE:
         case CF_OPCODE_JNE:
-        case CF_OPCODE_JMP: {
+        case CF_OPCODE_JMP:
+        case CF_OPCODE_CALL: {
             if (bytecodeEnd - bytecode < 4) {
                 cfDarrDtor(outStack);
                 return CF_DISASSEMBLY_STATUS_UNEXPECTED_CODE_END;
@@ -149,9 +150,15 @@ CfDisassemblyStatus cfDisassemble( const CfModule *module, char **dest, CfDisass
             case CF_OPCODE_JE  : name = "je  "; break;
             case CF_OPCODE_JNE : name = "jne "; break;
             case CF_OPCODE_JMP : name = "jmp "; break;
+            case CF_OPCODE_CALL: name = "call"; break;
             }
 
             snprintf(line, sizeof(line), "%s 0x%08X", name, r32);
+            break;
+        }
+
+        case CF_OPCODE_RET: {
+            strcpy(line, "ret");
             break;
         }
 
@@ -240,4 +247,4 @@ CfDisassemblyStatus cfDisassemble( const CfModule *module, char **dest, CfDisass
     return CF_DISASSEMBLY_STATUS_OK;
 } // cfDisassemble
 
-// cf_disassemble.cpp
+// cf_disassemble.c

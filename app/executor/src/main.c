@@ -58,6 +58,10 @@ void handlePanic( void *context, const CfPanicInfo *panicInfo ) {
         printf("unknown opcode (%04X).", (int)panicInfo->unknownOpcode.opcode);
         break;
     }
+    case CF_PANIC_REASON_CALL_STACK_UNDERFLOW     : {
+        printf("call stack underflow.");
+        break;
+    }
     case CF_PANIC_REASON_UNREACHABLE         : {
         printf("unreachable executed.");
         break;
@@ -91,7 +95,7 @@ void handlePanic( void *context, const CfPanicInfo *panicInfo ) {
 
 int main( const int _argc, const char **_argv ) {
     // const int argc = 2;
-    // const char *argv[] = { "qq", "examples/sqr.cfmod" };
+    // const char *argv[] = { "qq", "examples/sqrt_repl.cfmod" };
     const int argc = _argc;
     const char **argv = _argv;
 

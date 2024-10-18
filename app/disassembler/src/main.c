@@ -50,11 +50,15 @@ void printHelp( void ) {
         "\n"
         "Options:\n"
         "    -h              Display this message\n"
-        "    -o <filename>   Write output to <filename>\n"
     );
 } // printHelp
 
-int main( const int argc, const char **argv ) {
+int main( const int _argc, const char **_argv ) {
+    // const int argc = 2;
+    // const char *argv[] = { "qq", "examples/sqrt_repl.cfmod" };
+    const int argc = _argc;
+    const char **argv = _argv;
+
     // quite strange solution, but it's ok because last argument is treated as input file name.
     if (argc < 2 || 0 == strcmp(argv[1], "-h")) {
         printHelp();

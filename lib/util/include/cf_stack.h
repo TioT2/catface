@@ -13,11 +13,7 @@ extern "C" {
 #endif
 
 /// @brief stack handle representation typedef
-typedef size_t CfStack;
-
-/// @brief stack null reference.
-/// @note using macro is REQUIRED because C linker don't likes constants defined in header files
-#define CF_STACK_NULL 0
+typedef struct __CfStackImpl * CfStack;
 
 typedef enum __CfPopStatus {
     CF_STACK_OK,             ///< succeeded

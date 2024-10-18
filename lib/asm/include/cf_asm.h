@@ -31,17 +31,20 @@ typedef enum __CfAssemblyStatus {
     CF_ASSEMBLY_STATUS_UNKNOWN_LABEL,       ///< unknown label
     CF_ASSEMBLY_STATUS_UNKNOWN_REGISTER,    ///< unknown register
     CF_ASSEMBLY_STATUS_DUPLICATE_LABEL,     ///< duplicated label declaration
-    CF_ASSEMBLY_STATUS_UNEVEN_JUMP,         ///< uneven jump
 } CfAssemblyStatus;
 
 /// @brief detailed info about assembling process
 typedef union __CfAssemblyDetails {
-    CfStr unknownInstruction;
     CfStr unknownRegister;
 
     struct {
-        CfStr  label;            ///< unknown label name
-        size_t referencedAtLine; ///< line reference of this label occured
+        CfStr  instruction; ///< the instruction (whole line)
+        size_t line;        ///< line the instruction occured
+    } unknownInstruction;
+
+    struct {
+        CfStr  label; ///< unknown label name
+        size_t line;  ///< line reference of this label occured
     } unknownLabel;
 
     struct {
@@ -49,11 +52,6 @@ typedef union __CfAssemblyDetails {
         size_t firstDeclaration;  ///< line there duplicated label was initially declared
         size_t secondDeclaration; ///< line there duplicated label was secondary declared
     } duplicateLabel;
-
-    struct {
-        size_t line;      ///< line error occured
-        uint64_t address; ///< jumping address
-    } unevenJump;
 } CfAssemblyDetails;
 
 /**

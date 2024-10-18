@@ -257,7 +257,7 @@ static CfAssemblyStatus cfAsmRepairFixups(
         if (!found) {
             if (details != NULL) {
                 details->unknownLabel.label = label;
-                details->unknownLabel.referencedAtLine = curr->line;
+                details->unknownLabel.line = curr->line;
             }
             return CF_ASSEMBLY_STATUS_UNKNOWN_LABEL;
         }
@@ -309,8 +309,11 @@ CfAssemblyStatus cfAssemble( CfStr text, CfModule *dst, CfAssemblyDetails *detai
             continue;
 
         if (token.type != CF_ASM_TOKEN_TYPE_IDENT) {
-            if (details != NULL)
-                details->unknownInstruction = line;
+            if (details != NULL) {
+
+                details->unknownInstruction.instruction = line;
+                details->unknownInstruction.line = lineIndex;
+            }
             resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION;
             goto cfAssemble__end;
         }
@@ -352,27 +355,33 @@ CfAssemblyStatus cfAssemble( CfStr text, CfModule *dst, CfAssemblyDetails *detai
             dataBuffer[0] = CF_OPCODE_ICMP;
         } else if (cfStrStartsWith(token.ident, "fcmp")) {
             dataBuffer[0] = CF_OPCODE_FCMP;
+        } else if (cfStrStartsWith(token.ident, "ret")) {
+            dataBuffer[0] = CF_OPCODE_RET;
         } else if (false
-            || cfStrIsSame(token.ident, CF_STR("jmp"))
-            || cfStrIsSame(token.ident, CF_STR("jle"))
-            || cfStrIsSame(token.ident, CF_STR("jl" ))
-            || cfStrIsSame(token.ident, CF_STR("jge"))
-            || cfStrIsSame(token.ident, CF_STR("jg" ))
-            || cfStrIsSame(token.ident, CF_STR("jne"))
-            || cfStrIsSame(token.ident, CF_STR("je" ))
+            || cfStrIsSame(token.ident, CF_STR("jmp" ))
+            || cfStrIsSame(token.ident, CF_STR("jle" ))
+            || cfStrIsSame(token.ident, CF_STR("jl"  ))
+            || cfStrIsSame(token.ident, CF_STR("jge" ))
+            || cfStrIsSame(token.ident, CF_STR("jg"  ))
+            || cfStrIsSame(token.ident, CF_STR("jne" ))
+            || cfStrIsSame(token.ident, CF_STR("je"  ))
+            || cfStrIsSame(token.ident, CF_STR("call"))
         ) {
-                 if (cfStrIsSame(token.ident, CF_STR("jmp"))) dataBuffer[0] = CF_OPCODE_JMP;
-            else if (cfStrIsSame(token.ident, CF_STR("jle"))) dataBuffer[0] = CF_OPCODE_JLE;
-            else if (cfStrIsSame(token.ident, CF_STR("jl" ))) dataBuffer[0] = CF_OPCODE_JL;
-            else if (cfStrIsSame(token.ident, CF_STR("jge"))) dataBuffer[0] = CF_OPCODE_JGE;
-            else if (cfStrIsSame(token.ident, CF_STR("jg" ))) dataBuffer[0] = CF_OPCODE_JG;
-            else if (cfStrIsSame(token.ident, CF_STR("jne"))) dataBuffer[0] = CF_OPCODE_JNE;
-            else if (cfStrIsSame(token.ident, CF_STR("je" ))) dataBuffer[0] = CF_OPCODE_JE;
+                 if (cfStrIsSame(token.ident, CF_STR("jmp" ))) dataBuffer[0] = CF_OPCODE_JMP;
+            else if (cfStrIsSame(token.ident, CF_STR("jle" ))) dataBuffer[0] = CF_OPCODE_JLE;
+            else if (cfStrIsSame(token.ident, CF_STR("jl"  ))) dataBuffer[0] = CF_OPCODE_JL;
+            else if (cfStrIsSame(token.ident, CF_STR("jge" ))) dataBuffer[0] = CF_OPCODE_JGE;
+            else if (cfStrIsSame(token.ident, CF_STR("jg"  ))) dataBuffer[0] = CF_OPCODE_JG;
+            else if (cfStrIsSame(token.ident, CF_STR("jne" ))) dataBuffer[0] = CF_OPCODE_JNE;
+            else if (cfStrIsSame(token.ident, CF_STR("je"  ))) dataBuffer[0] = CF_OPCODE_JE;
+            else if (cfStrIsSame(token.ident, CF_STR("call"))) dataBuffer[0] = CF_OPCODE_CALL;
 
             // read label
             if (!cfAsmNextToken(&tokenSlice, &token) || (token.type != CF_ASM_TOKEN_TYPE_IDENT && token.type != CF_ASM_TOKEN_TYPE_INTEGER)) {
-                if (details != NULL)
-                    details->unknownInstruction = line;
+                if (details != NULL) {
+                    details->unknownInstruction.instruction = line;
+                    details->unknownInstruction.line = lineIndex;
+                }
                 resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION;
                 goto cfAssemble__end;
             }
@@ -403,8 +412,10 @@ CfAssemblyStatus cfAssemble( CfStr text, CfModule *dst, CfAssemblyDetails *detai
                     && token.type != CF_ASM_TOKEN_TYPE_IDENT
                 )
             ) {
-                if (details != NULL)
-                    details->unknownInstruction = line;
+                if (details != NULL) {
+                    details->unknownInstruction.instruction = line;
+                    details->unknownInstruction.line        = lineIndex;
+                }
                 resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION;
                 goto cfAssemble__end;
             }
@@ -438,8 +449,11 @@ CfAssemblyStatus cfAssemble( CfStr text, CfModule *dst, CfAssemblyDetails *detai
         } else if (cfStrStartsWith(token.ident, "pop")) {
             if (cfAsmNextToken(&tokenSlice, &token)) {
                 if (token.type != CF_ASM_TOKEN_TYPE_IDENT) {
-                    if (details != NULL)
-                        details->unknownInstruction = line;
+                    if (details != NULL) {
+                        details->unknownInstruction.instruction = line;
+                        details->unknownInstruction.line = lineIndex;
+
+                    }
                     resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION;
                     goto cfAssemble__end;
                 }
@@ -469,8 +483,11 @@ CfAssemblyStatus cfAssemble( CfStr text, CfModule *dst, CfAssemblyDetails *detai
                 !cfAsmNextToken(&tokenSlice, &token) ||
                 token.type != CF_ASM_TOKEN_TYPE_INTEGER
             ) {
-                if (details != NULL)
-                    details->unknownInstruction = line;
+                if (details != NULL) {
+                    details->unknownInstruction.instruction = line;
+                    details->unknownInstruction.line = lineIndex;
+
+                }
                 resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION;
                 goto cfAssemble__end;
             }
@@ -513,7 +530,8 @@ CfAssemblyStatus cfAssemble( CfStr text, CfModule *dst, CfAssemblyDetails *detai
                 dataElementCount = 0;
             } else {
                 if (details != NULL) {
-                    details->unknownInstruction = line;
+                    details->unknownInstruction.instruction = line;
+                    details->unknownInstruction.line = lineIndex;
                 }
 
                 resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION;
@@ -566,4 +584,4 @@ cfAssemble__end:
     return resultStatus;
 } // cfAssemble
 
-// cf_asm.cpp
+// cf_assemble.c

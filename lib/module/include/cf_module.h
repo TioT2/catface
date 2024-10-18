@@ -112,6 +112,10 @@ typedef enum __CfOpcode {
     CF_OPCODE_JG,   ///< jump if comparison flags correspond to >  (Jump if Greater)
     CF_OPCODE_JE,   ///< jump if comparison flags correspond to == (Jump if Equal)
     CF_OPCODE_JNE,  ///< jump if comparison flags correspond to != (Jump if Not Equal)
+
+    // call/ret instructions
+    CF_OPCODE_CALL, ///< calling instruction
+    CF_OPCODE_RET,  ///< returning instruction
 } CfOpcode;
 
 /// @brief CF compiled module represetnation structure

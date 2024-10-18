@@ -60,8 +60,8 @@ int main( const int _argc, const char **_argv ) {
     // const char *argv[] = {
     //     "qq",
     //     "-o",
-    //     "examples/sqr.cfmod",
-    //     "examples/sqr.cfasm",
+    //     "examples/sqrt_repl.cfmod",
+    //     "examples/sqrt_repl.cfasm",
     // };
     const int argc = _argc;
     const char **argv = _argv;

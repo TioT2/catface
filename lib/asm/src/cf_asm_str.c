@@ -42,9 +42,17 @@ void cfAssemblyDetailsDump(
 
     switch (status) {
     case CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION: {
-        fprintf(out, "unknown insturction: %.*s",
-            (int)(details->unknownInstruction.end - details->unknownInstruction.begin),
-            details->unknownInstruction.begin
+        fprintf(out, "unknown instruction (at %zu): ", details->unknownInstruction.line);
+        cfWriteStr(out, details->unknownInstruction.instruction);
+        break;
+    }
+
+    case CF_ASSEMBLY_STATUS_DUPLICATE_LABEL: {
+        fprintf(out, "duplicate label \"");
+        cfWriteStr(out, details->duplicateLabel.label);
+        fprintf(out, "\" at %zu (initially declared at %zu)",
+            details->duplicateLabel.firstDeclaration,
+            details->duplicateLabel.secondDeclaration
         );
         break;
     }
@@ -72,4 +80,4 @@ void cfDisassemblyDetailsDump(
     }
 } // cfDisassemblyDetailsDump
 
-// cf_asm_str.h
+// cf_asm_str.c
