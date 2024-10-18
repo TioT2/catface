@@ -8,7 +8,7 @@ int cfPrintSlice( CfStr slice ) {
     return printf("%*s", (int)(slice.end - slice.begin), slice.begin);
 } // cfPrintSlice
 
-bool cfSliceStartsWith( CfStr slice, const char *start ) {
+bool cfStrStartsWith( CfStr slice, const char *start ) {
     if (slice.begin >= slice.end)
         return *start == '\0';
 
@@ -23,9 +23,9 @@ bool cfSliceStartsWith( CfStr slice, const char *start ) {
         if (slice.begin >= slice.end || startChar == '\0')
             return true;
     }
-} // cfSliceStartsWith
+} // cfStrStartsWith
 
-bool cfStrStartsWith( const char *string, const char *start ) {
+bool cfRawStrStartsWith( const char *string, const char *start ) {
     assert(string != NULL);
     assert(start != NULL);
 

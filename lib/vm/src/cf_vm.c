@@ -69,7 +69,7 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
 
     const uint8_t *instructionCounter = instructionCounterBegin;
 
-    uint32_t registers[CF_REGISTER_COUNT] = {0};
+    CfRegisters registers;
 
     CfStack stack = CF_STACK_NULL;
     CfPanicInfo panicInfo;
@@ -263,7 +263,7 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
         case CF_OPCODE_PUSH_R  : {
             uint8_t reg;
             READ_REGISTER(reg);
-            PUSH(registers[reg]);
+            PUSH(registers.indexed[reg]);
             break;
         }
 
@@ -273,21 +273,98 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
             READ_REGISTER(reg);
             POP(dst);
 
-            // prevent flag and zero register writing
+            // prevent FL and CZ register writing
             if (reg >= 2)
-                registers[reg] = dst;
+                registers.indexed[reg] = dst;
+            break;
+        }
+
+        case CF_OPCODE_JL : {
+            uint32_t point;
+            READ(point);
+            if (registers.fl.cmpIsLt)
+                instructionCounter = instructionCounterBegin + point;
+            break;
+        }
+
+        case CF_OPCODE_JLE: {
+            uint32_t point;
+            READ(point);
+            if (registers.fl.cmpIsLt || registers.fl.cmpIsEq)
+                instructionCounter = instructionCounterBegin + point;
+            break;
+        }
+
+        case CF_OPCODE_JG: {
+            uint32_t point;
+            READ(point);
+            if (!registers.fl.cmpIsLt && !registers.fl.cmpIsEq)
+                instructionCounter = instructionCounterBegin + point;
+            break;
+        }
+
+        case CF_OPCODE_JGE: {
+            uint32_t point;
+            READ(point);
+            if (!registers.fl.cmpIsLt)
+                instructionCounter = instructionCounterBegin + point;
+            break;
+        }
+
+        case CF_OPCODE_JE: {
+            uint32_t point;
+            READ(point);
+            if (registers.fl.cmpIsEq)
+                instructionCounter = instructionCounterBegin + point;
+            break;
+        }
+
+        case CF_OPCODE_JNE: {
+            uint32_t point;
+            READ(point);
+
+            if (!registers.fl.cmpIsEq)
+                instructionCounter = instructionCounterBegin + point;
             break;
         }
 
         case CF_OPCODE_JMP: {
-            instructionCounter--;
-            CfInstruction instruction;
             uint32_t point;
-
-            READ(instruction);
             READ(point);
-
             instructionCounter = instructionCounterBegin + point;
+            break;
+        }
+
+        case CF_OPCODE_CMP: {
+            uint32_t lhs, rhs;
+
+            POP(rhs);
+            POP(lhs);
+
+            registers.fl.cmpIsEq = (lhs == rhs);
+            registers.fl.cmpIsLt = (lhs < rhs);
+            break;
+        }
+
+        case CF_OPCODE_ICMP: {
+            int32_t lhs, rhs;
+
+            POP(rhs);
+            POP(lhs);
+
+            registers.fl.cmpIsEq = (lhs == rhs);
+            registers.fl.cmpIsLt = (lhs < rhs);
+            break;
+        }
+
+        case CF_OPCODE_FCMP: {
+            float lhs, rhs;
+
+            POP(rhs);
+            POP(lhs);
+
+            registers.fl.cmpIsEq = (lhs == rhs);
+            registers.fl.cmpIsLt = (lhs < rhs);
             break;
         }
 

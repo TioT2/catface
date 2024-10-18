@@ -12,7 +12,6 @@ const char * cfAssemblyStatusStr( const CfAssemblyStatus status ) {
     case CF_ASSEMBLY_STATUS_INTERNAL_ERROR      : return "internal error";
     case CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION : return "unknown instruction";
     case CF_ASSEMBLY_STATUS_UNEXPECTED_TEXT_END : return "unexpected text end";
-    case CF_ASSEMBLY_STATUS_UNKNOWN_DECLARATION : return "unknown declaration";
 
 
     default                                     : return "<invalid>";
@@ -46,14 +45,6 @@ void cfAssemblyDetailsDump(
         fprintf(out, "unknown insturction: %.*s",
             (int)(details->unknownInstruction.end - details->unknownInstruction.begin),
             details->unknownInstruction.begin
-        );
-        break;
-    }
-
-    case CF_ASSEMBLY_STATUS_UNKNOWN_DECLARATION: {
-        fprintf(out, "unknown declaration: %.*s",
-            (int)(details->unknownDeclaration.end - details->unknownDeclaration.begin),
-            details->unknownDeclaration.begin
         );
         break;
     }

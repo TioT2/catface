@@ -39,7 +39,7 @@ int cfPrintSlice( CfStr slice );
  * 
  * @return true if slice starts from string, false otherwise.
  */
-bool cfSliceStartsWith( CfStr slice, const char *start );
+bool cfStrStartsWith( CfStr slice, const char *start );
 
 /**
  * @brief check if string if start of another one
@@ -49,7 +49,7 @@ bool cfSliceStartsWith( CfStr slice, const char *start );
  * 
  * @return true if string starts from start, false otherwise
  */
-bool cfStrStartsWith( const char *string, const char *start );
+bool cfRawStrStartsWith( const char *string, const char *start );
 
 
 /**

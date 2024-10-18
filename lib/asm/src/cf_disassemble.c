@@ -125,16 +125,61 @@ CfDisassemblyStatus cfDisassemble( const CfModule *module, char **dest, CfDisass
             break;
         }
 
+        case CF_OPCODE_JL:
+        case CF_OPCODE_JLE:
+        case CF_OPCODE_JG:
+        case CF_OPCODE_JGE:
+        case CF_OPCODE_JE:
+        case CF_OPCODE_JNE:
+        case CF_OPCODE_JMP: {
+            if (bytecodeEnd - bytecode < 4) {
+                cfDarrDtor(outStack);
+                return CF_DISASSEMBLY_STATUS_UNEXPECTED_CODE_END;
+            }
+
+            uint32_t r32 = *(const uint32_t *)bytecode;
+            bytecode += 4;
+
+            const char *name = "??? ";
+            switch (opcode) {
+            case CF_OPCODE_JL  : name = "jl  "; break;
+            case CF_OPCODE_JLE : name = "jle "; break;
+            case CF_OPCODE_JG  : name = "jg  "; break;
+            case CF_OPCODE_JGE : name = "jge "; break;
+            case CF_OPCODE_JE  : name = "je  "; break;
+            case CF_OPCODE_JNE : name = "jne "; break;
+            case CF_OPCODE_JMP : name = "jmp "; break;
+            }
+
+            snprintf(line, sizeof(line), "%s 0x%08X", name, r32);
+            break;
+        }
+
+        case CF_OPCODE_CMP: {
+            strcpy(line, "cmp");
+            break;
+        }
+
+        case CF_OPCODE_ICMP: {
+            strcpy(line, "icmp");
+            break;
+        }
+
+        case CF_OPCODE_FCMP: {
+            strcpy(line, "fcmp");
+            break;
+        }
+
         case CF_OPCODE_PUSH: {
             // then read constant
             if (bytecodeEnd - bytecode < 4) {
                 cfDarrDtor(outStack);
                 return CF_DISASSEMBLY_STATUS_UNEXPECTED_CODE_END;
             }
-            uint64_t r32 = *(const uint32_t *)bytecode;
+            uint32_t r32 = *(const uint32_t *)bytecode;
             bytecode += 4;
 
-            snprintf(line, sizeof(line), "push 0x%08lX", r32);
+            snprintf(line, sizeof(line), "push 0x%08X", r32);
             break;
         }
 

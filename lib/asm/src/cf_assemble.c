@@ -316,37 +316,59 @@ CfAssemblyStatus cfAssemble( CfStr text, CfModule *dst, CfAssemblyDetails *detai
         }
 
         // then try to parse opcode
-               if (cfSliceStartsWith(token.ident, "add")) {
+               if (cfStrStartsWith(token.ident, "add")) {
             dataBuffer[0] = CF_OPCODE_ADD;
-        } else if (cfSliceStartsWith(token.ident, "sub")) {
+        } else if (cfStrStartsWith(token.ident, "sub")) {
             dataBuffer[0] = CF_OPCODE_SUB;
-        } else if (cfSliceStartsWith(token.ident, "shl")) {
+        } else if (cfStrStartsWith(token.ident, "shl")) {
             dataBuffer[0] = CF_OPCODE_SHL;
-        } else if (cfSliceStartsWith(token.ident, "imul")) {
+        } else if (cfStrStartsWith(token.ident, "imul")) {
             dataBuffer[0] = CF_OPCODE_IMUL;
-        } else if (cfSliceStartsWith(token.ident, "mul")) {
+        } else if (cfStrStartsWith(token.ident, "mul")) {
             dataBuffer[0] = CF_OPCODE_MUL;
-        } else if (cfSliceStartsWith(token.ident, "idiv")) {
+        } else if (cfStrStartsWith(token.ident, "idiv")) {
             dataBuffer[0] = CF_OPCODE_IDIV;
-        } else if (cfSliceStartsWith(token.ident, "div")) {
+        } else if (cfStrStartsWith(token.ident, "div")) {
             dataBuffer[0] = CF_OPCODE_DIV;
-        } else if (cfSliceStartsWith(token.ident, "shr")) {
+        } else if (cfStrStartsWith(token.ident, "shr")) {
             dataBuffer[0] = CF_OPCODE_SHR;
-        } else if (cfSliceStartsWith(token.ident, "sar")) {
+        } else if (cfStrStartsWith(token.ident, "sar")) {
             dataBuffer[0] = CF_OPCODE_SAR;
-        } else if (cfSliceStartsWith(token.ident, "ftoi")) {
+        } else if (cfStrStartsWith(token.ident, "ftoi")) {
             dataBuffer[0] = CF_OPCODE_FTOI;
-        } else if (cfSliceStartsWith(token.ident, "fadd")) {
+        } else if (cfStrStartsWith(token.ident, "fadd")) {
             dataBuffer[0] = CF_OPCODE_FADD;
-        } else if (cfSliceStartsWith(token.ident, "fsub")) {
+        } else if (cfStrStartsWith(token.ident, "fsub")) {
             dataBuffer[0] = CF_OPCODE_FSUB;
-        } else if (cfSliceStartsWith(token.ident, "fmul")) {
+        } else if (cfStrStartsWith(token.ident, "fmul")) {
             dataBuffer[0] = CF_OPCODE_FMUL;
-        } else if (cfSliceStartsWith(token.ident, "fdiv")) {
+        } else if (cfStrStartsWith(token.ident, "fdiv")) {
             dataBuffer[0] = CF_OPCODE_FDIV;
-        } else if (cfSliceStartsWith(token.ident, "itof")) {
+        } else if (cfStrStartsWith(token.ident, "itof")) {
             dataBuffer[0] = CF_OPCODE_ITOF;
-        } else if (cfSliceStartsWith(token.ident, "jmp")) {
+        } else if (cfStrStartsWith(token.ident, "cmp")) {
+            dataBuffer[0] = CF_OPCODE_CMP;
+        } else if (cfStrStartsWith(token.ident, "icmp")) {
+            dataBuffer[0] = CF_OPCODE_ICMP;
+        } else if (cfStrStartsWith(token.ident, "fcmp")) {
+            dataBuffer[0] = CF_OPCODE_FCMP;
+        } else if (false
+            || cfStrIsSame(token.ident, CF_STR("jmp"))
+            || cfStrIsSame(token.ident, CF_STR("jle"))
+            || cfStrIsSame(token.ident, CF_STR("jl" ))
+            || cfStrIsSame(token.ident, CF_STR("jge"))
+            || cfStrIsSame(token.ident, CF_STR("jg" ))
+            || cfStrIsSame(token.ident, CF_STR("jne"))
+            || cfStrIsSame(token.ident, CF_STR("je" ))
+        ) {
+                 if (cfStrIsSame(token.ident, CF_STR("jmp"))) dataBuffer[0] = CF_OPCODE_JMP;
+            else if (cfStrIsSame(token.ident, CF_STR("jle"))) dataBuffer[0] = CF_OPCODE_JLE;
+            else if (cfStrIsSame(token.ident, CF_STR("jl" ))) dataBuffer[0] = CF_OPCODE_JL;
+            else if (cfStrIsSame(token.ident, CF_STR("jge"))) dataBuffer[0] = CF_OPCODE_JGE;
+            else if (cfStrIsSame(token.ident, CF_STR("jg" ))) dataBuffer[0] = CF_OPCODE_JG;
+            else if (cfStrIsSame(token.ident, CF_STR("jne"))) dataBuffer[0] = CF_OPCODE_JNE;
+            else if (cfStrIsSame(token.ident, CF_STR("je" ))) dataBuffer[0] = CF_OPCODE_JE;
+
             // read label
             if (!cfAsmNextToken(&tokenSlice, &token) || (token.type != CF_ASM_TOKEN_TYPE_IDENT && token.type != CF_ASM_TOKEN_TYPE_INTEGER)) {
                 if (details != NULL)
@@ -355,35 +377,24 @@ CfAssemblyStatus cfAssemble( CfStr text, CfModule *dst, CfAssemblyDetails *detai
                 goto cfAssemble__end;
             }
 
-            // the simplest case
-            CfInstructionJmp instruction = {
-                .opcode = CF_OPCODE_JMP,
-                .isRelative = 0,
-                .isCall = 0,
-                .ignoreCmp = 1,
-                .cmpMask = 7,
-                .immediate = 0,
-            };
-
             if (token.type == CF_ASM_TOKEN_TYPE_INTEGER) {
-                *(uint32_t *)(dataBuffer + 2) = token.integer;
+                *(uint32_t *)(dataBuffer + 1) = token.integer;
             } else {
                 CfAsmFixup fixup = {
                     .label = token.ident,
                     .line = lineIndex,
-                    .offset = cfDarrSize(code) + 2,
+                    .offset = cfDarrSize(code) + 1,
                 };
 
                 if (CF_DARR_OK != cfDarrPush(&fixups, &fixup)) {
                     resultStatus = CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
                     goto cfAssemble__end;
                 }
-                *(uint32_t *)(dataBuffer + 2) = ~0U; // for kind of safety
+                *(uint32_t *)(dataBuffer + 1) = ~0U; // for (kind of) safety
             }
 
-            ((CfInstruction *)dataBuffer)->jmp = instruction;
-            dataElementCount = 6;
-        } else if (cfSliceStartsWith(token.ident, "push")) {
+            dataElementCount = 5;
+        } else if (cfStrStartsWith(token.ident, "push")) {
             if (
                 !cfAsmNextToken(&tokenSlice, &token) ||
                 (true
@@ -424,7 +435,7 @@ CfAssemblyStatus cfAssemble( CfStr text, CfModule *dst, CfAssemblyDetails *detai
                 dataElementCount = 5;
             }
 
-        } else if (cfSliceStartsWith(token.ident, "pop")) {
+        } else if (cfStrStartsWith(token.ident, "pop")) {
             if (cfAsmNextToken(&tokenSlice, &token)) {
                 if (token.type != CF_ASM_TOKEN_TYPE_IDENT) {
                     if (details != NULL)
@@ -451,7 +462,7 @@ CfAssemblyStatus cfAssemble( CfStr text, CfModule *dst, CfAssemblyDetails *detai
             }
 
         } else
-        if (cfSliceStartsWith(token.ident, "syscall")) {
+        if (cfStrStartsWith(token.ident, "syscall")) {
             dataBuffer[0] = CF_OPCODE_SYSCALL;
 
             if (
@@ -466,9 +477,9 @@ CfAssemblyStatus cfAssemble( CfStr text, CfModule *dst, CfAssemblyDetails *detai
 
             *(uint32_t *)(dataBuffer + 1) = token.integer;
             dataElementCount = 5;
-        } else if (cfSliceStartsWith(token.ident, "unreachable")) {
+        } else if (cfStrStartsWith(token.ident, "unreachable")) {
             dataBuffer[0] = CF_OPCODE_UNREACHABLE;
-        } else if (cfSliceStartsWith(token.ident, "halt")) {
+        } else if (cfStrStartsWith(token.ident, "halt")) {
             dataBuffer[0] = CF_OPCODE_HALT;
         } else {
             // try to parse token

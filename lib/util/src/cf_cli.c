@@ -20,10 +20,10 @@ bool cfParseCommandLineOptions(
         const char *argument = NULL;
         bool longNameRequired;
 
-        if (cfStrStartsWith(argv[index], "--")) {
+        if (cfRawStrStartsWith(argv[index], "--")) {
             argument = argv[index] + 2;
             longNameRequired = true;
-        } else if (cfStrStartsWith(argv[index], "-")) {
+        } else if (cfRawStrStartsWith(argv[index], "-")) {
             argument = argv[index] + 1;
             longNameRequired = false;
         } else {

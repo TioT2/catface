@@ -1,4 +1,5 @@
-; Square root REPL printer program
+; Square root kind-of-REPL printer program
+; Note: print '<= 0.0' value to quit
 
 ; set label 'start'
 start:
@@ -6,6 +7,11 @@ start:
 ; get value from user
 syscall 0
 pop  ax
+
+push ax
+push 0.0
+fcmp
+jle  end
 
 ; square it
 push ax
@@ -16,3 +22,5 @@ syscall 1
 
 ; restart process
 jmp start
+
+end:

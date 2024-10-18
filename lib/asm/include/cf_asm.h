@@ -28,7 +28,6 @@ typedef enum __CfAssemblyStatus {
     CF_ASSEMBLY_STATUS_INTERNAL_ERROR,      ///< internal error (e.g. error that shouldn't occur in normal situation, such as memory allocation failure etc.)
     CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION, ///< unknown instruction occured
     CF_ASSEMBLY_STATUS_UNEXPECTED_TEXT_END, ///< unexpected text end (missing something)
-    CF_ASSEMBLY_STATUS_UNKNOWN_DECLARATION, ///< unknown declaration
     CF_ASSEMBLY_STATUS_UNKNOWN_LABEL,       ///< unknown label
     CF_ASSEMBLY_STATUS_UNKNOWN_REGISTER,    ///< unknown register
     CF_ASSEMBLY_STATUS_DUPLICATE_LABEL,     ///< duplicated label declaration
@@ -38,7 +37,6 @@ typedef enum __CfAssemblyStatus {
 /// @brief detailed info about assembling process
 typedef union __CfAssemblyDetails {
     CfStr unknownInstruction;
-    CfStr unknownDeclaration;
     CfStr unknownRegister;
 
     struct {
