@@ -28,6 +28,35 @@ static const char * cfAsmGetRegisterName( uint8_t reg ) {
     return "";
 } // cfAsmGetRegisterName
 
+/**
+ * @brief push/pop info formatting function
+ * 
+ * @param[out] dst    formatting destination
+ * @param[in]  dstLen destinatino buffer length
+ * @param[in]  info   pushPop info
+ * @param[in]  imm    immediate value (any value acceptable if info immediate reading flag is not set)
+ */
+static void cfAsmFormatPushPopInfo(
+    char                *const dst,
+    const size_t               dstLen,
+    const CfPushPopInfo        info,
+    const uint32_t             imm
+) {
+    if (info.isMemoryAccess) {
+        if (info.doReadImmediate) {
+            snprintf(dst, dstLen, "[%s + 0x%08X]", cfAsmGetRegisterName(info.registerIndex), imm);
+            return;
+        }
+        snprintf(dst, dstLen, "[%s]", cfAsmGetRegisterName(info.registerIndex));
+        return;
+    }
+    if (info.doReadImmediate) {
+        snprintf(dst, dstLen, "%s + 0x%08X", cfAsmGetRegisterName(info.registerIndex), imm);
+        return;
+    }
+    snprintf(dst, dstLen, "%s", cfAsmGetRegisterName(info.registerIndex));
+} // cfAsmFormatPushPopInfo
+
 CfDisassemblyStatus cfDisassemble( const CfModule *module, char **dest, CfDisassemblyDetails *details ) {
     assert(module != NULL);
     assert(dest != NULL);
@@ -153,7 +182,7 @@ CfDisassemblyStatus cfDisassemble( const CfModule *module, char **dest, CfDisass
             case CF_OPCODE_CALL: name = "call"; break;
             }
 
-            snprintf(line, sizeof(line), "%s 0x%08X", name, r32);
+            snprintf(line, lineLengthMax, "%s 0x%08X", name, r32);
             break;
         }
 
@@ -177,41 +206,35 @@ CfDisassemblyStatus cfDisassemble( const CfModule *module, char **dest, CfDisass
             break;
         }
 
+        case CF_OPCODE_POP:
         case CF_OPCODE_PUSH: {
-            // then read constant
-            if (bytecodeEnd - bytecode < 4) {
-                cfDarrDtor(outStack);
-                return CF_DISASSEMBLY_STATUS_UNEXPECTED_CODE_END;
-            }
-            uint32_t r32 = *(const uint32_t *)bytecode;
-            bytecode += 4;
-
-            snprintf(line, sizeof(line), "push 0x%08X", r32);
-            break;
-        }
-
-        case CF_OPCODE_POP: {
-            strcpy(line, "pop");
-            break;
-        }
-
-        case CF_OPCODE_PUSH_R: {
             if (bytecodeEnd - bytecode < 1) {
                 cfDarrDtor(outStack);
                 return CF_DISASSEMBLY_STATUS_UNEXPECTED_CODE_END;
             }
-            uint8_t reg = *bytecode++;
-            sprintf(line, "push %s", cfAsmGetRegisterName(reg));
-            break;
-        }
+            CfPushPopInfo info = *(const CfPushPopInfo *)bytecode;
+            bytecode += sizeof(CfPushPopInfo);
+            uint32_t imm = 0;
 
-        case CF_OPCODE_POP_R: {
-            if (bytecodeEnd - bytecode < 1) {
-                cfDarrDtor(outStack);
-                return CF_DISASSEMBLY_STATUS_UNEXPECTED_CODE_END;
+            if (info.doReadImmediate) {
+                // read immediate, actually
+                if (bytecodeEnd - bytecode < 4) {
+                    cfDarrDtor(outStack);
+                    return CF_DISASSEMBLY_STATUS_UNEXPECTED_CODE_END;
+                }
+                imm = *(const uint32_t *)bytecode;
+                bytecode += sizeof(uint32_t);
             }
-            uint8_t reg = *bytecode++;
-            sprintf(line, "pop  %s", cfAsmGetRegisterName(reg));
+
+            const char *name = opcode == CF_OPCODE_PUSH ? "push " : "pop  ";
+
+            strncpy(line, name, lineLengthMax);
+            cfAsmFormatPushPopInfo(
+                line + strlen(name),
+                lineLengthMax - strlen(name),
+                info,
+                imm
+            );
             break;
         }
 

@@ -1,9 +1,68 @@
-#include <cf_vm.h>
-#include <cf_stack.h>
-
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
+#include <setjmp.h>
+
+#include <cf_vm.h>
+#include <cf_stack.h>
+
+#if FALSE
+/// @brief VM context representation structure
+typedef struct __CfVm {
+    uint8_t *         memory;             ///< operative memory
+    size_t            memorySize;         ///< current memory size (1 MB, actually)
+
+    const CfModule  * module;             ///< executed module
+    const CfSandbox * sandbox;            ///< execution environment (sandbox, actually)
+
+    // registers
+    CfRegisters       registers;          ///< user visible register
+    const uint8_t   * instructionCounter; ///< next instruction to execute pointer
+
+    // stascks
+    CfStack           operandStack;       ///< function operand stack
+    CfStack           callStack;          ///< call stack (contains previous instructionCounter's)
+
+    /// panic-related fields
+    CfPanicInfo       panicInfo;          ///< info to give to user if panic occured
+    CfPanicReason     panicReason;        ///< panic reason
+    jmp_buf           panicJumpBuffer;    ///< to panic handler jump buffer
+} CfVm;
+
+/**
+ * @brief panic invocation function
+ * 
+ * @param[in,out] self VM to call panic in
+ */
+void cfVmPanic( CfVm *self ) {
+    longjmp(self->panicJumpBuffer, 1);
+} // cfVmPanic
+
+void cfModuleExec2( const CfModule *module, const CfSandbox *sandbox ) {
+    // perform minimal context setup
+    CfVm context = {
+        .module = module,
+        .sandbox = sandbox,
+    };
+
+    // setup jumpBuffer
+    // note: after jumpBuffer setup it's ok to do cleanup and call panic.
+    int jmp = setjmp(context.panicJumpBuffer);
+    if (jmp) {
+        if (sandbox->handlePanic != NULL)
+            sandbox->handlePanic(sandbox->userContextPtr, &context.panicInfo);
+        // then go to cleanup
+        goto cfModuleExec__cleanup;
+    }
+
+    // start initialization process
+
+cfModuleExec__cleanup:
+    free(context.memory);
+    cfStackDtor(context.callStack);
+    cfStackDtor(context.operandStack);
+} // cfModuleExec2
+#endif
 
 // TODO Split this fckng function into structure + set of little functions (?)
 
@@ -254,32 +313,37 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
         }
 
         case CF_OPCODE_PUSH    : {
-            uint32_t val;
-            READ(val);
-            PUSH(val);
+            // so-called TMP solution)))
+            PANIC(
+                .reason = CF_PANIC_REASON_INTERNAL_ERROR
+            );
+
+            CfPushPopInfo info;
+            READ(info);
+
+            /// TODO Finish push/pop instructions
+            if (info.doReadImmediate) {
+
+            } else {
+                
+            }
             break;
         }
+
         case CF_OPCODE_POP     : {
-            uint32_t dst;
-            POP(dst);
-            break;
-        }
-        case CF_OPCODE_PUSH_R  : {
-            uint8_t reg;
-            READ_REGISTER(reg);
-            PUSH(registers.indexed[reg]);
-            break;
-        }
+            PANIC(
+                .reason = CF_PANIC_REASON_INTERNAL_ERROR
+            );
 
-        case CF_OPCODE_POP_R   : {
-            uint8_t reg;
-            uint32_t dst;
-            READ_REGISTER(reg);
-            POP(dst);
+            // so-called TMP solution)))
+            assert(false);
 
-            // prevent FL and CZ register writing
-            if (reg >= 2)
-                registers.indexed[reg] = dst;
+            CfPushPopInfo info;
+            READ(info);
+
+            /// TODO Finish push/pop instructions
+            if (info.registerIndex >= 2)
+                POP(registers.indexed[info.registerIndex]);
             break;
         }
 

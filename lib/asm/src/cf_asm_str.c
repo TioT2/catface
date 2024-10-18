@@ -8,13 +8,16 @@
 
 const char * cfAssemblyStatusStr( const CfAssemblyStatus status ) {
     switch (status) {
-    case CF_ASSEMBLY_STATUS_OK                  : return "ok";
-    case CF_ASSEMBLY_STATUS_INTERNAL_ERROR      : return "internal error";
-    case CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION : return "unknown instruction";
-    case CF_ASSEMBLY_STATUS_UNEXPECTED_TEXT_END : return "unexpected text end";
+    case CF_ASSEMBLY_STATUS_OK                       : return "ok";
+    case CF_ASSEMBLY_STATUS_INTERNAL_ERROR           : return "internal error";
+    case CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION      : return "unknown instruction";
+    case CF_ASSEMBLY_STATUS_UNEXPECTED_TEXT_END      : return "unexpected text end";
+    case CF_ASSEMBLY_STATUS_UNKNOWN_LABEL            : return "unknown label";
+    case CF_ASSEMBLY_STATUS_UNKNOWN_REGISTER         : return "unknown register";
+    case CF_ASSEMBLY_STATUS_DUPLICATE_LABEL          : return "duplicate label";
+    case CF_ASSEMBLY_STATUS_INVALID_PUSHPOP_ARGUMENT : return "invalid push/pop argument";
 
-
-    default                                     : return "<invalid>";
+    default                                          : return "<invalid>";
     }
 } // cfAssemblyStatusStr
 

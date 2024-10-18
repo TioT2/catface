@@ -1,0 +1,17 @@
+; Push and Pop instruction assembling/disassembling test
+
+; test push instruction parsing
+push ax
+push 30
+push ax+30
+push [ax]
+push [30]
+push [ax+30]
+
+; test pop instruction parsing
+pop  ax
+pop  47
+pop  ax+30
+pop  [ax]
+pop  [30]
+pop  [ax+30]

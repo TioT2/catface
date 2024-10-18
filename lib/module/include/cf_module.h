@@ -13,7 +13,13 @@ extern "C" {
 #endif
 
 /// @brief count of registers used in vm
-#define CF_REGISTER_COUNT 8
+#define CF_REGISTER_COUNT ((size_t)8)
+
+/// @brief screen width
+#define CF_VIDEO_SCREEN_WIDTH  ((size_t)320)
+
+/// @brief screen height
+#define CF_VIDEO_SCREEN_HEIGHT ((size_t)200)
 
 /// @brief ordering representation enumeration
 /// @note exactly this bit flags are used in CMP and JIM instructions implementation
@@ -28,14 +34,28 @@ typedef struct __CfRegisterFlags {
     uint8_t cmpIsLt         : 1; ///< is less in last comparison
     uint8_t cmpIsEq         : 1; ///< is equal in last comparison
 
-    uint8_t videoMode       : 2; ///< buffer output mode (text/colored text/256-color palette/RGBX TrueColor)
+    uint8_t videoMode       : 3; ///< buffer output mode (text/colored text/256-color palette/RGBX TrueColor)
     uint8_t videoUpdateMode : 1; ///< manual (kind of synchronization)/immediate (rewrite in parallel thread)
 
-    uint8_t _placeholder0: 3;    // placeholder
+    uint8_t _placeholder0: 2;    // placeholder
     uint8_t _placeholder1: 8;    // placeholder
     uint8_t _placeholder2: 8;    // placeholder
     uint8_t _placeholder3: 8;    // placeholder
 } CfRegisterFlags;
+
+/// @brief video mode representation enumeration
+typedef enum __CfVideoMode {
+    CF_VIDEO_MODE_TEXT          = 0, ///< just black text
+    CF_VIDEO_MODE_COLORED_TEXT  = 1, ///< text with 16 colors
+    CF_VIDEO_MODE_COLOR_PALETTE = 2, ///< colored, with 256-color palette
+    CF_VIDEO_MODE_TRUE_COLOR    = 3, ///< RGBX mode (fourth coordinate ignored)
+} CfVideoMode;
+
+/// @brief video update mode representation enumeration
+typedef enum __CfVideoUpdateMode {
+    CF_VIDEO_UPDATE_MODE_MANUAL    = 0, ///< update image on screen after certain instruction call
+    CF_VIDEO_UPDATE_MODE_IMMEDIATE = 1, ///< update image on screen immediately
+} CfVideoUpdateMode;
 
 /// @brief register set representation structure
 typedef union __CfRegisters {
@@ -96,8 +116,6 @@ typedef enum __CfOpcode {
     // push-pop instructions
     CF_OPCODE_PUSH,   ///< 32-bit literal pushing opcode
     CF_OPCODE_POP,    ///< 32-bit value removing opcode
-    CF_OPCODE_PUSH_R, ///< push into stack from register
-    CF_OPCODE_POP_R,  ///< pop  from stack into register
 
     // comparison instruction family
     CF_OPCODE_CMP,  ///< unsigned integer comparison instruction
@@ -116,9 +134,29 @@ typedef enum __CfOpcode {
     // call/ret instructions
     CF_OPCODE_CALL, ///< calling instruction
     CF_OPCODE_RET,  ///< returning instruction
+
+    CF_OPCODE_SVM,  ///< Set Video Mode (update video mode flag bits from value from stack)
 } CfOpcode;
 
-/// @brief CF compiled module represetnation structure
+/// @brief colored character representation structure (used in coloredText video mode)
+typedef struct __CfColoredCharacter {
+    uint8_t character; ///< character itself
+    uint8_t color;     ///< character color
+} CfColoredCharacter;
+
+/// @brief video memory layout in different modes representation union
+typedef union __CfVideoMemory {
+    uint32_t           trueColor  [CF_VIDEO_SCREEN_WIDTH * CF_VIDEO_SCREEN_HEIGHT]; ///< trueColor pixels
+    uint8_t            text       [CF_VIDEO_SCREEN_WIDTH * CF_VIDEO_SCREEN_HEIGHT]; ///< text characters
+    CfColoredCharacter coloredText[CF_VIDEO_SCREEN_WIDTH * CF_VIDEO_SCREEN_HEIGHT]; ///< colored text characters
+
+    struct {
+        uint32_t palette[256];                                            ///< color palette itself
+        uint8_t  colors [CF_VIDEO_SCREEN_WIDTH * CF_VIDEO_SCREEN_HEIGHT]; ///< pixels that refers to certain colors in palette
+    } colorPalette;
+} CfVideoMemory;
+
+/// @brief bytecode module represetnation structure
 typedef struct __CfModule {
     void    *code;       ///< module bytecode
     size_t   codeLength; ///< module bytecode length
@@ -132,6 +170,13 @@ typedef enum __CfModuleReadStatus {
     CF_MODULE_READ_STATUS_INVALID_MODULE_MAGIC, ///< invalid module magic number
     CF_MODULE_READ_STATUS_CODE_INVALID_HASH,    ///< invalid module code hash
 } CfModuleReadStatus;
+
+/// @brief push and pop instruction additional data
+typedef struct __CfPushPopInfo {
+    uint8_t registerIndex   : 3; ///< index of register to get value from
+    uint8_t isMemoryAccess  : 1; ///< true if destination is placed in memory
+    uint8_t doReadImmediate : 1; ///< is this instruction followed by 4-byte immediate
+} CfPushPopInfo;
 
 /**
  * @brief module from file reading function

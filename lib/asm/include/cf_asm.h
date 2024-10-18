@@ -24,13 +24,14 @@ extern "C" {
 
 /// Assembling status
 typedef enum __CfAssemblyStatus {
-    CF_ASSEMBLY_STATUS_OK,                  ///< all's ok
-    CF_ASSEMBLY_STATUS_INTERNAL_ERROR,      ///< internal error (e.g. error that shouldn't occur in normal situation, such as memory allocation failure etc.)
-    CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION, ///< unknown instruction occured
-    CF_ASSEMBLY_STATUS_UNEXPECTED_TEXT_END, ///< unexpected text end (missing something)
-    CF_ASSEMBLY_STATUS_UNKNOWN_LABEL,       ///< unknown label
-    CF_ASSEMBLY_STATUS_UNKNOWN_REGISTER,    ///< unknown register
-    CF_ASSEMBLY_STATUS_DUPLICATE_LABEL,     ///< duplicated label declaration
+    CF_ASSEMBLY_STATUS_OK,                       ///< all's ok
+    CF_ASSEMBLY_STATUS_INTERNAL_ERROR,           ///< internal error (e.g. error that shouldn't occur in normal situation, such as memory allocation failure etc.)
+    CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION,      ///< unknown instruction occured
+    CF_ASSEMBLY_STATUS_UNEXPECTED_TEXT_END,      ///< unexpected text end (missing something)
+    CF_ASSEMBLY_STATUS_UNKNOWN_LABEL,            ///< unknown label
+    CF_ASSEMBLY_STATUS_UNKNOWN_REGISTER,         ///< unknown register
+    CF_ASSEMBLY_STATUS_DUPLICATE_LABEL,          ///< duplicated label declaration
+    CF_ASSEMBLY_STATUS_INVALID_PUSHPOP_ARGUMENT, ///< invalid argument of push/pop instructions
 } CfAssemblyStatus;
 
 /// @brief detailed info about assembling process
@@ -52,6 +53,11 @@ typedef union __CfAssemblyDetails {
         size_t firstDeclaration;  ///< line there duplicated label was initially declared
         size_t secondDeclaration; ///< line there duplicated label was secondary declared
     } duplicateLabel;
+
+    struct {
+        CfStr  argument; ///< argument text
+        size_t line;     ///< line
+    } invalidPushPopArgument;
 } CfAssemblyDetails;
 
 /**

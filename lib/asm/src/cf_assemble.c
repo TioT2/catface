@@ -59,10 +59,11 @@ static bool cfAsmIsIdentCharacter( const char ch ) {
 typedef enum __CfAsmTokenType {
     CF_ASM_TOKEN_TYPE_IDENT,         ///< ident
     CF_ASM_TOKEN_TYPE_INTEGER,       ///< number
-    CF_ASM_TOKEN_TYPE_COLON,         ///< colon
     CF_ASM_TOKEN_TYPE_FLOATING,      ///< floating
-    CF_ASM_TOKEN_TYPE_LEFT_BRACKET,  ///< left bracket
-    CF_ASM_TOKEN_TYPE_RIGHT_BRACKET, ///< right bracket
+    CF_ASM_TOKEN_TYPE_COLON,         ///< ':' character
+    CF_ASM_TOKEN_TYPE_LEFT_BRACKET,  ///< '[' character
+    CF_ASM_TOKEN_TYPE_RIGHT_BRACKET, ///< ']' character
+    CF_ASM_TOKEN_TYPE_PLUS,          ///< '+' character
 } CfAsmTokenType;
 
 /// @brief token tagged union
@@ -111,6 +112,12 @@ static bool cfAsmNextToken( CfStr *line, CfAsmToken *dst ) {
     if (first == ':') {
         line->begin++;
         dst->type = CF_ASM_TOKEN_TYPE_COLON;
+        return true;
+    }
+
+    if (first == '+') {
+        line->begin++;
+        dst->type = CF_ASM_TOKEN_TYPE_PLUS;
         return true;
     }
 
@@ -168,27 +175,31 @@ static bool cfAsmNextToken( CfStr *line, CfAsmToken *dst ) {
 /**
  * @brief register from string slice parsing function
  * 
- * @param[in] slice slice to parse register from
+ * @param[in]  slice slice to parse register from
+ * @param[out] dst   register index destination
  * 
- * @return register index + 1 if success, 0 otherwise
- * (yes, it's quite strange solution, but in this case this ### is somehow reliable.)
+ * @return true if succeeded, false otherwise
  */
-static uint32_t cfAsmParseRegister( CfStr slice ) {
+static bool cfAsmParseRegister( CfStr slice, uint32_t *const dst ) {
+    assert(dst != NULL);
+
     if (slice.begin + 2 != slice.end)
         return 0;
 
     uint16_t bs = *(const uint16_t *)slice.begin;
 
-    if (bs == *(const uint16_t *)"cz") return 1;
-    if (bs == *(const uint16_t *)"fl") return 2;
-    if (bs == *(const uint16_t *)"ax") return 3;
-    if (bs == *(const uint16_t *)"bx") return 4;
-    if (bs == *(const uint16_t *)"cx") return 5;
-    if (bs == *(const uint16_t *)"dx") return 6;
-    if (bs == *(const uint16_t *)"ex") return 7;
-    if (bs == *(const uint16_t *)"fx") return 8;
+    *dst = 0xFFFFFFFF;
 
-    return 0;
+         if (bs == *(const uint16_t *)"cz") *dst = 0;
+    else if (bs == *(const uint16_t *)"fl") *dst = 1;
+    else if (bs == *(const uint16_t *)"ax") *dst = 2;
+    else if (bs == *(const uint16_t *)"bx") *dst = 3;
+    else if (bs == *(const uint16_t *)"cx") *dst = 4;
+    else if (bs == *(const uint16_t *)"dx") *dst = 5;
+    else if (bs == *(const uint16_t *)"ex") *dst = 6;
+    else if (bs == *(const uint16_t *)"fx") *dst = 7;
+
+    return *dst != 0xFFFFFFFF;
 } // cfAsmParseRegister
 
 
@@ -273,8 +284,135 @@ static CfAssemblyStatus cfAsmRepairFixups(
     return CF_ASSEMBLY_STATUS_OK;
 } // cfAsmRepairFixups
 
+/**
+ * @brief push/pop info immediate value parsing function
+ */
+static bool cfAsmParsePushPopInfoImmediate( CfAsmToken *token, uint32_t *immDst ) {
+    if (token->type != CF_ASM_TOKEN_TYPE_INTEGER && token->type != CF_ASM_TOKEN_TYPE_FLOATING)
+        return false;
+    if (token->type == CF_ASM_TOKEN_TYPE_INTEGER)
+        *immDst = token->integer;
+    else
+        *(float *)immDst = token->floating;
+    return true;
+} // cfAsmParsePushPopInfoImmediate
 
+/**
+ * @brief push/pop info register parsing function
+ */
+static bool cfAsmParsePushPopInfoRegister( CfAsmToken *token, uint32_t *regIndexDst ) {
+    if (token->type != CF_ASM_TOKEN_TYPE_IDENT)
+        return false;
+    return cfAsmParseRegister(token->ident, regIndexDst);
+} // cfAsmParsePushPopInfoRegister
 
+static bool cfAsmParsePushPopInfoRegisterAndImmediate(
+    CfAsmToken *tokens,
+    uint32_t *regDst,
+    uint32_t *immDst
+) {
+    if (!cfAsmParsePushPopInfoRegister(tokens + 0, regDst))
+        return false;
+    if (tokens[1].type != CF_ASM_TOKEN_TYPE_PLUS)
+        return false;
+    if (!cfAsmParsePushPopInfoImmediate(tokens + 2, immDst))
+        return false;
+    return true;
+} // cfAsmParsePushPopInfoRegisterAndImmediate
+
+/**
+ * @brief push and pop instructions additional data parsing function
+ * 
+ * @param[in]  tokenStr string to parse tokens from
+ * @param[out] dst      parsing destination
+ * @param[out] immDst   immediate value destination
+ * 
+ * @return true if succeeded, false otherwise
+ */
+bool cfAsmParsePushPopInfo(
+    CfStr             * tokenStr,
+    CfPushPopInfo     * dst,
+    uint32_t          * immDst
+) {
+    assert(tokenStr != NULL);
+    assert(dst != NULL);
+    assert(immDst != NULL);
+
+    memset(dst, 0, sizeof(CfPushPopInfo));
+
+    CfAsmToken tokens[5] = {};
+    const size_t maxTokens = 5;
+
+    size_t tokenCount = 0;
+
+    while (cfAsmNextToken(tokenStr, tokens + tokenCount)) {
+        if (tokenCount >= maxTokens)
+            return false;
+        tokenCount++;
+    }
+
+    // case 1 - register / number only
+    if (tokenCount == 1) {
+        if (cfAsmParsePushPopInfoImmediate(&tokens[0], immDst)) {
+            dst->doReadImmediate = true;
+            return true;
+        }
+
+        uint32_t regIndex = 0;
+        if (cfAsmParsePushPopInfoRegister(&tokens[0], &regIndex)) {
+            dst->registerIndex = regIndex;
+            return true;
+        }
+
+        return false;
+    }
+
+    if (tokenCount == 3) {
+        if (tokens[0].type == CF_ASM_TOKEN_TYPE_LEFT_BRACKET) {
+            if (tokens[2].type != CF_ASM_TOKEN_TYPE_RIGHT_BRACKET)
+                return false;
+            dst->isMemoryAccess = true;
+
+            // parse register/immediate
+            if (cfAsmParsePushPopInfoImmediate(&tokens[1], immDst)) {
+                dst->doReadImmediate = true;
+                return true;
+            }
+
+            uint32_t regDst = 0;
+            if (cfAsmParsePushPopInfoRegister(&tokens[1], &regDst)) {
+                dst->registerIndex = regDst;
+                return true;
+            }
+
+            return false;
+        }
+
+        // parse register, plus and immediate
+        uint32_t regDst;
+        if (!cfAsmParsePushPopInfoRegisterAndImmediate(tokens + 0, &regDst, immDst))
+            return false;
+        dst->doReadImmediate = true;
+        dst->registerIndex = regDst;
+        return true;
+    }
+
+    if (tokenCount == 5) {
+        if (tokens[0].type != CF_ASM_TOKEN_TYPE_LEFT_BRACKET || tokens[4].type != CF_ASM_TOKEN_TYPE_RIGHT_BRACKET)
+            return false;
+
+        uint32_t regDst;
+        if (!cfAsmParsePushPopInfoRegisterAndImmediate(tokens + 1, &regDst, immDst))
+            return false;
+
+        dst->isMemoryAccess = true;
+        dst->doReadImmediate = true;
+        dst->registerIndex = regDst;
+        return true;
+    }
+
+    return false;
+} // cfAsmParsePushPopInfo
 
 
 CfAssemblyStatus cfAssemble( CfStr text, CfModule *dst, CfAssemblyDetails *details ) {
@@ -357,6 +495,43 @@ CfAssemblyStatus cfAssemble( CfStr text, CfModule *dst, CfAssemblyDetails *detai
             dataBuffer[0] = CF_OPCODE_FCMP;
         } else if (cfStrStartsWith(token.ident, "ret")) {
             dataBuffer[0] = CF_OPCODE_RET;
+        } else if (cfStrStartsWith(token.ident, "unreachable")) {
+            dataBuffer[0] = CF_OPCODE_UNREACHABLE;
+        } else if (cfStrStartsWith(token.ident, "halt")) {
+            dataBuffer[0] = CF_OPCODE_HALT;
+        } else if (false
+            || cfStrIsSame(token.ident, CF_STR("push"))
+            || cfStrIsSame(token.ident, CF_STR("pop" ))
+        ) {
+            // yeah, functional programming
+            dataBuffer[0] = token.ident.begin[1] == 'u'
+                ? CF_OPCODE_PUSH
+                : CF_OPCODE_POP
+            ;
+
+            const CfStr argumentStr = tokenSlice;
+
+            uint32_t imm = 0;
+            CfPushPopInfo info = {0};
+
+            if (!cfAsmParsePushPopInfo(&tokenSlice, &info, &imm)) {
+                if (details != NULL) {
+                    details->invalidPushPopArgument.argument = argumentStr;
+                    details->invalidPushPopArgument.line     = lineIndex;
+                }
+                resultStatus = CF_ASSEMBLY_STATUS_INVALID_PUSHPOP_ARGUMENT;
+                goto cfAssemble__end;
+            }
+
+            // write info to data buffer
+            *(CfPushPopInfo *)(dataBuffer + 1) = info;
+            dataElementCount = 2;
+
+            if (info.doReadImmediate) {
+                *(uint32_t *)(dataBuffer + 2) = imm;
+                dataElementCount = 6;
+            }
+
         } else if (false
             || cfStrIsSame(token.ident, CF_STR("jmp" ))
             || cfStrIsSame(token.ident, CF_STR("jle" ))
@@ -403,80 +578,7 @@ CfAssemblyStatus cfAssemble( CfStr text, CfModule *dst, CfAssemblyDetails *detai
             }
 
             dataElementCount = 5;
-        } else if (cfStrStartsWith(token.ident, "push")) {
-            if (
-                !cfAsmNextToken(&tokenSlice, &token) ||
-                (true
-                    && token.type != CF_ASM_TOKEN_TYPE_INTEGER
-                    && token.type != CF_ASM_TOKEN_TYPE_FLOATING
-                    && token.type != CF_ASM_TOKEN_TYPE_IDENT
-                )
-            ) {
-                if (details != NULL) {
-                    details->unknownInstruction.instruction = line;
-                    details->unknownInstruction.line        = lineIndex;
-                }
-                resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION;
-                goto cfAssemble__end;
-            }
-
-            if (token.type == CF_ASM_TOKEN_TYPE_IDENT) {
-                // use ident
-                dataBuffer[0] = CF_OPCODE_PUSH_R;
-
-                uint32_t reg = cfAsmParseRegister(token.ident);
-
-                if (reg == 0) {
-                    if (details != NULL)
-                        details->unknownRegister = token.ident;
-                    resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_REGISTER;
-                    goto cfAssemble__end;
-                }
-
-                dataBuffer[1] = reg - 1;
-                dataElementCount = 2;
-            } else {
-                dataBuffer[0] = CF_OPCODE_PUSH;
-                // parse some numeric token
-
-                if (token.type == CF_ASM_TOKEN_TYPE_INTEGER)
-                    *(uint32_t *)(dataBuffer + 1) = token.integer;
-                else
-                    *(float *)(dataBuffer + 1) = token.floating;
-                dataElementCount = 5;
-            }
-
-        } else if (cfStrStartsWith(token.ident, "pop")) {
-            if (cfAsmNextToken(&tokenSlice, &token)) {
-                if (token.type != CF_ASM_TOKEN_TYPE_IDENT) {
-                    if (details != NULL) {
-                        details->unknownInstruction.instruction = line;
-                        details->unknownInstruction.line = lineIndex;
-
-                    }
-                    resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION;
-                    goto cfAssemble__end;
-                }
-
-                dataBuffer[0] = CF_OPCODE_POP_R;
-
-                uint32_t reg = cfAsmParseRegister(token.ident);
-
-                if (reg == 0) {
-                    if (details != NULL)
-                        details->unknownRegister = line;
-                    resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_REGISTER;
-                    goto cfAssemble__end;
-                }
-
-                dataBuffer[1] = reg - 1;
-                dataElementCount = 2;
-            } else {
-                dataBuffer[0] = CF_OPCODE_POP;
-            }
-
-        } else
-        if (cfStrStartsWith(token.ident, "syscall")) {
+        } else if (cfStrStartsWith(token.ident, "syscall")) {
             dataBuffer[0] = CF_OPCODE_SYSCALL;
 
             if (
@@ -494,10 +596,6 @@ CfAssemblyStatus cfAssemble( CfStr text, CfModule *dst, CfAssemblyDetails *detai
 
             *(uint32_t *)(dataBuffer + 1) = token.integer;
             dataElementCount = 5;
-        } else if (cfStrStartsWith(token.ident, "unreachable")) {
-            dataBuffer[0] = CF_OPCODE_UNREACHABLE;
-        } else if (cfStrStartsWith(token.ident, "halt")) {
-            dataBuffer[0] = CF_OPCODE_HALT;
         } else {
             // try to parse token
             CfStr labelName = token.ident;
