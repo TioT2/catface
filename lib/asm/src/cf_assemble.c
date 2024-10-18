@@ -4,14 +4,11 @@
 #include <math.h>
 
 #include "cf_asm.h"
-#include "cf_stack.h"
+#include "cf_darr.h"
 #include "cf_string.h"
 
-bool cfAsmNextLine(
-    CfStringSlice *self,
-    CfStringSlice *dst
-) {
-    CfStringSlice slice;
+bool cfAsmNextLine( CfStr *self, size_t *line, CfStr *dst ) {
+    CfStr slice;
 
     do {
         if (self->begin >= self->end)
@@ -39,18 +36,13 @@ bool cfAsmNextLine(
             slice.end--;
 
         self->begin = lineEnd + 1;
+        (*line)++;
     } while (slice.end == slice.begin);
 
     *dst = slice;
 
     return true;
 } // cfAsmNextLine
-
-/// @brief fixup representation structure
-typedef struct __CfAsmFixup {
-    uint32_t *codePtr;     ///< pointer to code section to insert label to
-    const char *labelName; ///< name of label to insert
-} CfAsmFixup;
 
 /**
  * @brief check if character can belong to ident
@@ -78,13 +70,22 @@ typedef struct __CfAsmToken {
     CfAsmTokenType type; ///< type
 
     union {
-        CfStringSlice ident; ///< ident slice
-        uint64_t integer;    ///< integer number
-        double floating;     ///< floating point number
+        CfStr    ident;    ///< ident slice
+        uint64_t integer;  ///< integer number
+        double   floating; ///< floating point number
     };
 } CfAsmToken;
 
-bool cfAsmNextToken( CfStringSlice *line, CfAsmToken *dst ) {
+
+/**
+ * @brief next token from line getting function
+ * 
+ * @param[in,out] line line to try to get next token from. At the function end is equal to line without token data.
+ * @param[out]    dst  token parsing destination
+ * 
+ * @return true if token parsed, false if not
+ */
+static bool cfAsmNextToken( CfStr *line, CfAsmToken *dst ) {
     if (line->begin < line->end && *line->begin == ';')
         return false;
 
@@ -118,8 +119,8 @@ bool cfAsmNextToken( CfStringSlice *line, CfAsmToken *dst ) {
         if (line->begin + 1 < line->end && line->begin[1] == 'x') {
             // parse hexadecimal
             uint64_t res;
-            *line = cfSliceParseHexadecmialInteger(
-                (CfStringSlice){line->begin + 2, line->end},
+            *line = cfStrParseHexadecmialInteger(
+                (CfStr){line->begin + 2, line->end},
                 &res
             );
 
@@ -130,10 +131,10 @@ bool cfAsmNextToken( CfStringSlice *line, CfAsmToken *dst ) {
             // parse decimal (or floating)
             CfParsedDecimal res;
 
-            *line = cfSliceParseDecimal(*line, &res);
+            *line = cfStrParseDecimal(*line, &res);
             if (res.exponentStarted || res.fractionalStarted) {
                 dst->type = CF_ASM_TOKEN_TYPE_FLOATING;
-                dst->floating = (res.integer + res.fractional) * powl(10.0, res.exponent);
+                dst->floating = cfParsedDecimalCompose(&res);
             } else {
                 dst->type = CF_ASM_TOKEN_TYPE_INTEGER;
                 dst->integer = res.integer;
@@ -144,7 +145,7 @@ bool cfAsmNextToken( CfStringSlice *line, CfAsmToken *dst ) {
     }
 
     if (first >= 'a' && first <= 'z' || first >= 'A' && first <= 'Z' || first == '_') {
-        CfStringSlice ident = {line->begin, line->begin};
+        CfStr ident = {line->begin, line->begin};
 
         while (ident.end < line->end && cfAsmIsIdentCharacter(*ident.end))
             ident.end++;
@@ -160,6 +161,10 @@ bool cfAsmNextToken( CfStringSlice *line, CfAsmToken *dst ) {
     return false;
 } // cfAsmNextToken
 
+
+
+
+
 /**
  * @brief register from string slice parsing function
  * 
@@ -168,44 +173,136 @@ bool cfAsmNextToken( CfStringSlice *line, CfAsmToken *dst ) {
  * @return register index + 1 if success, 0 otherwise
  * (yes, it's quite strange solution, but in this case this ### is somehow reliable.)
  */
-static uint32_t cfAsmParseRegister( CfStringSlice slice ) {
+static uint32_t cfAsmParseRegister( CfStr slice ) {
     if (slice.begin + 2 != slice.end)
         return 0;
 
     uint16_t bs = *(const uint16_t *)slice.begin;
 
-    if (bs == *(const uint16_t *)"ax") return 1;
-    if (bs == *(const uint16_t *)"bx") return 2;
-    if (bs == *(const uint16_t *)"cx") return 3;
-    if (bs == *(const uint16_t *)"dx") return 4;
+    if (bs == *(const uint16_t *)"cz") return 1;
+    if (bs == *(const uint16_t *)"fl") return 2;
+    if (bs == *(const uint16_t *)"ax") return 3;
+    if (bs == *(const uint16_t *)"bx") return 4;
+    if (bs == *(const uint16_t *)"cx") return 5;
+    if (bs == *(const uint16_t *)"dx") return 6;
+    if (bs == *(const uint16_t *)"ex") return 7;
+    if (bs == *(const uint16_t *)"fx") return 8;
 
     return 0;
 } // cfAsmParseRegister
 
-CfAssemblyStatus cfAssemble( CfStringSlice text, CfModule *dst, CfAssemblyDetails *details ) {
+
+
+
+
+/// @brief fixup representation structure
+typedef struct __CfAsmFixup {
+    CfStr  label;  ///< label to insert name
+    size_t line;   ///< line this fixup 
+    size_t offset; ///< offset to fixup number storage (4 bytes)
+} CfAsmFixup;
+
+
+
+
+
+/// @brief label representation structure
+typedef struct __CfAsmLabel {
+    CfStr    name;         ///< label name
+    uint32_t offset;       ///< code offset
+    size_t   lineDeclared; ///< line this label declared
+} CfAsmLabel;
+
+
+
+
+
+/**
+ * @brief fixups repairing function
+ * 
+ * @param[in]     fixups     fixups to repair (non-null)
+ * @param[in]     fixupCount fixup count
+ * @param[in]     labels     labels to repair fixups by (non-null)
+ * @param[in]     labelCount label count
+ * @param[in,out] code       code to repair fixups in
+ * @param[in]     codeSize   size of code (for fixup validation)
+ * @param[in,out] details    assembling details to write error to
+ * 
+ * @return assembling (stage) status
+ */
+static CfAssemblyStatus cfAsmRepairFixups(
+    const CfAsmFixup  * fixups,
+    const size_t        fixupCount,
+    const CfAsmLabel  * labels,
+    const size_t        labelCount,
+    uint8_t           * code,
+    const size_t        codeSize,
+    CfAssemblyDetails * details
+) {
+    for (const CfAsmFixup *curr = fixups, *end = fixups + fixupCount; curr < end; curr++) {
+        const CfStr label = curr->label;
+        uint32_t actualOffset = 0;
+        bool found = false;
+
+        // try to find label
+        for (const CfAsmLabel *lCurr = labels, *lEnd = labels + labelCount; lCurr < lEnd; lCurr++) {
+            if (cfStrIsSame(label, lCurr->name)) {
+                found = true;
+                actualOffset = lCurr->offset;
+                break;
+            }
+        }
+
+        // return error if no labels found
+        if (!found) {
+            if (details != NULL) {
+                details->unknownLabel.label = label;
+                details->unknownLabel.referencedAtLine = curr->line;
+            }
+            return CF_ASSEMBLY_STATUS_UNKNOWN_LABEL;
+        }
+
+        // fixups validated - internal error.
+        if (curr->offset > codeSize)
+            return CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
+
+        // actually, repair fixup
+        *(uint32_t *)((uint8_t *)code + curr->offset) = actualOffset;
+    }
+
+    return CF_ASSEMBLY_STATUS_OK;
+} // cfAsmRepairFixups
+
+
+
+
+
+CfAssemblyStatus cfAssemble( CfStr text, CfModule *dst, CfAssemblyDetails *details ) {
     assert(dst != NULL);
 
-    CfStringSlice line;
-    CfStack stack = CF_STACK_NULL;
-    CfStack fixupStack = CF_STACK_NULL;
+    CfStr line;
+    size_t lineIndex = 0;
+    CfDarr code = NULL;
+    CfDarr fixups = NULL;
+    CfDarr labels = NULL;
     CfAssemblyStatus resultStatus = CF_ASSEMBLY_STATUS_OK;
 
-    stack = cfStackCtor(sizeof(uint8_t));
-    fixupStack = cfStackCtor(sizeof(CfAsmFixup));
-    resultStatus = CF_ASSEMBLY_STATUS_OK;
+    code = cfDarrCtor(sizeof(uint8_t));
+    fixups = cfDarrCtor(sizeof(CfAsmFixup));
+    labels = cfDarrCtor(sizeof(CfAsmLabel));
 
-    if (stack == CF_STACK_NULL || fixupStack == CF_STACK_NULL) {
+    if (code == NULL || fixups == NULL || labels == NULL) {
         resultStatus = CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
         goto cfAssemble__end;
     }
 
     // parse code
-    while (cfAsmNextLine(&text, &line)) {
+    while (cfAsmNextLine(&text, &lineIndex, &line)) {
         uint8_t dataBuffer[16];
         size_t dataElementCount = 1;
 
         CfAsmToken token = {};
-        CfStringSlice tokenSlice = line;
+        CfStr tokenSlice = line;
 
         // There's no starting token in line
         if (!cfAsmNextToken(&tokenSlice, &token))
@@ -249,6 +346,43 @@ CfAssemblyStatus cfAssemble( CfStringSlice text, CfModule *dst, CfAssemblyDetail
             dataBuffer[0] = CF_OPCODE_FDIV;
         } else if (cfSliceStartsWith(token.ident, "itof")) {
             dataBuffer[0] = CF_OPCODE_ITOF;
+        } else if (cfSliceStartsWith(token.ident, "jmp")) {
+            // read label
+            if (!cfAsmNextToken(&tokenSlice, &token) || (token.type != CF_ASM_TOKEN_TYPE_IDENT && token.type != CF_ASM_TOKEN_TYPE_INTEGER)) {
+                if (details != NULL)
+                    details->unknownInstruction = line;
+                resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION;
+                goto cfAssemble__end;
+            }
+
+            // the simplest case
+            CfInstructionJmp instruction = {
+                .opcode = CF_OPCODE_JMP,
+                .isRelative = 0,
+                .isCall = 0,
+                .ignoreCmp = 1,
+                .cmpMask = 7,
+                .immediate = 0,
+            };
+
+            if (token.type == CF_ASM_TOKEN_TYPE_INTEGER) {
+                *(uint32_t *)(dataBuffer + 2) = token.integer;
+            } else {
+                CfAsmFixup fixup = {
+                    .label = token.ident,
+                    .line = lineIndex,
+                    .offset = cfDarrSize(code) + 2,
+                };
+
+                if (CF_DARR_OK != cfDarrPush(&fixups, &fixup)) {
+                    resultStatus = CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
+                    goto cfAssemble__end;
+                }
+                *(uint32_t *)(dataBuffer + 2) = ~0U; // for kind of safety
+            }
+
+            ((CfInstruction *)dataBuffer)->jmp = instruction;
+            dataElementCount = 6;
         } else if (cfSliceStartsWith(token.ident, "push")) {
             if (
                 !cfAsmNextToken(&tokenSlice, &token) ||
@@ -319,6 +453,7 @@ CfAssemblyStatus cfAssemble( CfStringSlice text, CfModule *dst, CfAssemblyDetail
         } else
         if (cfSliceStartsWith(token.ident, "syscall")) {
             dataBuffer[0] = CF_OPCODE_SYSCALL;
+
             if (
                 !cfAsmNextToken(&tokenSlice, &token) ||
                 token.type != CF_ASM_TOKEN_TYPE_INTEGER
@@ -333,36 +468,90 @@ CfAssemblyStatus cfAssemble( CfStringSlice text, CfModule *dst, CfAssemblyDetail
             dataElementCount = 5;
         } else if (cfSliceStartsWith(token.ident, "unreachable")) {
             dataBuffer[0] = CF_OPCODE_UNREACHABLE;
+        } else if (cfSliceStartsWith(token.ident, "halt")) {
+            dataBuffer[0] = CF_OPCODE_HALT;
         } else {
-            if (details != NULL) {
-                details->unknownInstruction = line;
+            // try to parse token
+            CfStr labelName = token.ident;
+            if (cfAsmNextToken(&tokenSlice, &token) && token.type == CF_ASM_TOKEN_TYPE_COLON) {
+                // treat ident as label if parsed colon
+
+                // check for this line duplicates another one
+                CfAsmLabel *labelArray = (CfAsmLabel *)cfDarrData(labels);
+                for (size_t i = 0, n = cfDarrSize(labels); i < n; i++) {
+                    if (cfStrIsSame(labelArray[i].name, labelName)) {
+                        resultStatus = CF_ASSEMBLY_STATUS_DUPLICATE_LABEL;
+                        if (details != NULL) {
+                            details->duplicateLabel.label = labelName;
+                            details->duplicateLabel.firstDeclaration = labelArray[i].lineDeclared;
+                            details->duplicateLabel.secondDeclaration = lineIndex;
+                        }
+                        goto cfAssemble__end;
+                    }
+                }
+
+                CfAsmLabel newLabel = {
+                    .name = labelName,
+                    .offset = (uint32_t)cfDarrSize(code),
+                    .lineDeclared = lineIndex,
+                };
+                if (CF_DARR_OK != cfDarrPush(&labels, &newLabel)) {
+                    resultStatus = CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
+                    goto cfAssemble__end;
+                }
+                dataElementCount = 0;
+            } else {
+                if (details != NULL) {
+                    details->unknownInstruction = line;
+                }
+
+                resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION;
+                goto cfAssemble__end;
             }
 
-            resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION;
-            goto cfAssemble__end;
         }
 
-        // append element to stack
-        CfStackStatus status = cfStackPushArrayReversed(&stack, &dataBuffer, dataElementCount);
-        if (status != CF_STACK_OK) {
+        // append element to code
+        CfDarrStatus status = cfDarrPushArray(&code, &dataBuffer, dataElementCount);
+        if (status != CF_DARR_OK) {
             resultStatus = CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
+            goto cfAssemble__end;
+        }
+    }
+
+    // repair fixups
+    {
+        CfAssemblyStatus fixupRepairStatus = cfAsmRepairFixups(
+            (CfAsmFixup *)cfDarrData(fixups),
+            cfDarrSize(fixups),
+            (CfAsmLabel *)cfDarrData(labels),
+            cfDarrSize(labels),
+            (uint8_t *)cfDarrData(code),
+            cfDarrSize(code),
+            details
+        );
+
+        // propagate fixup repairing error in case it occured
+        if (fixupRepairStatus != CF_ASSEMBLY_STATUS_OK) {
+            resultStatus = fixupRepairStatus;
             goto cfAssemble__end;
         }
     }
 
     {
-        uint8_t *code = NULL;
-        if (!cfStackToArray(stack, (void **)&code)) {
+        uint8_t *codeArray = NULL;
+        if (CF_DARR_OK != cfDarrIntoData(code, (void **)&codeArray)) {
             resultStatus = CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
             goto cfAssemble__end;
         }
-        dst->code = code;
-        dst->codeLength = cfStackGetSize(stack) * sizeof(uint8_t);
+        dst->code = codeArray;
+        dst->codeLength = cfDarrSize(code);
     }
 
 cfAssemble__end:
-    cfStackDtor(stack);
-    cfStackDtor(fixupStack);
+    cfDarrDtor(code);
+    cfDarrDtor(fixups);
+    cfDarrDtor(labels);
     return resultStatus;
 } // cfAssemble
 

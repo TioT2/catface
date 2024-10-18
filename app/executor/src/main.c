@@ -40,7 +40,7 @@ double readFloat64( void *context ) {
  * @param number  number to write
  */
 void writeFloat64( void *context, double number ) {
-    printf("%lf", number);
+    printf("%lf\n", number);
 } // writeFloat64
 
 /**
@@ -90,10 +90,10 @@ void handlePanic( void *context, const CfPanicInfo *panicInfo ) {
 } // handlePanic
 
 int main( const int _argc, const char **_argv ) {
-    const int argc = 2;
-    const char *argv[] = { "qq", "examples/fisqrt.cfmod" };
-    // const int argc = _argc;
-    // const char **argv = _argv;
+    // const int argc = 2;
+    // const char *argv[] = { "qq", "examples/sqr.cfmod" };
+    const int argc = _argc;
+    const char **argv = _argv;
 
     if (argc < 2) {
         printHelp();

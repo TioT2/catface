@@ -4,11 +4,11 @@
 
 #include "cf_string.h"
 
-int cfPrintSlice( CfStringSlice slice ) {
+int cfPrintSlice( CfStr slice ) {
     return printf("%*s", (int)(slice.end - slice.begin), slice.begin);
 } // cfPrintSlice
 
-bool cfSliceStartsWith( CfStringSlice slice, const char *start ) {
+bool cfSliceStartsWith( CfStr slice, const char *start ) {
     if (slice.begin >= slice.end)
         return *start == '\0';
 
@@ -40,7 +40,7 @@ bool cfStrStartsWith( const char *string, const char *start ) {
     }
 } // cfStrStartsWith
 
-CfStringSlice cfSliceParseHexadecmialInteger( CfStringSlice slice, uint64_t *dst ) {
+CfStr cfStrParseHexadecmialInteger( CfStr slice, uint64_t *dst ) {
     uint64_t result = 0;
 
     while (slice.begin != slice.end) {
@@ -68,7 +68,7 @@ CfStringSlice cfSliceParseHexadecmialInteger( CfStringSlice slice, uint64_t *dst
 } // cfSliceParseHexadecimalInteger
 
 
-CfStringSlice cfSliceParseDecimalInteger( CfStringSlice slice, uint64_t *dst ) {
+CfStr cfStrParseDecimalInteger( CfStr slice, uint64_t *dst ) {
     uint64_t result = 0;
 
     while (slice.begin != slice.end) {
@@ -89,13 +89,13 @@ CfStringSlice cfSliceParseDecimalInteger( CfStringSlice slice, uint64_t *dst ) {
         *dst = result;
 
     return slice;
-} // cfSliceParseDecimalInteger
+} // cfStrParseDecimalInteger
 
-CfStringSlice cfSliceParseDecimal( CfStringSlice slice, CfParsedDecimal *dst ) {
+CfStr cfStrParseDecimal( CfStr slice, CfParsedDecimal *dst ) {
     CfParsedDecimal result = {0};
-    CfStringSlice newSlice;
+    CfStr newSlice;
 
-    newSlice = cfSliceParseDecimalInteger(slice, &result.integer);
+    newSlice = cfStrParseDecimalInteger(slice, &result.integer);
     slice = newSlice;
 
     // parse floating part
@@ -105,8 +105,8 @@ CfStringSlice cfSliceParseDecimal( CfStringSlice slice, CfParsedDecimal *dst ) {
 
         uint64_t frac;
         // parse fractional
-        newSlice = cfSliceParseDecimalInteger(slice, &frac);
-        result.fractional = frac * powl(10.0, -double(newSlice.begin - slice.begin));
+        newSlice = cfStrParseDecimalInteger(slice, &frac);
+        result.fractional = frac * pow(10.0, -(double)(newSlice.begin - slice.begin));
         slice = newSlice;
     }
 
@@ -123,8 +123,8 @@ CfStringSlice cfSliceParseDecimal( CfStringSlice slice, CfParsedDecimal *dst ) {
         }
 
         uint64_t unsignedExponent;
-        newSlice = cfSliceParseDecimalInteger(slice, &unsignedExponent);
-        result.exponent = int64_t(unsignedExponent) * sign;
+        newSlice = cfStrParseDecimalInteger(slice, &unsignedExponent);
+        result.exponent = (int64_t)unsignedExponent * sign;
         slice = newSlice;
     }
 
@@ -132,7 +132,7 @@ CfStringSlice cfSliceParseDecimal( CfStringSlice slice, CfParsedDecimal *dst ) {
         *dst = result;
 
     return slice;
-} // cfSliceParseDecimal
+} // cfStrParseDecimal
 
 /**
  * @brief decimal into double composition function
@@ -144,7 +144,19 @@ CfStringSlice cfSliceParseDecimal( CfStringSlice slice, CfParsedDecimal *dst ) {
 double cfParsedDecimalCompose( const CfParsedDecimal *decimal ) {
     assert(decimal != NULL);
 
-    return (decimal->integer + decimal->fractional) * powl(10.0, decimal->exponent);
-}
+    return (decimal->integer + decimal->fractional) * pow(10.0, decimal->exponent);
+} // cfParsedDecimalCompose
+
+bool cfStrIsSame( CfStr lhs, CfStr rhs ) {
+    // compare lengths
+    if (lhs.end - lhs.begin != rhs.end - rhs.begin)
+        return false;
+
+    // then compare contents
+    while (lhs.begin < lhs.end)
+        if (*lhs.begin++ != *rhs.begin++)
+            return false;
+    return true;
+} // cfStrIsSame
 
 // cf_string.cpp

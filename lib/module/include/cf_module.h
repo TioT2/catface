@@ -12,43 +12,163 @@
 extern "C" {
 #endif
 
-/// @brief Count of registers used in vm
-#define CF_REGISTER_COUNT 4
+/// @brief count of registers used in vm
+#define CF_REGISTER_COUNT 8
 
-/// @brief Instruction header representation enumeration
+/// @brief ordering representation enumeration
+/// @note exactly this bit flags are used in CMP and JIM instructions implementation
+typedef enum __CfOrdering {
+    CF_ORDERING_LESS  = 1, ///< <
+    CF_ORDERING_EQUAL = 2, ///< =
+    CF_ORDERING_MORE  = 4, ///< >
+} CfOrdering;
+
+/// @brief flag register layout
+typedef struct __CfRegisterFlags {
+    uint8_t cmpIsLt         : 1; ///< is less in last comparison
+    uint8_t cmpIsEq         : 1; ///< is equal in last comparison
+    uint8_t cmpIsGt         : 1; ///< is greater in last comparison
+
+    uint8_t videoUpdateMode : 1; ///< manual (kind of synchronization)/immediate (rewrite in parallel thread)
+    uint8_t videoMode       : 2; ///< buffer output mode (text/colored text/256-color palette/RGBX TrueColor)
+
+    uint8_t _placeholder0: 2;    // placeholder
+    uint8_t _placeholder1: 8;    // placeholder
+    uint8_t _placeholder2: 8;    // placeholder
+    uint8_t _placeholder3: 8;    // placeholder
+} CfRegisterFlags;
+
+/// @brief register set representation structure
+typedef union __CfRegisters {
+    uint32_t registers[8]; ///< registers as array
+
+    struct {
+        // read-only registers (write isn't restricted, but don't affect anything)
+        uint32_t        cz; ///< constant zero register
+        CfRegisterFlags fl; ///< flag register
+
+        // general-purpose registers
+        uint32_t        ax; ///< general-purpose register 'a'
+        uint32_t        bx; ///< general-purpose register 'b'
+        uint32_t        cx; ///< general-purpose register 'c'
+        uint32_t        dx; ///< general-purpose register 'd'
+        uint32_t        ex; ///< general-purpose register 'e'
+        uint32_t        fx; ///< general-purpose register 'f'
+    };
+} CfRegisters;
+
+/// @brief pushpop instruciton layout
+typedef struct __CfInstructionPushPop {
+    uint8_t opcode         : 5; ///< operation code
+    uint8_t regIndex       : 3; ///< register index
+    uint8_t immediate      : 5; ///< immediate
+    uint8_t isShort        : 1; ///< use imm or external value in operation
+    uint8_t isPush         : 1; ///< is push if true, pop if false
+    uint8_t isMemoryAccess : 1; ///< do access memory
+} CfInstructionPushPop;
+
+/// @brief jump instruction layout
+typedef struct __CfInstructionJmp {
+    uint8_t opcode     : 5; ///< operation code
+    uint8_t isRelative : 1; ///< use immediate as offset or use external value !!!(note: then 1, ic += imm * 2 - 32)
+    uint8_t isCall     : 1; ///< do save IC to call stack
+    uint8_t ignoreCmp  : 1; ///< ignore flag comparison (always resolve it to true, actually)
+    uint8_t cmpMask    : 3; ///< comparison flags mask (jump only if cmpMask & flags != 0)
+    uint8_t immediate  : 5; ///< short jump immediate value (half of code offset, because IC is always even)
+} CfInstructionJmp;
+
+/// @brief comparison instruction layout
+typedef struct __CfInstructionCmp {
+    uint8_t opcode   : 5; ///< operation code
+    uint8_t newFlags : 3; ///< new cmp flags (for 'set' type)
+    uint8_t type     : 2; ///< comparison type (signed/unsigned/float/set). note: 'set' type doesn't performs any comparison, it just drops values out and sets comparison flags
+} CfInstructionCmp;
+
+typedef union __CfInstruction {
+    struct {
+        uint8_t opcode : 5;
+    };
+    CfInstructionJmp     jmp;     ///< jump instruction
+    CfInstructionCmp     cmp;     ///< comparison instruction
+    CfInstructionPushPop pushPop; ///< pushpop instruction
+} CfInstruction;
+
+/// @brief keyboard instruction representation enumeration
+typedef struct __CfInstructionCheckKey {
+    uint8_t opcode  : 5; ///< operation code
+    uint8_t action  : 2; ///< (wait press/wait release/check state)
+    uint8_t isAny   : 1; ///< for wait mode: wait for any or for imm-specified keycode
+    uint8_t keycode : 8; ///< keycode
+} CfInstructionCheckKey;
+
+/// @brief mathematical instruction layout (common for binary and unary operations)
+typedef struct __CfInstructionMath {
+    uint8_t opcode : 5; ///< operation code
+    uint8_t act1   : 5; ///< first action  (nothing if 0)
+    uint8_t act2   : 5; ///< second action (nothing if 0)
+} CfInstructionMath;
+
+/// @brief video-interaction instructions representation enumeration
+typedef struct __CfInstructionVid {
+    uint8_t opcode : 5; ///< operation code
+} CfInstructionVid;
+
+/// @brief systemcall instruction (actually, isn't needed)
+typedef struct __CfInstructionSyscall {
+    uint8_t  opcode : 5;
+} CfInstructionSyscall;
+
+/// @brief halt instruction
+typedef struct __CfInstructionHalt {
+    uint8_t opcode : 5; ///< operation code
+    uint8_t isOk   : 1; ///< is it ok to reach this instruction
+} CfInstructionHalt;
+
+/// @brief return instruction layout
+typedef struct __CfInstructionRet {
+    uint8_t opcode : 5; ///< operation code
+} CfInstructionRet;
+
+/// @brief instruction header representation enumeration
 typedef enum __CfOpcode {
     // system instructions
     CF_OPCODE_UNREACHABLE, ///< unreachable instruction, calls panic
     CF_OPCODE_SYSCALL,     ///< function by pre-defined index from without of sandbox calling function
+    CF_OPCODE_HALT,        ///< program forced stopping opcode
 
     // i32 common instructions
-    CF_OPCODE_ADD, ///< 32-bit integer
-    CF_OPCODE_SUB, ///< 32-bit integer
-    CF_OPCODE_SHL, ///< shift 32-bit integer left
-    CF_OPCODE_SHR, ///< shift signed   i32 right
-    CF_OPCODE_SAR, ///< shift unsigned i32 right
+    CF_OPCODE_ADD,    ///< 32-bit integer
+    CF_OPCODE_SUB,    ///< 32-bit integer
+    CF_OPCODE_SHL,    ///< shift 32-bit integer left
+    CF_OPCODE_SHR,    ///< shift signed   i32 right
+    CF_OPCODE_SAR,    ///< shift unsigned i32 right
 
     // i32 signed/unsigned instructions
-    CF_OPCODE_IMUL, ///< signed   i32 multiplication
-    CF_OPCODE_MUL,  ///< unsigned i32 multiplication
-    CF_OPCODE_IDIV, ///< signed   i32 division
-    CF_OPCODE_DIV,  ///< unsigned i32 division
+    CF_OPCODE_IMUL,   ///< signed   i32 multiplication
+    CF_OPCODE_MUL,    ///< unsigned i32 multiplication
+    CF_OPCODE_IDIV,   ///< signed   i32 division
+    CF_OPCODE_DIV,    ///< unsigned i32 division
 
     // f32 arithmetical instructions
-    CF_OPCODE_FADD, ///< f32 addition
-    CF_OPCODE_FSUB, ///< f32 substraction
-    CF_OPCODE_FMUL, ///< f32 multiplication
-    CF_OPCODE_FDIV, ///< f32 division
+    CF_OPCODE_FADD,   ///< f32 addition
+    CF_OPCODE_FSUB,   ///< f32 substraction
+    CF_OPCODE_FMUL,   ///< f32 multiplication
+    CF_OPCODE_FDIV,   ///< f32 division
 
     // f32-i32 instructions
-    CF_OPCODE_FTOI, ///< f32 into signed i32 conversion
-    CF_OPCODE_ITOF, ///< signed i32 into f32 conversion
+    CF_OPCODE_FTOI,   ///< f32 into signed i32 conversion
+    CF_OPCODE_ITOF,   ///< signed i32 into f32 conversion
 
     // common 32-bit instructions
     CF_OPCODE_PUSH,   ///< 32-bit literal pushing opcode
     CF_OPCODE_POP,    ///< 32-bit value removing opcode
     CF_OPCODE_PUSH_R, ///< push into stack from register
     CF_OPCODE_POP_R,  ///< pop  from stack into register
+
+    // jmp instruction family
+
+    CF_OPCODE_JMP,    ///< jumping instructions
+    CF_OPCODE_RET,    ///< returning instruction
 } CfOpcode;
 
 /// @brief CF compiled module represetnation structure

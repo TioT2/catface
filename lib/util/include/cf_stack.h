@@ -16,7 +16,7 @@ extern "C" {
 typedef size_t CfStack;
 
 /// @brief stack null reference.
-/// @note using macro is REQUIRED because C don't likes constants defined in header files
+/// @note using macro is REQUIRED because C linker don't likes constants defined in header files
 #define CF_STACK_NULL 0
 
 typedef enum __CfPopStatus {
@@ -67,9 +67,12 @@ CfStackStatus cfStackPop( CfStack *self, void *data );
  * @param[in]  stack stack to build array from
  * @param[out] dst   stack converted to array destination
  * 
- * @note elements of destination array are located in PUSHing order (e.g. first element of resulting array will be first element pushed to the stack.)
+ * @note elements of destination array are located in PUSHing order
+ * (e.g. first element of resulting array will be first element pushed to the stack.).
+ * Also, call of this function DOES NOT destroys stack.
  * 
  * @return true if allocated successfully, false if not. This strange output and input combination is required, because it's ok for dst to be null in case if stack is empty.
+ * 
  */
 bool cfStackToArray( CfStack stack, void **dst );
 

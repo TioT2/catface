@@ -10,6 +10,11 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
     assert(module->code != NULL);
     assert(sandbox != NULL);
 
+
+#define OFFSET ((size_t)(instructionCounter - (const uint8_t *)module->code))
+
+#define PANIC(...) { panicInfo = (CfPanicInfo){ __VA_ARGS__ }; goto cfModuleExec__handle_panic; }
+
 #define PUSH(value)                                                    \
     if (CF_STACK_OK != cfStackPush(&stack, &(value))) {                \
         PANIC(                                                         \
@@ -58,18 +63,15 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
             }                                                   \
         }                                                       \
 
-#define OFFSET ((size_t)(instructionCounter - (const uint8_t *)module->code))
-
-#define PANIC(...) { panicInfo = (CfPanicInfo){ __VA_ARGS__ }; goto cfModuleExec_HANDLE_PANIC; }
-
     // this name inspired by x86v7 architecture
-    const uint8_t *instructionCounter = (const uint8_t *)module->code;
+    const uint8_t *const instructionCounterBegin = (const uint8_t *)module->code;
     const uint8_t *const instructionCounterEnd = (const uint8_t *)module->code + module->codeLength;
+
+    const uint8_t *instructionCounter = instructionCounterBegin;
 
     uint32_t registers[CF_REGISTER_COUNT] = {0};
 
     CfStack stack = CF_STACK_NULL;
-    void *frame = NULL;
     CfPanicInfo panicInfo;
 
     stack = cfStackCtor(sizeof(uint32_t));
@@ -79,10 +81,9 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
         );
     
     while (instructionCounter < instructionCounterEnd) {
-        uint8_t opcode = *instructionCounter++;
+        uint8_t opcode = 0x1F & *instructionCounter++;
 
         switch ((CfOpcode)opcode) {
-
         /***
          * Integer instructions
          ***/
@@ -265,10 +266,28 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
             PUSH(registers[reg]);
             break;
         }
+
         case CF_OPCODE_POP_R   : {
             uint8_t reg;
+            uint32_t dst;
             READ_REGISTER(reg);
-            POP(registers[reg]);
+            POP(dst);
+
+            // prevent flag and zero register writing
+            if (reg >= 2)
+                registers[reg] = dst;
+            break;
+        }
+
+        case CF_OPCODE_JMP: {
+            instructionCounter--;
+            CfInstruction instruction;
+            uint32_t point;
+
+            READ(instruction);
+            READ(point);
+
+            instructionCounter = instructionCounterBegin + point;
             break;
         }
 
@@ -316,6 +335,12 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
             );
         }
 
+        case CF_OPCODE_HALT: {
+            // halt program without additional checks
+            instructionCounter = instructionCounterEnd + 1;
+            break;
+        }
+
         // panic on unknown instruction
         default: {
             PANIC(
@@ -330,17 +355,16 @@ void cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
         }
     }
 
-cfModuleExec_CLEANUP:
+cfModuleExec__cleanup:
 
     cfStackDtor(stack);
-    free(frame);
     return;
 
-cfModuleExec_HANDLE_PANIC:
+cfModuleExec__handle_panic:
 
     if (sandbox->handlePanic != NULL)
         sandbox->handlePanic(sandbox->userContextPtr, &panicInfo);
-    goto cfModuleExec_CLEANUP;
+    goto cfModuleExec__cleanup;
 
 #undef PUSH
 #undef POP

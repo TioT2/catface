@@ -1,14 +1,38 @@
 #include "cf_asm.h"
-#include "cf_stack.h"
+#include "cf_darr.h"
 
 #include <assert.h>
 #include <string.h>
+
+/**
+ * @brief register by index getting function
+ * 
+ * @param[in] reg register index (< CF_REGISTER_COUNT)
+ * 
+ * @return register name
+ */
+static const char * cfAsmGetRegisterName( uint8_t reg ) {
+    assert(reg < CF_REGISTER_COUNT);
+
+    switch (reg) {
+    case 0: return "cz";
+    case 1: return "fl";
+    case 2: return "ax";
+    case 3: return "bx";
+    case 4: return "cx";
+    case 5: return "dx";
+    case 6: return "ex";
+    case 7: return "fx";
+    }
+
+    return "";
+} // cfAsmGetRegisterName
 
 CfDisassemblyStatus cfDisassemble( const CfModule *module, char **dest, CfDisassemblyDetails *details ) {
     assert(module != NULL);
     assert(dest != NULL);
 
-    CfStack outStack = cfStackCtor(sizeof(char));
+    CfDarr outStack = cfDarrCtor(sizeof(char));
 
     const uint8_t *bytecode = (const uint8_t *)module->code;
     const uint8_t *bytecodeEnd = bytecode + module->codeLength;
@@ -26,7 +50,7 @@ CfDisassemblyStatus cfDisassemble( const CfModule *module, char **dest, CfDisass
         }
         case CF_OPCODE_SYSCALL        : {
             if (bytecodeEnd - bytecode < 4) {
-                cfStackDtor(outStack);
+                cfDarrDtor(outStack);
                 return CF_DISASSEMBLY_STATUS_UNEXPECTED_CODE_END;
             }
 
@@ -34,6 +58,12 @@ CfDisassemblyStatus cfDisassemble( const CfModule *module, char **dest, CfDisass
             bytecode += 4;
             break;
         }
+
+        case CF_OPCODE_HALT: {
+            strcpy(line, "halt");
+            break;
+        }
+
         case CF_OPCODE_ADD        : {
             strcpy(line, "add");
             break;
@@ -94,10 +124,11 @@ CfDisassemblyStatus cfDisassemble( const CfModule *module, char **dest, CfDisass
             strcpy(line, "itof");
             break;
         }
+
         case CF_OPCODE_PUSH: {
             // then read constant
             if (bytecodeEnd - bytecode < 4) {
-                cfStackDtor(outStack);
+                cfDarrDtor(outStack);
                 return CF_DISASSEMBLY_STATUS_UNEXPECTED_CODE_END;
             }
             uint64_t r32 = *(const uint32_t *)bytecode;
@@ -114,53 +145,53 @@ CfDisassemblyStatus cfDisassemble( const CfModule *module, char **dest, CfDisass
 
         case CF_OPCODE_PUSH_R: {
             if (bytecodeEnd - bytecode < 1) {
-                cfStackDtor(outStack);
+                cfDarrDtor(outStack);
                 return CF_DISASSEMBLY_STATUS_UNEXPECTED_CODE_END;
             }
             uint8_t reg = *bytecode++;
-            sprintf(line, "push %cx", 'a' + reg);
+            sprintf(line, "push %s", cfAsmGetRegisterName(reg));
             break;
         }
 
         case CF_OPCODE_POP_R: {
             if (bytecodeEnd - bytecode < 1) {
-                cfStackDtor(outStack);
+                cfDarrDtor(outStack);
                 return CF_DISASSEMBLY_STATUS_UNEXPECTED_CODE_END;
             }
             uint8_t reg = *bytecode++;
-            sprintf(line, "pop  %cx", 'a' + reg);
+            sprintf(line, "pop  %s", cfAsmGetRegisterName(reg));
             break;
         }
 
         default: {
             if (details != NULL)
                 details->unknownOpcode.opcode = opcode;
-            cfStackDtor(outStack);
+            cfDarrDtor(outStack);
             return CF_DISASSEMBLY_STATUS_UNKNOWN_OPCODE;
         }
         }
 
         const size_t currentSize = strlen(line);
         line[currentSize] = '\n';
-        if (CF_STACK_OK != cfStackPushArrayReversed(&outStack, line, currentSize + 1)) {
-            cfStackDtor(outStack);
+        if (CF_DARR_OK != cfDarrPushArray(&outStack, line, currentSize + 1)) {
+            cfDarrDtor(outStack);
             return CF_DISASSEMBLY_STATUS_INTERNAL_ERROR;
         }
     }
 
     // then append '0' and transform stack to array
     const char zero = '\0';
-    if (CF_STACK_OK != cfStackPush(&outStack, &zero)) {
-        cfStackDtor(outStack);
+    if (CF_DARR_OK != cfDarrPush(&outStack, &zero)) {
+        cfDarrDtor(outStack);
         return CF_DISASSEMBLY_STATUS_INTERNAL_ERROR;
     }
 
-    if (!cfStackToArray(outStack, (void **)dest)) {
-        cfStackDtor(outStack);
+    if (CF_DARR_OK != cfDarrIntoData(outStack, (void **)dest)) {
+        cfDarrDtor(outStack);
         return CF_DISASSEMBLY_STATUS_INTERNAL_ERROR;
     }
 
-    cfStackDtor(outStack);
+    cfDarrDtor(outStack);
     return CF_DISASSEMBLY_STATUS_OK;
 } // cfDisassemble
 

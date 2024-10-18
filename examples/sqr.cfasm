@@ -1,0 +1,18 @@
+; Square root REPL printer program
+
+; set label 'start'
+start:
+
+; get value from user
+syscall 0
+pop  ax
+
+; square it
+push ax
+push ax
+fmul
+
+syscall 1
+
+; restart process
+jmp start

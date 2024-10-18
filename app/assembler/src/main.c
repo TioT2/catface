@@ -34,6 +34,7 @@ bool readFile( FILE *file, char **dst, size_t *dstLen ) {
 
     fread(buffer, 1, len, file);
 
+
     *dst = buffer;
     if (dstLen != NULL)
         *dstLen = len;
@@ -55,15 +56,15 @@ void printHelp( void ) {
 } // printHelp
 
 int main( const int _argc, const char **_argv ) {
-    const int argc = 4;
-    const char *argv[] = {
-        "qq",
-        "-o",
-        "examples/fisqrt.cfmod",
-        "examples/fisqrt.cfasm",
-    };
-    // const int argc = _argc;
-    // const char **argv = _argv;
+    // const int argc = 4;
+    // const char *argv[] = {
+    //     "qq",
+    //     "-o",
+    //     "examples/sqr.cfmod",
+    //     "examples/sqr.cfasm",
+    // };
+    const int argc = _argc;
+    const char **argv = _argv;
 
     // quite strange solution, but it's ok because last argument is treated as input file name.
     if (argc < 2 || 0 == strcmp(argv[1], "-h")) {
@@ -73,11 +74,12 @@ int main( const int _argc, const char **_argv ) {
 
     // it's obviously NOT overengineering
     const int optionCount = 2;
-    const CfCommandLineOptionInfo optionInfos[optionCount] = {
+    CfCommandLineOptionInfo optionInfos[2] = {
         {"o", "output", 1},
         {"h", "help",   0},
     };
-    int optionIndices[optionCount];
+    int optionIndices[2];
+
     if (!cfParseCommandLineOptions(argc - 2, argv + 1, optionCount, optionInfos, optionIndices)) {
         // it's ok for cli utils to display something in stdout, so corresponding error message is already displayed.
         return 0;
@@ -119,7 +121,7 @@ int main( const int _argc, const char **_argv ) {
     CfModule module;
     CfAssemblyDetails assemblyDetails;
     CfAssemblyStatus assemblyStatus = cfAssemble(
-        (CfStringSlice){text, text + textLen},
+        (CfStr){text, text + textLen},
         &module,
         &assemblyDetails
     );

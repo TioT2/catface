@@ -5,19 +5,22 @@
 #ifndef CF_STRING_H_
 #define CF_STRING_H_
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 /// @brief string slice representation structure
 typedef struct __CfStringSlice {
     const char *begin; ///< slice begin
     const char *end;   ///< slice end (non-inclusive, may not point on null)
-} CfStringSlice;
+} CfStr;
+
+/// @brief string ident to slice conversion macro
+#define CF_STR(literal) ((CfStr){ (literal), (literal) + strlen((literal)) })
 
 /**
  * @brief string slice printing function
@@ -26,10 +29,7 @@ typedef struct __CfStringSlice {
  * 
  * @return count of characters printed.
  */
-int cfPrintSlice( CfStringSlice slice );
-
-/// @brief string ident to slice conversion macro
-#define CF_SLICE(literal) ((CfStringSlice){ (literal), (literal) + strlen((literal)) })
+int cfPrintSlice( CfStr slice );
 
 /**
  * @brief slice starting with zero-terminated string checking function
@@ -39,7 +39,7 @@ int cfPrintSlice( CfStringSlice slice );
  * 
  * @return true if slice starts from string, false otherwise.
  */
-bool cfSliceStartsWith( CfStringSlice slice, const char *start );
+bool cfSliceStartsWith( CfStr slice, const char *start );
 
 /**
  * @brief check if string if start of another one
@@ -61,7 +61,7 @@ bool cfStrStartsWith( const char *string, const char *start );
  * @return subslice of slice with all data except of characters that belongs to integer.
  * @note resulting subslice lies in same pointer range with 'slice' parameter.
  */
-CfStringSlice cfSliceParseHexadecmialInteger( CfStringSlice slice, uint64_t *dst );
+CfStr cfStrParseHexadecmialInteger( CfStr slice, uint64_t *dst );
 
 /**
  * @brief decimal integer from slice parsing function
@@ -72,7 +72,17 @@ CfStringSlice cfSliceParseHexadecmialInteger( CfStringSlice slice, uint64_t *dst
  * @return subslice of slice with all data except of characters that belongs to integer.
  * @note returned subslice IS subslice of input slice.
  */
-CfStringSlice cfSliceParseDecimalInteger( CfStringSlice slice, uint64_t *dst );
+CfStr cfStrParseDecimalInteger( CfStr slice, uint64_t *dst );
+
+/**
+ * @brief string comparison function
+ * 
+ * @param[in] lhs left hand side
+ * @param[in] rhs right hand side
+ * 
+ * @return true if lhs and rhs str-s contains same characters, false otherwise.
+ */
+bool cfStrIsSame( CfStr lhs, CfStr rhs );
 
 /// @brief parsed decimal number representation structure
 typedef struct __CfParsedDecimal {
@@ -92,7 +102,7 @@ typedef struct __CfParsedDecimal {
  * @result subslice with all data except of data that belongs to decimal.
  * @note returned subslice IS subslice of original slice.
  */
-CfStringSlice cfSliceParseDecimal( CfStringSlice slice, CfParsedDecimal *dst );
+CfStr cfStrParseDecimal( CfStr slice, CfParsedDecimal *dst );
 
 /**
  * @brief decimal into double composition function

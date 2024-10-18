@@ -22,18 +22,6 @@ extern "C" {
 // r6 
 // r7 
 
-/// @brief push and pop compressed instruction representation structure
-typedef struct __CfInstructionPushPop {
-    uint8_t opcode    : 8;     ///< instruciton opcode
-    struct {
-        uint8_t action    : 1; ///< push then 1, pop then 0
-        uint8_t imm       : 2; ///< immediate space requirement, 0 => 0, 1 => 4, 2 => 8
-        uint8_t reg_index : 3; ///< target register index, 0 => zero, 1 => ax, 2 => bx, 3 => cx, 4 => dx
-        uint8_t access    : 1; ///< register index
-        uint8_t is_next   : 1; ///< if true next desc is valid, if not - not.
-    } desc[3];
-} CfInstructionPushPop;
-
 /// Assembling status
 typedef enum __CfAssemblyStatus {
     CF_ASSEMBLY_STATUS_OK,                  ///< all's ok
@@ -43,14 +31,31 @@ typedef enum __CfAssemblyStatus {
     CF_ASSEMBLY_STATUS_UNKNOWN_DECLARATION, ///< unknown declaration
     CF_ASSEMBLY_STATUS_UNKNOWN_LABEL,       ///< unknown label
     CF_ASSEMBLY_STATUS_UNKNOWN_REGISTER,    ///< unknown register
+    CF_ASSEMBLY_STATUS_DUPLICATE_LABEL,     ///< duplicated label declaration
+    CF_ASSEMBLY_STATUS_UNEVEN_JUMP,         ///< uneven jump
 } CfAssemblyStatus;
 
 /// @brief detailed info about assembling process
 typedef union __CfAssemblyDetails {
-    CfStringSlice unknownInstruction;
-    CfStringSlice unknownDeclaration;
-    CfStringSlice unknownLabel;
-    CfStringSlice unknownRegister;
+    CfStr unknownInstruction;
+    CfStr unknownDeclaration;
+    CfStr unknownRegister;
+
+    struct {
+        CfStr  label;            ///< unknown label name
+        size_t referencedAtLine; ///< line reference of this label occured
+    } unknownLabel;
+
+    struct {
+        CfStr  label;             ///< label itself
+        size_t firstDeclaration;  ///< line there duplicated label was initially declared
+        size_t secondDeclaration; ///< line there duplicated label was secondary declared
+    } duplicateLabel;
+
+    struct {
+        size_t line;      ///< line error occured
+        uint64_t address; ///< jumping address
+    } unevenJump;
 } CfAssemblyDetails;
 
 /**
@@ -62,7 +67,7 @@ typedef union __CfAssemblyDetails {
  * 
  * @return assembling status
  */
-CfAssemblyStatus cfAssemble( CfStringSlice text, CfModule *dst, CfAssemblyDetails *details );
+CfAssemblyStatus cfAssemble( CfStr text, CfModule *dst, CfAssemblyDetails *details );
 
 /// @brief general disassembling process status
 typedef enum __CfDisassemblyStatus {
