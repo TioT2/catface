@@ -24,3 +24,4 @@ syscall 1
 jmp start
 
 end:
+halt

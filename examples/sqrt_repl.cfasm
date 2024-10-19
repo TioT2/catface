@@ -1,7 +1,7 @@
 ; REPL fast inverse square root calculation program
 
 call _start
-jmp end
+halt
 
 ; INTERNAL FUNCTION of _fast_inv_sqrt
 _fast_inv_sqrt_newt_iteration:
@@ -80,4 +80,3 @@ _start:
     _start__end:
 ret
 
-end:

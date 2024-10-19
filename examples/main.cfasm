@@ -16,3 +16,4 @@ itof
 ; syscall instruction is made to call some functions from outside of sandbox
 ; "syscall <- n" just outputs n interpreting it as f64 number
 syscall 1
+halt

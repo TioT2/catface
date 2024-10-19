@@ -33,3 +33,4 @@ pop  bx
 ; ask sandbox to display f64 to stdout
 push bx
 syscall 1
+halt

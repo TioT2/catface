@@ -15,44 +15,69 @@
 extern "C" {
 #endif
 
-/// @brief reason of occured panic
-typedef enum __CfPanicReason {
-    CF_PANIC_REASON_UNKNOWN_OPCODE,       ///< unknown instruction passed
-    CF_PANIC_REASON_UNREACHABLE,          ///< unreachable
-    CF_PANIC_REASON_INTERNAL_ERROR,       ///< VM internal error
-    CF_PANIC_REASON_NO_OPERANDS,          ///< no arguments on stack
-    CF_PANIC_REASON_UNKNOWN_SYSTEM_CALL,  ///< invalid index of systemcall
-    CF_PANIC_REASON_UNEXPECTED_CODE_END,  ///< unexpected end of bytecode
-    CF_PANIC_REASON_UNKNOWN_REGISTER,     ///< unknown register index
-    CF_PANIC_REASON_STACK_UNDERFLOW,      ///< operand stack underflow
-    CF_PANIC_REASON_CALL_STACK_UNDERFLOW, ///< call stack underflow
-} CfPanicReason;
+/// @brief reason of program termination
+typedef enum __CfTermReason {
+    // sef of reasons that are module-independent
+    CF_TERM_REASON_HALT,                 ///< program finished without errors
+    CF_TERM_REASON_SANDBOX_ERROR,        ///< sandbox function call failed
+    CF_TERM_REASON_INTERNAL_ERROR,       ///< something went totally wrong in VM itself
 
-/// @brief description of occured panic
-typedef struct __CfPanicInfo {
-    CfPanicReason reason; ///< panic reason
-    size_t        offset; ///< offset of code then instruction interrupted
+    // set of reasons called by module invalidness
+    CF_TERM_REASON_UNKNOWN_SYSTEM_CALL,  ///< invalid index of systemcall
+    CF_TERM_REASON_UNKNOWN_OPCODE,       ///< unknown opcode passed
+    CF_TERM_REASON_UNEXPECTED_CODE_END,  ///< unexpected end of bytecode
+    CF_TERM_REASON_UNKNOWN_REGISTER,     ///< unknown register index
+
+    // set of reasons called by execution errors
+    CF_TERM_REASON_UNREACHABLE,          ///< unreachable
+    CF_TERM_REASON_NO_OPERANDS,          ///< no arguments on stack
+    CF_TERM_REASON_STACK_UNDERFLOW,      ///< operand stack underflow
+    CF_TERM_REASON_CALL_STACK_UNDERFLOW, ///< call stack underflow
+    CF_TERM_REASON_INVALID_IC,           ///< invalid jump
+} CfTermReason;
+
+/// @brief description of program termination reason
+typedef struct __CfTermInfo {
+    CfTermReason  reason; ///< panic reason
+    size_t        offset; ///< offset of code then execution stopped
 
     union {
-        struct {
-            uint8_t opcode; ///< the unknown opcode
-        } unknownOpcode;
-
-        struct {
-            uint32_t index; ///< unknown systemcall
-        } unknownSystemCall;
-
-        struct {
-            uint32_t index; ///< register index
-        } unknownRegister;
+        uint8_t  unknownOpcode;     ///< unknown opcode
+        uint32_t unknownRegister;   ///< index of unknown register
+        uint32_t unknownSystemCall; ///< index of unknown systemCall
     };
-} CfPanicInfo;
+} CfTermInfo;
+
+/// @brief virtual machine context representation sturcture (passed from VM to user during sandbox initialization)
+typedef struct __CfExecContext {
+    void   * memory;     ///< VM memory
+    size_t   memorySize; ///< memory size (usually 1 MB)
+} CfExecContext;
 
 /// @brief sandbox description structure.
-/// Actually, this structure is temporary and (then functions will be introduced)
-/// will be partially (readF64 and writeF64 fields) replaced by import table.
 typedef struct __CfSandbox {
-    void *userContextPtr; ///< some pointer user may pass into this structure
+    void *userContext; ///< some pointer user may pass into this structure
+
+    /**
+     * @brief initialization callback
+     * 
+     * @param userContext pointer, passed by user into context
+     * @param execContext execution context, that contains all data that may be shared by user (non-null)
+     * 
+     * @return true if initialized, false if something went wrong
+     * 
+     * @note user **must not** save pointer of execContext, because execContext is temporary structure.
+     * @note terminate() callback **is not called** in case this function returns false.
+     */
+    bool (*initialize)( void *userContext, const CfExecContext *execContext );
+
+    /**
+     * @brief termination callback
+     * 
+     * @param userContextPtr pointer to some user context
+     * @param termInfo       information about program termination
+     */
+    void (*terminate)( void *userContext, const CfTermInfo *termInfo );
 
     /**
      * @brief 64-bit integer reading function pointer
@@ -70,14 +95,6 @@ typedef struct __CfSandbox {
      * @param number         number to write to output
      */
     void (*writeFloat64)( void *userContextPtr, double number );
-
-    /**
-     * @brief panic handle function
-     * 
-     * @param userContextPtr pointer to some user context
-     * @param panicInfo useful information for panic (non-null)
-     */
-    void (*handlePanic)( void *userContextPtr, const CfPanicInfo *panicInfo );
 } CfSandbox;
 
 /**
@@ -85,8 +102,10 @@ typedef struct __CfSandbox {
  * 
  * @param[in] module  module to execute (non-null, assumed to be valid ASM)
  * @param[in] sandbox connection of VM with environment (non-null)
+ * 
+ * @return true if execution started, false if not
  */
-void cfModuleExec( const CfModule *module, const CfSandbox *sandbox );
+bool cfModuleExec( const CfModule *module, const CfSandbox *sandbox );
 
 #ifdef __cplusplus
 }

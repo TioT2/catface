@@ -44,54 +44,82 @@ void writeFloat64( void *context, double number ) {
 } // writeFloat64
 
 /**
+ * @brief sandbox initialization function
+ * 
+ * @param[in] context     user context
+ * @param[in] execContext execution context
+ */
+bool sandboxInitialize( void *context, const CfExecContext *execContext ) {
+    return true;
+} // sandboxInitialize
+
+/**
  * @brief vm panic handling function
  * 
  * @param context   sandbox user context
- * @param panicInfo describes occured panic (non-null)
+ * @param termInfo describes occured panic (non-null)
  */
-void handlePanic( void *context, const CfPanicInfo *panicInfo ) {
-    assert(panicInfo != NULL);
+void sandboxTerminate( void *context, const CfTermInfo *termInfo ) {
+    assert(termInfo != NULL);
 
-    printf("module panicked (by %zu offset). reason: ", panicInfo->offset);
-    switch (panicInfo->reason) {
-    case CF_PANIC_REASON_UNKNOWN_OPCODE      : {
-        printf("unknown opcode (%04X).", (int)panicInfo->unknownOpcode.opcode);
+    if (termInfo->reason == CF_TERM_REASON_HALT) {
+        printf("program finished.");
+        return;
+    }
+
+    if (termInfo->reason == CF_TERM_REASON_SANDBOX_ERROR) {
+        printf("execution stopped because sandbox told to.");
+        return;
+    }
+
+    printf("module panicked (by %zu offset). reason: ", termInfo->offset);
+    switch (termInfo->reason) {
+    case CF_TERM_REASON_HALT: break;
+    case CF_TERM_REASON_SANDBOX_ERROR: break;
+
+    case CF_TERM_REASON_INVALID_IC: {
+        printf("instruction counter invalidated.");
         break;
     }
-    case CF_PANIC_REASON_CALL_STACK_UNDERFLOW     : {
+
+    case CF_TERM_REASON_UNKNOWN_OPCODE      : {
+        printf("unknown opcode (%04X).", (int)termInfo->unknownOpcode);
+        break;
+    }
+    case CF_TERM_REASON_CALL_STACK_UNDERFLOW     : {
         printf("call stack underflow.");
         break;
     }
-    case CF_PANIC_REASON_UNREACHABLE         : {
+    case CF_TERM_REASON_UNREACHABLE         : {
         printf("unreachable executed.");
         break;
     }
-    case CF_PANIC_REASON_INTERNAL_ERROR      : {
+    case CF_TERM_REASON_INTERNAL_ERROR      : {
         printf("internal vm error occured.");
         break;
     }
-    case CF_PANIC_REASON_NO_OPERANDS         : {
+    case CF_TERM_REASON_NO_OPERANDS         : {
         printf("no operands on stack.");
         break;
     }
-    case CF_PANIC_REASON_UNKNOWN_SYSTEM_CALL : {
-        printf("unknown system call (%u).", panicInfo->unknownSystemCall.index);
+    case CF_TERM_REASON_UNKNOWN_SYSTEM_CALL : {
+        printf("unknown system call (%u).", termInfo->unknownSystemCall);
         break;
     }
-    case CF_PANIC_REASON_UNEXPECTED_CODE_END : {
+    case CF_TERM_REASON_UNEXPECTED_CODE_END : {
         printf("unexpected code end.");
         break;
     }
-    case CF_PANIC_REASON_UNKNOWN_REGISTER    : {
-        printf("unknown register: %d.", panicInfo->unknownRegister.index);
+    case CF_TERM_REASON_UNKNOWN_REGISTER    : {
+        printf("unknown register: %d.", termInfo->unknownRegister);
         break;
     }
-    case CF_PANIC_REASON_STACK_UNDERFLOW     : {
+    case CF_TERM_REASON_STACK_UNDERFLOW     : {
         printf("operand stack underflow.");
         break;
     }
     }
-} // handlePanic
+} // sandboxTerminate
 
 int main( const int _argc, const char **_argv ) {
     // const int argc = 2;
@@ -123,10 +151,15 @@ int main( const int _argc, const char **_argv ) {
     }
 
     CfSandbox sandbox = {
-        .userContextPtr = &module,
+        .userContext = &module,
+
+        // initialization/termination function
+        .initialize = sandboxInitialize,
+        .terminate = sandboxTerminate,
+
+        // actually, debug-only functions
         .readFloat64 = readFloat64,
         .writeFloat64 = writeFloat64,
-        .handlePanic = handlePanic,
     };
 
     cfModuleExec(&module, &sandbox);

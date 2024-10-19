@@ -134,8 +134,6 @@ typedef enum __CfOpcode {
     // call/ret instructions
     CF_OPCODE_CALL, ///< calling instruction
     CF_OPCODE_RET,  ///< returning instruction
-
-    CF_OPCODE_SVM,  ///< Set Video Mode (update video mode flag bits from value from stack)
 } CfOpcode;
 
 /// @brief colored character representation structure (used in coloredText video mode)
