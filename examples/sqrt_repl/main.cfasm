@@ -1,0 +1,31 @@
+; REPL fast inverse square root calculation program
+
+; required: math.cfasm
+
+call _start
+halt
+
+; main function
+_start:
+    _start__start:
+
+    ; get value from user
+    syscall 0
+    pop  ax
+
+    call _fast_inv_sqrt
+
+    ; compare result with 0xFFFFFFFF
+    push 0xFFFFFFFF
+    push ax
+    cmp
+    je _start__end
+
+    ; print value and continue loop
+    push ax
+    syscall 1
+    jmp _start__start
+
+    _start__end:
+ret
+

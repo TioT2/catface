@@ -41,15 +41,16 @@ CfObjectReadStatus cfObjectRead( FILE *file, CfObject *dst ) {
 
     // read code/links/labels
     if (false
-        || header.sourceNameLength != fread(sourceName, sizeof(char),    header.sourceNameLength, file)
-        || header.codeLength           != fread(code,           sizeof(uint8_t), header.codeLength,           file)
-        || header.linkCount            != fread(links,          sizeof(CfLink),  header.linkCount,            file)
-        || header.labelCount           != fread(labels,         sizeof(CfLabel), header.labelCount,           file)
+        || header.sourceNameLength != fread(sourceName,     sizeof(char),    header.sourceNameLength, file)
+        || header.codeLength       != fread(code,           sizeof(uint8_t), header.codeLength,       file)
+        || header.linkCount        != fread(links,          sizeof(CfLink),  header.linkCount,        file)
+        || header.labelCount       != fread(labels,         sizeof(CfLabel), header.labelCount,       file)
     ) {
         status = CF_OBJECT_READ_STATUS_UNEXPECTED_FILE_END;
         goto cfObjectRead__error;
     }
 
+    dst->sourceName = sourceName;
     dst->code = code;
     dst->codeLength = header.codeLength;
     dst->links = links;
@@ -98,5 +99,16 @@ void cfObjectDtor( CfObject *object ) {
         free(object->links);
     }
 } // cfObjectDtor
+
+const char * cfObjectReadStatusStr( CfObjectReadStatus status ) {
+    switch (status) {
+    case CF_OBJECT_READ_STATUS_OK                   : return "ok";
+    case CF_OBJECT_READ_STATUS_INTERNAL_ERROR       : return "internal error";
+    case CF_OBJECT_READ_STATUS_UNEXPECTED_FILE_END  : return "unexpected file end";
+    case CF_OBJECT_READ_STATUS_INVALID_OBJECT_MAGIC : return "invalid object magic";
+    }
+
+    return "<invalid>";
+} // cfObjectReadStatusStr
 
 // cf_object.c

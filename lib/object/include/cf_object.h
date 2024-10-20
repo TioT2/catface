@@ -75,6 +75,15 @@ bool cfObjectWrite( FILE *file, const CfObject *src );
  */
 void cfObjectDtor( CfObject *object );
 
+/**
+ * @brief object read status string getting function
+ * 
+ * @param status status to get value for
+ * 
+ * @return string corresponding to status
+ */
+const char * cfObjectReadStatusStr( CfObjectReadStatus status );
+
 #ifdef __cplusplus
 }
 #endif

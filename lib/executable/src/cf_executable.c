@@ -47,7 +47,7 @@ CfExecutableReadStatus cfExecutableRead( FILE *file, CfExecutable *dst ) {
     return CF_EXECUTABLE_READ_STATUS_OK;
 } // cfExecutableRead
 
-bool cfExecutableWrite( const CfExecutable *executable, FILE *dst ) {
+bool cfExecutableWrite( FILE *const dst, const CfExecutable *const executable ) {
     assert(executable != NULL);
     assert(dst != NULL);
 

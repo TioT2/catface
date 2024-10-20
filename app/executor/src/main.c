@@ -339,7 +339,7 @@ bool sandboxSetVideoMode(
 
 int main( const int _argc, const char **_argv ) {
     // const int argc = 2;
-    // const char *argv[] = { "qq", "examples/green_line.cfmod" };
+    // const char *argv[] = { "qq", "examples/sqrt_repl/out.cfexe" };
     const int argc = _argc;
     const char **argv = _argv;
 

@@ -62,7 +62,7 @@ int main( const int _argc, const char **_argv ) {
     // const char *argv[] = {
     //     "qq",
     //     "-o",
-    //     "examples/sqrt_repl.cfmod",
+    //     "examples/sqrt_repl.cfexe",
     //     "-l",
     //     "examples/sqrt_repl.cfasm",
     // };
@@ -160,7 +160,7 @@ int main( const int _argc, const char **_argv ) {
             return 0;
         }
 
-        if (!cfExecutableWrite(&executable, output))
+        if (!cfExecutableWrite(output, &executable))
             printf("executable writing failed.\n");
 
         fclose(output);

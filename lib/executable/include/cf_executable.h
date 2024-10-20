@@ -193,12 +193,12 @@ CfExecutableReadStatus cfExecutableRead( FILE *file, CfExecutable *dst );
 /**
  * @brief executable to file writing function
  * 
- * @param[in]  executable executable to dump to file (non-null)
  * @param[out] file   destination file, should allow "wb" access
+ * @param[in]  executable executable to dump to file (non-null)
  * 
  * @return operation status
  */
-bool cfExecutableWrite( const CfExecutable *executable, FILE *dst );
+bool cfExecutableWrite( FILE *file, const CfExecutable *executable );
 
 /**
  * @brief executable destructor

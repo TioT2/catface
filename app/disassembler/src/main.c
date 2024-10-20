@@ -55,7 +55,7 @@ void printHelp( void ) {
 
 int main( const int _argc, const char **_argv ) {
     // const int argc = 2;
-    // const char *argv[] = { "qq", "examples/sqrt_repl.cfmod" };
+    // const char *argv[] = { "qq", "examples/sqrt_repl/out.cfexe" };
     const int argc = _argc;
     const char **argv = _argv;
 

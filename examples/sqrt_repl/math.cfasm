@@ -1,0 +1,54 @@
+; Math utilities
+
+; INTERNAL FUNCTION of _fast_inv_sqrt
+_fast_inv_sqrt_newt_iteration:
+    push 1.5
+    push bx
+    push bx
+    fmul
+    push ax
+    fmul
+    fsub
+    push bx
+    fmul
+    pop  bx
+ret
+
+; fast inverse square root calculation function
+; arguments: ax - value to calculate square root of
+; violates: ax, bx
+; in case of negative value, returns 0xFFFFFFFF
+_fast_inv_sqrt:
+    ; move error value to bx
+    push 0xFFFFFFFF
+    pop  bx
+
+    ; check if ax >= 0.0
+    push ax
+    push 0.0
+    fcmp
+    jl _fast_inv_sqrt__end
+
+    ; fast inverse square root's 'evil bit hack'
+    push 0x5F3759DF
+    push ax
+    push 1
+    shr
+    sub
+    pop  bx
+    
+    ; multiply x to 0.5
+    push ax
+    push 0.5
+    fmul
+    pop  ax
+
+    ; two newtonian iterations
+    call _fast_inv_sqrt_newt_iteration
+    call _fast_inv_sqrt_newt_iteration
+
+    _fast_inv_sqrt__end:
+    ; set return value
+    push bx
+    pop  ax
+ret
