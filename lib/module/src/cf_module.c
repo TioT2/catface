@@ -4,8 +4,10 @@
 #include "cf_module.h"
 #include "cf_hash.h"
 
+/// @brief module file magic
 const uint64_t CF_MODULE_MAGIC = 0x0045434146544143; // "CATFACE\0" as char
 
+/// @brief module file header representation structure
 typedef struct __CfModuleHeader {
     uint64_t magic;      ///< module magic number
     uint64_t codeLength; ///< module length
@@ -45,7 +47,7 @@ CfModuleReadStatus cfModuleRead( FILE *file, CfModule *dst ) {
     return CF_MODULE_READ_STATUS_OK;
 } // cfModuleRead
 
-CfModuleWriteStatus cfModuleWrite( const CfModule *module, FILE *dst ) {
+bool cfModuleWrite( const CfModule *module, FILE *dst ) {
     assert(module != NULL);
     assert(dst != NULL);
 
@@ -55,11 +57,10 @@ CfModuleWriteStatus cfModuleWrite( const CfModule *module, FILE *dst ) {
         .codeHash = cfHash(module->code, module->codeLength),
     };
 
-    if (sizeof(moduleHeader) != fwrite(&moduleHeader, 1, sizeof(moduleHeader), dst))
-        return CF_MODULE_WRITE_STATUS_WRITE_ERROR;
-    if (module->codeLength != fwrite(module->code, 1, module->codeLength, dst))
-        return CF_MODULE_WRITE_STATUS_WRITE_ERROR;
-    return CF_MODULE_WRITE_STATUS_OK;
+    return true
+        && sizeof(moduleHeader) == fwrite(&moduleHeader, 1, sizeof(moduleHeader), dst)
+        && module->codeLength == fwrite(module->code, 1, module->codeLength, dst)
+    ;
 } // cfModuleWrite
 
 void cfModuleDtor( CfModule *module ) {
@@ -80,14 +81,5 @@ const char * cfModuleReadStatusStr( CfModuleReadStatus status ) {
     default                                         : return "<invalid>";
     }
 } // cfModuleReadStatusStr
-
-const char * cfModuleWriteStatusStr( CfModuleWriteStatus status ) {
-    switch (status) {
-    case CF_MODULE_WRITE_STATUS_OK          : return "ok";
-    case CF_MODULE_WRITE_STATUS_WRITE_ERROR : return "write error";
-
-    default                                 : return "<invalid>";
-    }
-} // cfModuleWriteStatusStr
 
 // cf_module.h

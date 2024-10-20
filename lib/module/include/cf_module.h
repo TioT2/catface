@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -189,12 +190,6 @@ typedef struct __CfPushPopInfo {
  */
 CfModuleReadStatus cfModuleRead( FILE *file, CfModule *dst );
 
-/// @brief module to file writing status
-typedef enum __CfModuleWriteStatus {
-    CF_MODULE_WRITE_STATUS_OK,          ///< succeeded
-    CF_MODULE_WRITE_STATUS_WRITE_ERROR, ///< writing to file operation failed
-} CfModuleWriteStatus;
-
 /**
  * @brief module to file writing function
  * 
@@ -203,7 +198,7 @@ typedef enum __CfModuleWriteStatus {
  * 
  * @return operation status
  */
-CfModuleWriteStatus cfModuleWrite( const CfModule *module, FILE *dst );
+bool cfModuleWrite( const CfModule *module, FILE *dst );
 
 /**
  * @brief module destructor
@@ -221,15 +216,6 @@ void cfModuleDtor( CfModule *module );
  * @return corresponding string. In case of invalid status returns "<invalid>"
  */
 const char * cfModuleReadStatusStr( CfModuleReadStatus status );
-
-/**
- * @brief module write status corresponding string getting function
- * 
- * @param[in] status module writing status
- * 
- * @return corresponding string. In case of invalid status returns "<invalid>"
- */
-const char * cfModuleWriteStatusStr( CfModuleWriteStatus status );
 
 #ifdef __cplusplus
 }

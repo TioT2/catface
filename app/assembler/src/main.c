@@ -139,9 +139,9 @@ int main( const int _argc, const char **_argv ) {
         printf("output file opening error: %s\n", strerror(errno));
         return 0;
     }
-    CfModuleWriteStatus moduleWriteStatus = cfModuleWrite(&module, output);
-    if (moduleWriteStatus != CF_MODULE_WRITE_STATUS_OK) {
-        printf("module to output file writing error: %s\n", cfModuleWriteStatusStr(moduleWriteStatus));
+
+    if (!cfModuleWrite(&module, output)) {
+        printf("module writing failed.\n");
 
         fclose(output);
         free(text);
