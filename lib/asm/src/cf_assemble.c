@@ -499,6 +499,10 @@ CfAssemblyStatus cfAssemble( CfStr text, CfModule *dst, CfAssemblyDetails *detai
             dataBuffer[0] = CF_OPCODE_UNREACHABLE;
         } else if (cfStrStartsWith(token.ident, "halt")) {
             dataBuffer[0] = CF_OPCODE_HALT;
+        } else if (cfStrStartsWith(token.ident, "vsm")) {
+            dataBuffer[0] = CF_OPCODE_VSM;
+        } else if (cfStrStartsWith(token.ident, "vrs")) {
+            dataBuffer[0] = CF_OPCODE_VRS;
         } else if (false
             || cfStrIsSame(token.ident, CF_STR("push"))
             || cfStrIsSame(token.ident, CF_STR("pop" ))

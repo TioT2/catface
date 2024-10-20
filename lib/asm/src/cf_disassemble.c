@@ -133,6 +133,14 @@ CfDisassemblyStatus cfDisassemble( const CfModule *module, char **dest, CfDisass
             strcpy(line, "ftoi");
             break;
         }
+        case CF_OPCODE_VSM: {
+            strcpy(line, "vsm");
+            break;
+        }
+        case CF_OPCODE_VRS: {
+            strcpy(line, "vrs");
+            break;
+        }
         case CF_OPCODE_FADD: {
             strcpy(line, "fadd");
             break;

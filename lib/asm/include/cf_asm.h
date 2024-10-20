@@ -12,16 +12,6 @@
 extern "C" {
 #endif
 
-// registers:
-// r0 zero 
-// r1 ax   
-// r2 bx   
-// r3 cx   
-// r4 dx   
-// r5 vid  
-// r6 
-// r7 
-
 /// Assembling status
 typedef enum __CfAssemblyStatus {
     CF_ASSEMBLY_STATUS_OK,                       ///< all's ok

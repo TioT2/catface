@@ -1,5 +1,7 @@
 /**
  * @brief CF binary module basic functions declaration file
+ * 
+ * @note actually, this file contains full 'specification' of CF binary executable format.
  */
 
 #ifndef CF_MODULE_H_
@@ -21,21 +23,15 @@ extern "C" {
 /// @brief screen height
 #define CF_VIDEO_SCREEN_HEIGHT ((size_t)200)
 
-/// @brief ordering representation enumeration
-/// @note exactly this bit flags are used in CMP and JIM instructions implementation
-typedef enum __CfOrdering {
-    CF_ORDERING_LESS  = 1, ///< <
-    CF_ORDERING_EQUAL = 2, ///< =
-    CF_ORDERING_MORE  = 4, ///< >
-} CfOrdering;
-
 /// @brief flag register layout
 typedef struct __CfRegisterFlags {
-    uint8_t cmpIsLt         : 1; ///< is less in last comparison
-    uint8_t cmpIsEq         : 1; ///< is equal in last comparison
+    // comparison flag family
+    uint8_t cmpIsLt            : 1; ///< is less in last comparison
+    uint8_t cmpIsEq            : 1; ///< is equal in last comparison
 
-    uint8_t videoMode       : 3; ///< buffer output mode (text/colored text/256-color palette/RGBX TrueColor)
-    uint8_t videoUpdateMode : 1; ///< manual (kind of synchronization)/immediate (rewrite in parallel thread)
+    // video flag family
+    uint8_t videoStorageFormat : 3; ///< buffer output mode (text/colored text/256-color palette/RGBX TrueColor)
+    uint8_t videoUpdateMode    : 1; ///< manual (kind of synchronization)/immediate (rewrite in parallel thread)
 
     uint8_t _placeholder0: 2;    // placeholder
     uint8_t _placeholder1: 8;    // placeholder
@@ -44,17 +40,17 @@ typedef struct __CfRegisterFlags {
 } CfRegisterFlags;
 
 /// @brief video mode representation enumeration
-typedef enum __CfVideoMode {
-    CF_VIDEO_MODE_TEXT          = 0, ///< just black text
-    CF_VIDEO_MODE_COLORED_TEXT  = 1, ///< text with 16 colors
-    CF_VIDEO_MODE_COLOR_PALETTE = 2, ///< colored, with 256-color palette
-    CF_VIDEO_MODE_TRUE_COLOR    = 3, ///< RGBX mode (fourth coordinate ignored)
-} CfVideoMode;
+typedef enum __CfVideoStorageFormat {
+    CF_VIDEO_STORAGE_FORMAT_TEXT          = 0, ///< (default) just black text
+    CF_VIDEO_STORAGE_FORMAT_COLORED_TEXT  = 1, ///< text with 16 colors
+    CF_VIDEO_STORAGE_FORMAT_COLOR_PALETTE = 2, ///< colored, with 256-color palette
+    CF_VIDEO_STORAGE_FORMAT_TRUE_COLOR    = 3, ///< RGBX mode (fourth coordinate ignored)
+} CfVideoStorageFormat;
 
 /// @brief video update mode representation enumeration
 typedef enum __CfVideoUpdateMode {
-    CF_VIDEO_UPDATE_MODE_MANUAL    = 0, ///< update image on screen after certain instruction call
-    CF_VIDEO_UPDATE_MODE_IMMEDIATE = 1, ///< update image on screen immediately
+    CF_VIDEO_UPDATE_MODE_IMMEDIATE = 0, ///< (default) update image on screen immediately
+    CF_VIDEO_UPDATE_MODE_MANUAL    = 1, ///< update image on screen after certain only instruction call. During video memory update it's ok for image in actual window to change.
 } CfVideoUpdateMode;
 
 /// @brief register set representation structure
@@ -134,6 +130,13 @@ typedef enum __CfOpcode {
     // call/ret instructions
     CF_OPCODE_CALL, ///< calling instruction
     CF_OPCODE_RET,  ///< returning instruction
+
+    // // key state getting function
+    // CF_OPCODE_KCHK, ///< Key CHecKing function. Stack value is used as scancode, 1 pushed if key is pressed, 0 otherwise.
+
+    // update video mode
+    CF_OPCODE_VSM,  ///< Video Set Mode
+    CF_OPCODE_VRS,  ///< Video Refresh Screen
 } CfOpcode;
 
 /// @brief colored character representation structure (used in coloredText video mode)

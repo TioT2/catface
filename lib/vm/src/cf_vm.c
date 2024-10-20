@@ -153,6 +153,28 @@ void cfVmWriteRegister( CfVm *const self, const uint32_t reg, const uint32_t val
 } // cfVmWriteRegister
 
 /**
+ * @brief VM video mode setting function
+ * 
+ * @param storageFormat pixel storage format
+ * @param updateMode    screen and memory content synchronization mode
+ * 
+ * @note all input enumerations are assumed to be valid
+ */
+void cfVmSetVideoMode(
+    CfVm *const self,
+    const CfVideoStorageFormat storageFormat,
+    const CfVideoUpdateMode updateMode
+) {
+    // set corresponding registers
+    self->registers.fl.videoStorageFormat = storageFormat;
+    self->registers.fl.videoUpdateMode = updateMode;
+
+    // propagate changes to sandbox
+    if (!self->sandbox->setVideoMode(self->sandbox->userContext, storageFormat, updateMode))
+        cfVmTerminate(self, CF_TERM_REASON_SANDBOX_ERROR);
+} // cfVmSetVideoMode
+
+/**
  * @brief value to register writing function
  * 
  * @param[in,out] self virtual machine to perform operation in
@@ -167,6 +189,25 @@ uint32_t cfVmReadRegister( CfVm *const self, const uint32_t reg ) {
     }
     return self->registers.indexed[reg];
 } // cfVmReadRegister
+
+/**
+ * @brief memory pointer getting function
+ * 
+ * @param[in,out] self vm pointer
+ * @param[in]     addr address to access memory by
+ * 
+ * @return pointer to memory location, always valid to read/write 4 bytes and non-null
+ */
+void * cfVmGetMemoryPointer( CfVm *const self, const uint32_t addr ) {
+    // perform address bound check
+    if (addr >= self->memorySize - 4) {
+        self->termInfo.segmentationFault.memorySize = self->memorySize;
+        self->termInfo.segmentationFault.addr = addr;
+        cfVmTerminate(self, CF_TERM_REASON_SEGMENTATION_FAULT);
+    }
+
+    return self->memory + addr;
+} // cfVmGetMemoryPointer
 
 /**
  * @brief VM execution starting function
@@ -316,17 +357,68 @@ void cfVmStart( CfVm *const self ) {
             break;
         }
 
+        case CF_OPCODE_VSM: {
+            // read videoMode bits from stack
+            uint32_t newVideoMode;
+            cfVmPopOperand(self, &newVideoMode);
+
+            // validate video mode flag bit combination
+            self->termInfo.invalidVideoMode.storageFormatBits = newVideoMode;
+            self->termInfo.invalidVideoMode.updateModeBits = newVideoMode >> 1;
+
+            // validate video mode
+            switch ((CfVideoStorageFormat)(newVideoMode & 0x7)) {
+            case CF_VIDEO_STORAGE_FORMAT_TEXT:
+            case CF_VIDEO_STORAGE_FORMAT_COLORED_TEXT:
+            case CF_VIDEO_STORAGE_FORMAT_COLOR_PALETTE:
+            case CF_VIDEO_STORAGE_FORMAT_TRUE_COLOR:
+                break;
+            default:
+                cfVmTerminate(self, CF_TERM_REASON_INVALID_VIDEO_MODE);
+            }
+
+            switch ((CfVideoUpdateMode)((newVideoMode >> 3) & 0x1)) {
+            case CF_VIDEO_UPDATE_MODE_IMMEDIATE:
+            case CF_VIDEO_UPDATE_MODE_MANUAL:
+                break;
+            default:
+                cfVmTerminate(self, CF_TERM_REASON_INVALID_VIDEO_MODE);
+            }
+
+            // actually, set video mode
+            cfVmSetVideoMode(
+                self,
+                (CfVideoStorageFormat)(newVideoMode & 0x7),
+                (CfVideoUpdateMode)((newVideoMode >> 3) & 0x1)
+            );
+            break;
+        }
+
+        case CF_OPCODE_VRS: {
+            // refresh screen
+            if (!self->sandbox->refreshScreen(self->sandbox->userContext))
+                cfVmTerminate(self, CF_TERM_REASON_SANDBOX_ERROR);
+            break;
+        }
+
         case CF_OPCODE_PUSH: {
             CfPushPopInfo info;
             cfVmRead(self, &info, sizeof(info));
-
-            if (info.isMemoryAccess)
-                cfVmTerminate(self, CF_TERM_REASON_INTERNAL_ERROR);
 
             uint32_t value = 0;
             if (info.doReadImmediate)
                 cfVmRead(self, &value, sizeof(value));
             value += cfVmReadRegister(self, info.registerIndex);
+
+            if (info.isMemoryAccess) {
+                void *ptr = cfVmGetMemoryPointer(
+                    self,
+                    cfVmReadRegister(self, info.registerIndex) + value
+                );
+
+                memcpy(&value, ptr, 4);
+            }
+
             cfVmPushOperand(self, &value);
             break;
         }
@@ -335,12 +427,28 @@ void cfVmStart( CfVm *const self ) {
             CfPushPopInfo info;
             cfVmRead(self, &info, sizeof(info));
 
-            if (info.doReadImmediate || info.isMemoryAccess)
-                cfVmTerminate(self, CF_TERM_REASON_INTERNAL_ERROR);
-
             uint32_t value;
             cfVmPopOperand(self, &value);
-            cfVmWriteRegister(self, info.registerIndex, value);
+
+            if (info.isMemoryAccess) {
+                uint32_t imm = 0;
+                if (info.doReadImmediate)
+                    cfVmRead(self, &imm, sizeof(imm));
+                uint32_t addr = cfVmReadRegister(self, info.registerIndex) + imm;
+
+                void *ptr = cfVmGetMemoryPointer(self, addr);
+
+                memcpy(ptr, &value, sizeof(value));
+            } else {
+                // throw error if trying to write to immediate
+                if (info.doReadImmediate) {
+                    self->termInfo.invalidPopInfo = info;
+                    cfVmTerminate(self, CF_TERM_REASON_INVALID_POP_INFO);
+                }
+
+                // write to register
+                cfVmWriteRegister(self, info.registerIndex, value);
+            }
             break;
         }
 
@@ -369,11 +477,7 @@ bool cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
     assert(module != NULL);
     assert(sandbox != NULL);
 
-    // validate sandbox
-    assert(sandbox->initialize != NULL);
-    assert(sandbox->terminate != NULL);
-    assert(sandbox->readFloat64 != NULL);
-    assert(sandbox->writeFloat64 != NULL);
+    // TODO: validate sandbox
 
     // perform minimal context setup
     CfVm vm = {

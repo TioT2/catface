@@ -34,6 +34,9 @@ typedef enum __CfTermReason {
     CF_TERM_REASON_STACK_UNDERFLOW,      ///< operand stack underflow
     CF_TERM_REASON_CALL_STACK_UNDERFLOW, ///< call stack underflow
     CF_TERM_REASON_INVALID_IC,           ///< invalid jump
+    CF_TERM_REASON_INVALID_VIDEO_MODE,   ///< invalid video mode
+    CF_TERM_REASON_SEGMENTATION_FAULT,   ///< good old segfault
+    CF_TERM_REASON_INVALID_POP_INFO,     ///< invalid push/pop info for pop instruction
 } CfTermReason;
 
 /// @brief description of program termination reason
@@ -42,9 +45,20 @@ typedef struct __CfTermInfo {
     size_t        offset; ///< offset of code then execution stopped
 
     union {
-        uint8_t  unknownOpcode;     ///< unknown opcode
-        uint32_t unknownRegister;   ///< index of unknown register
-        uint32_t unknownSystemCall; ///< index of unknown systemCall
+        uint8_t       unknownOpcode;     ///< unknown opcode
+        uint32_t      unknownRegister;   ///< index of unknown register
+        uint32_t      unknownSystemCall; ///< index of unknown systemCall
+        CfPushPopInfo invalidPopInfo;    ///< invalid push/pop info for pop instruction data
+
+        struct {
+            uint8_t storageFormatBits : 3; ///< bits of video mode
+            uint8_t updateModeBits    : 1; ///< bits of update mode
+        } invalidVideoMode;
+
+        struct {
+            uint32_t memorySize; ///< memory size
+            uint32_t addr;       ///< address
+        } segmentationFault;
     };
 } CfTermInfo;
 
@@ -80,21 +94,33 @@ typedef struct __CfSandbox {
     void (*terminate)( void *userContext, const CfTermInfo *termInfo );
 
     /**
+     * @brief screen manual refreshing function
+     * 
+     * @param[in] userContext   user-provided context
+     * @param[in] storageFormat image data storage foramt
+     * 
+     * @return true if succeeded, false if something went wrong.
+     */
+    bool (*refreshScreen)( void *userContext );
+
+    bool (*setVideoMode)( void *userContext, CfVideoStorageFormat storageFormat, CfVideoUpdateMode updateMode );
+
+    /**
      * @brief 64-bit integer reading function pointer
      * 
-     * @param userContextPtr pointer to some user context
+     * @param userContext pointer to some user context
      * 
      * @return some 64-bit integer
      */
-    double (*readFloat64)( void *userContextPtr );
+    double (*readFloat64)( void *userContext );
 
     /**
      * @brief 64-bit integer outputting function
      * 
-     * @param userContextPtr pointer to some user context
-     * @param number         number to write to output
+     * @param userContext pointer to some user context
+     * @param number      number to write to output
      */
-    void (*writeFloat64)( void *userContextPtr, double number );
+    void (*writeFloat64)( void *userContext, double number );
 } CfSandbox;
 
 /**

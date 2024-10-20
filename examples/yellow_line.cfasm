@@ -1,0 +1,58 @@
+; Yellow line displaying program.
+
+call _start
+halt
+
+; pixel setting function
+; stack: y x color
+; violates: ax
+_set_pixel:
+    push 320
+    mul
+    add
+    push 4
+    mul
+    pop ax
+    pop [ax]
+ret
+
+_start:
+    ; set video mode
+    push 0xB ; 1011, where 1 - manualUpdate, 011 - trueColor
+    vsm
+
+    _start__main_loop:
+
+    ; initialize counter
+    push 100
+    pop  ax
+
+    ; draw line loop
+    _start__begin:
+
+    ; set pixel at (i, i) location
+    push ax
+    push 0x00FFFF
+    push ax
+    push ax
+    call _set_pixel
+    pop ax
+
+    ; ax -= 1
+    push ax
+    push 1
+    sub
+    pop  ax
+
+    ; compare 
+    push ax
+    push 0
+    cmp
+
+    jne _start__begin:
+
+    ; refresh screen
+    vrs
+
+    jmp _start__main_loop
+ret
