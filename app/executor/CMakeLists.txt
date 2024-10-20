@@ -13,5 +13,4 @@ set_property(TARGET "cf_executor" PROPERTY CXX_STANDARD 20)
 
 # link dependencies
 target_link_libraries("cf_executor" PRIVATE vm)
-target_link_libraries("cf_executor" PRIVATE module)
 target_link_libraries("cf_executor" PRIVATE SDL2)

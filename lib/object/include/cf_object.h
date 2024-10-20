@@ -1,5 +1,5 @@
 /**
- * @brief object file utilities declaration module
+ * @brief object declaration file
  */
 
 #ifndef CF_OBJECT_H_

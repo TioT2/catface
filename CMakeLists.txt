@@ -12,7 +12,7 @@ set(CF_LANGUAGE CXX)
 
 # compile libraries
 add_subdirectory(lib/util)
-add_subdirectory(lib/module)
+add_subdirectory(lib/executable)
 add_subdirectory(lib/object)
 add_subdirectory(lib/assembler)
 add_subdirectory(lib/disassembler)

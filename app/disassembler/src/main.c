@@ -87,37 +87,37 @@ int main( const int _argc, const char **_argv ) {
         .inputFileName = argv[argc - 1],
     };
 
-    CfModule module;
+    CfExecutable executable;
 
     FILE *input = fopen(options.inputFileName, "rb");
     if (input == NULL) {
         printf("input file opening error: %s\n", strerror(errno));
         return 0;
     }
-    CfModuleReadStatus readStatus = cfModuleRead(input, &module);
+    CfExecutableReadStatus readStatus = cfExecutableRead(input, &executable);
     fclose(input);
 
 
-    if (readStatus != CF_MODULE_READ_STATUS_OK) {
-        printf("input module file reading error: %s\n", cfModuleReadStatusStr(readStatus));
+    if (readStatus != CF_EXECUTABLE_READ_STATUS_OK) {
+        printf("input executable file reading error: %s\n", cfExecutableReadStatusStr(readStatus));
         return 0;
     }
 
     char *text;
     CfDisassemblyDetails disassemblyDetails;
-    CfDisassemblyStatus disassemblyStatus = cfDisassemble(&module, &text, &disassemblyDetails);
+    CfDisassemblyStatus disassemblyStatus = cfDisassemble(&executable, &text, &disassemblyDetails);
 
     if (disassemblyStatus != CF_DISASSEMBLY_STATUS_OK) {
         printf("assembling failed.\n");
         cfDisassemblyDetailsDump(stdout, disassemblyStatus, &disassemblyDetails);
         printf("\n");
 
-        cfModuleDtor(&module);
+        cfExecutableDtor(&executable);
         return 0;
     }
 
     puts(text);
-    cfModuleDtor(&module);
+    cfExecutableDtor(&executable);
 
     return 0;
 } // main

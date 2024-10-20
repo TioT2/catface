@@ -1,5 +1,5 @@
 /**
- * @brief CF module executor utility.
+ * @brief CFEXE executor utility.
  */
 
 #include <stdio.h>
@@ -11,14 +11,14 @@
 #include <SDL2/SDL.h>
 
 #include <cf_vm.h>
-#include <cf_module.h>
+#include <cf_executable.h>
 #include <cf_cli.h>
 
 /**
  * @brief help displaying function
  */
 void printHelp( void ) {
-    printf("Usage: cf_exec module\n");
+    printf("Usage: cf_exec executable\n");
 } // printHelp
 
 /// @brief sandbox context representation structure
@@ -214,7 +214,7 @@ void sandboxTerminate( void *userContext, const CfTermInfo *termInfo ) {
         return;
     }
 
-    printf("module panicked (by %zu offset). reason: ", termInfo->offset);
+    printf("program panicked (by %zu offset). reason: ", termInfo->offset);
     switch (termInfo->reason) {
     case CF_TERM_REASON_HALT: break;
     case CF_TERM_REASON_SANDBOX_ERROR: break;
@@ -348,21 +348,21 @@ int main( const int _argc, const char **_argv ) {
         return 0;
     }
 
-    const char *modulePath = argv[1];
+    const char *execPath = argv[1];
 
-    CfModule module;
-    FILE *inputFile = fopen(modulePath, "rb");
+    CfExecutable executable;
+    FILE *inputFile = fopen(execPath, "rb");
 
     if (inputFile == NULL) {
         printf("input file opening error: %s\n", strerror(errno));
         return 0;
     }
 
-    CfModuleReadStatus readStatus = cfModuleRead(inputFile, &module);
+    CfExecutableReadStatus readStatus = cfExecutableRead(inputFile, &executable);
     fclose(inputFile);
 
-    if (readStatus != CF_MODULE_READ_STATUS_OK) {
-        printf("input module file reading error: %s\n", cfModuleReadStatusStr(readStatus));
+    if (readStatus != CF_EXECUTABLE_READ_STATUS_OK) {
+        printf("input executable file reading error: %s\n", cfExecutableReadStatusStr(readStatus));
         return 0;
     }
 
@@ -383,8 +383,8 @@ int main( const int _argc, const char **_argv ) {
         .writeFloat64 = writeFloat64,
     };
 
-    cfModuleExec(&module, &sandbox);
-    cfModuleDtor(&module);
+    cfExecute(&executable, &sandbox);
+    cfExecutableDtor(&executable);
 
     return 0;
 } // main

@@ -11,7 +11,7 @@ typedef struct __CfVm {
     uint8_t *         memory;                  ///< operative memory
     size_t            memorySize;              ///< current memory size (1 MB, actually)
 
-    const CfModule  * module;                  ///< executed module
+    const CfExecutable  * executable;                  ///< executed executable
     const CfSandbox * sandbox;                 ///< execution environment (sandbox, actually)
 
     // registers
@@ -40,7 +40,7 @@ void cfVmTerminate( CfVm *self, const CfTermReason reason ) {
 
     // fill standard termInfo fields
     self->termInfo.reason = reason;
-    self->termInfo.offset = self->instructionCounter - (const uint8_t *)self->module->code;
+    self->termInfo.offset = self->instructionCounter - (const uint8_t *)self->executable->code;
 
     // jump to termination handler
     longjmp(self->panicJumpBuffer, 1);
@@ -466,22 +466,22 @@ void cfVmStart( CfVm *const self ) {
 } // cfVmStart
 
 /**
- * @brief module execution function
+ * @brief executable execution function
  * 
- * @param[in] module  module to execute
+ * @param[in] executable  executable to execute
  * @param[in] sandbox execution environment
  * 
  * @return true if execution started, false if not
  */
-bool cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
-    assert(module != NULL);
+bool cfExecute( const CfExecutable *executable, const CfSandbox *sandbox ) {
+    assert(executable != NULL);
     assert(sandbox != NULL);
 
     // TODO: validate sandbox
 
     // perform minimal context setup
     CfVm vm = {
-        .module = module,
+        .executable = executable,
         .sandbox = sandbox,
     };
     bool isOk = true;
@@ -492,7 +492,7 @@ bool cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
     if (jmp) {
         sandbox->terminate(sandbox->userContext, &vm.termInfo);
         // then go to cleanup
-        goto cfModuleExec__cleanup;
+        goto cfExecute__cleanup;
     }
 
     // allocate memory
@@ -504,11 +504,11 @@ bool cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
     // here VM is not even initialized
     if (vm.memory == NULL || vm.callStack == NULL || vm.operandStack == NULL) {
         isOk = false;
-        goto cfModuleExec__cleanup;
+        goto cfExecute__cleanup;
     }
 
-    vm.instructionCounterBegin = (const uint8_t *)vm.module->code;
-    vm.instructionCounterEnd   = (const uint8_t *)vm.module->code + vm.module->codeLength;
+    vm.instructionCounterBegin = (const uint8_t *)vm.executable->code;
+    vm.instructionCounterEnd   = (const uint8_t *)vm.executable->code + vm.executable->codeLength;
 
     vm.instructionCounter = vm.instructionCounterBegin;
 
@@ -522,7 +522,7 @@ bool cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
         // finish if initialization failed
         if (!sandbox->initialize(sandbox->userContext, &execContext)) {
             isOk = false;
-            goto cfModuleExec__cleanup;
+            goto cfExecute__cleanup;
         }
     }
 
@@ -530,11 +530,11 @@ bool cfModuleExec( const CfModule *module, const CfSandbox *sandbox ) {
     cfVmStart(&vm);
 
     // perform cleanup
-cfModuleExec__cleanup:
+cfExecute__cleanup:
     free(vm.memory);
     cfStackDtor(vm.callStack);
     cfStackDtor(vm.operandStack);
     return isOk;
-} // cfModuleExec2
+} // cfExecute
 
 // cf_vm.c

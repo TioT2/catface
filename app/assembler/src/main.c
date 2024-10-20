@@ -118,11 +118,11 @@ int main( const int _argc, const char **_argv ) {
         return 0;
     }
 
-    CfModule module;
+    CfExecutable executable;
     CfAssemblyDetails assemblyDetails;
     CfAssemblyStatus assemblyStatus = cfAssemble(
         (CfStr){text, text + textLen},
-        &module,
+        &executable,
         &assemblyDetails
     );
 
@@ -140,18 +140,18 @@ int main( const int _argc, const char **_argv ) {
         return 0;
     }
 
-    if (!cfModuleWrite(&module, output)) {
-        printf("module writing failed.\n");
+    if (!cfExecutableWrite(&executable, output)) {
+        printf("executable writing failed.\n");
 
         fclose(output);
         free(text);
-        cfModuleDtor(&module);
+        cfExecutableDtor(&executable);
         return 0;
     }
     fclose(output);
 
     free(text);
-    cfModuleDtor(&module);
+    cfExecutableDtor(&executable);
 
     return 0;
 } // main

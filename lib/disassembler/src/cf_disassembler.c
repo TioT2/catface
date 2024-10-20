@@ -57,14 +57,14 @@ static void cfAsmFormatPushPopInfo(
     snprintf(dst, dstLen, "%s", cfAsmGetRegisterName(info.registerIndex));
 } // cfAsmFormatPushPopInfo
 
-CfDisassemblyStatus cfDisassemble( const CfModule *module, char **dest, CfDisassemblyDetails *details ) {
-    assert(module != NULL);
+CfDisassemblyStatus cfDisassemble( const CfExecutable *exec, char **dest, CfDisassemblyDetails *details ) {
+    assert(exec != NULL);
     assert(dest != NULL);
 
     CfDarr outStack = cfDarrCtor(sizeof(char));
 
-    const uint8_t *bytecode = (const uint8_t *)module->code;
-    const uint8_t *bytecodeEnd = bytecode + module->codeLength;
+    const uint8_t *bytecode = (const uint8_t *)exec->code;
+    const uint8_t *bytecodeEnd = bytecode + exec->codeLength;
 
     char line[256] = {0};
     const size_t lineLengthMax = sizeof(line);

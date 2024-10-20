@@ -1,11 +1,11 @@
 /**
- * @brief CfModule to CfAsm and CfAsm to CfModule converters declaratoin files
+ * @brief CfExecutable to CfAsm and CfAsm to CfExecutable converters declaratoin files
  */
 
 #ifndef CF_DISASSEMBLER_H_
 #define CF_DISASSEMBLER_H_
 
-#include <cf_module.h>
+#include <cf_executable.h>
 #include <cf_string.h>
 
 #ifdef __cplusplus
@@ -28,15 +28,15 @@ typedef union __CfDisassemblyDetails {
 } CfDisassemblyDetails;
 
 /**
- * @brief module disassembling function
+ * @brief exec disassembling function
  * 
- * @param[in] module  module pointer
+ * @param[in] exec    exec pointer
  * @param[in] dest    code destination
  * @param[in] details disassembling detailed info
  * 
  * @return disassembling status
  */
-CfDisassemblyStatus cfDisassemble( const CfModule *module, char **dest, CfDisassemblyDetails *details );
+CfDisassemblyStatus cfDisassemble( const CfExecutable *exec, char **dest, CfDisassemblyDetails *details );
 
 /**
  * @brief disassembly status to string conversion error

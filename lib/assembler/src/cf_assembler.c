@@ -416,7 +416,7 @@ bool cfAsmParsePushPopInfo(
 } // cfAsmParsePushPopInfo
 
 
-CfAssemblyStatus cfAssemble( CfStr text, CfModule *dst, CfAssemblyDetails *details ) {
+CfAssemblyStatus cfAssemble( CfStr text, CfExecutable *dst, CfAssemblyDetails *details ) {
     assert(dst != NULL);
 
     CfStr line;

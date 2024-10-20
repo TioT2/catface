@@ -1,11 +1,11 @@
 /**
- * @brief CF binary module basic functions declaration file
+ * @brief CF executable basic functions declaration file
  * 
  * @note actually, this file contains full 'specification' of CF binary executable format.
  */
 
-#ifndef CF_MODULE_H_
-#define CF_MODULE_H_
+#ifndef CF_EXECUTABLE_H_
+#define CF_EXECUTABLE_H_
 
 #include <stdint.h>
 #include <stdio.h>
@@ -158,20 +158,20 @@ typedef union __CfVideoMemory {
     } colorPalette;
 } CfVideoMemory;
 
-/// @brief bytecode module represetnation structure
-typedef struct __CfModule {
-    void    *code;       ///< module bytecode
-    size_t   codeLength; ///< module bytecode length
-} CfModule;
+/// @brief bytecode executable represetnation structure
+typedef struct __CfExecutable {
+    void    *code;       ///< executable bytecode
+    size_t   codeLength; ///< executable bytecode length
+} CfExecutable;
 
-/// @brief module reading status
-typedef enum __CfModuleReadStatus {
-    CF_MODULE_READ_STATUS_OK,                   ///< succeeded
-    CF_MODULE_READ_STATUS_INTERNAL_ERROR,       ///< some internal error occured
-    CF_MODULE_READ_STATUS_UNEXPECTED_FILE_END,  ///< unexpected end of file
-    CF_MODULE_READ_STATUS_INVALID_MODULE_MAGIC, ///< invalid module magic number
-    CF_MODULE_READ_STATUS_CODE_INVALID_HASH,    ///< invalid module code hash
-} CfModuleReadStatus;
+/// @brief executable reading status
+typedef enum __CfExecutableReadStatus {
+    CF_EXECUTABLE_READ_STATUS_OK,                       ///< succeeded
+    CF_EXECUTABLE_READ_STATUS_INTERNAL_ERROR,           ///< some internal error occured
+    CF_EXECUTABLE_READ_STATUS_UNEXPECTED_FILE_END,      ///< unexpected end of file
+    CF_EXECUTABLE_READ_STATUS_INVALID_EXECUTABLE_MAGIC, ///< invalid executable magic number
+    CF_EXECUTABLE_READ_STATUS_CODE_INVALID_HASH,        ///< invalid executable code hash
+} CfExecutableReadStatus;
 
 /// @brief push and pop instruction additional data
 typedef struct __CfPushPopInfo {
@@ -181,46 +181,46 @@ typedef struct __CfPushPopInfo {
 } CfPushPopInfo;
 
 /**
- * @brief module from file reading function
+ * @brief executable from file reading function
  * 
- * @param[in] file   file to read module from, should allow "rb" access
- * @param[in] module module to write to file (non-null)
+ * @param[in] file file to read executable from, should allow "rb" access
+ * @param[in] dst  executable to write to file (non-null)
  * 
- * @return module reading status
+ * @return operation status
  */
-CfModuleReadStatus cfModuleRead( FILE *file, CfModule *dst );
+CfExecutableReadStatus cfExecutableRead( FILE *file, CfExecutable *dst );
 
 /**
- * @brief module to file writing function
+ * @brief executable to file writing function
  * 
- * @param[in]  module module to dump to file (non-null)
+ * @param[in]  executable executable to dump to file (non-null)
  * @param[out] file   destination file, should allow "wb" access
  * 
  * @return operation status
  */
-bool cfModuleWrite( const CfModule *module, FILE *dst );
+bool cfExecutableWrite( const CfExecutable *executable, FILE *dst );
 
 /**
- * @brief module destructor
+ * @brief executable destructor
  * 
- * @param[in] module module to destroy
+ * @param[in] executable executable to destroy
  */
-void cfModuleDtor( CfModule *module );
+void cfExecutableDtor( CfExecutable *executable );
 
 
 /**
- * @brief module read status corresponding string getting function
+ * @brief executable read status corresponding string getting function
  * 
- * @param[in] status module read status
+ * @param[in] status executable read status
  * 
  * @return corresponding string. In case of invalid status returns "<invalid>"
  */
-const char * cfModuleReadStatusStr( CfModuleReadStatus status );
+const char * cfExecutableReadStatusStr( CfExecutableReadStatus status );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // !defined(CF_MODULE_H_)
+#endif // !defined(CF_EXECUTABLE_H_)
 
-// cf_module.h
+// cf_executable.h

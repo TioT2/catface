@@ -1,11 +1,11 @@
 /**
- * @brief CFASM -> CFOBJ compilation module
+ * @brief CFASM -> CFOBJ compilator declaration file
  */
 
 #ifndef CF_ASSEMBLER_H_
 #define CF_ASSEMBLER_H_
 
-#include <cf_module.h>
+#include <cf_executable.h>
 #include <cf_string.h>
 
 #ifdef __cplusplus
@@ -59,7 +59,7 @@ typedef union __CfAssemblyDetails {
  * 
  * @return assembling status
  */
-CfAssemblyStatus cfAssemble( CfStr text, CfModule *dst, CfAssemblyDetails *details );
+CfAssemblyStatus cfAssemble( CfStr text, CfExecutable *dst, CfAssemblyDetails *details );
 
 /**
  * @brief assembly status to string conversion error

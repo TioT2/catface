@@ -5,7 +5,7 @@
 #ifndef CF_VM_H_
 #define CF_VM_H_
 
-#include <cf_module.h>
+#include <cf_executable.h>
 
 #include <stdint.h>
 #include <stddef.h>
@@ -17,12 +17,12 @@ extern "C" {
 
 /// @brief reason of program termination
 typedef enum __CfTermReason {
-    // sef of reasons that are module-independent
+    // sef of reasons that are executable-independent
     CF_TERM_REASON_HALT,                 ///< program finished without errors
     CF_TERM_REASON_SANDBOX_ERROR,        ///< sandbox function call failed
     CF_TERM_REASON_INTERNAL_ERROR,       ///< something went totally wrong in VM itself
 
-    // set of reasons called by module invalidness
+    // set of reasons called by executable invalidness
     CF_TERM_REASON_UNKNOWN_SYSTEM_CALL,  ///< invalid index of systemcall
     CF_TERM_REASON_UNKNOWN_OPCODE,       ///< unknown opcode passed
     CF_TERM_REASON_UNEXPECTED_CODE_END,  ///< unexpected end of bytecode
@@ -124,14 +124,14 @@ typedef struct __CfSandbox {
 } CfSandbox;
 
 /**
- * @brief module execution function
+ * @brief executable execution function
  * 
- * @param[in] module  module to execute (non-null, assumed to be valid ASM)
+ * @param[in] executable  executable to execute (non-null, assumed to be valid ASM)
  * @param[in] sandbox connection of VM with environment (non-null)
  * 
  * @return true if execution started, false if not
  */
-bool cfModuleExec( const CfModule *module, const CfSandbox *sandbox );
+bool cfExecute( const CfExecutable *executable, const CfSandbox *sandbox );
 
 #ifdef __cplusplus
 }
