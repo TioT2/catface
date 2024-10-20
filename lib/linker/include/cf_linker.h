@@ -24,18 +24,17 @@ typedef enum __CfLinkStatus {
 /// @brief linking process details
 typedef struct __CfLinkDetails {
     struct {
-        CfStr  file;  ///< file where label is referenced
-        size_t line;  ///< line in file where label is referenced
-        CfStr  label; ///< referenced label
+        CfStr    file;  ///< file where label is referenced
+        uint32_t line;  ///< line in file where label is referenced
+        CfStr    label; ///< referenced label
     } unknownLabel;
 
     struct {
-        CfStr firstFile;   ///< file where first label is declared
-        size_t firstLine;  ///< line where first label is declared
-        CfStr secondFile;  ///< file where second label is declared
-        size_t secondLine; ///< line where second label is declared
-
-        CfStr label;       ///< label itself
+        CfStr    firstFile;  ///< file where first label is declared
+        uint32_t firstLine;  ///< line where first label is declared
+        CfStr    secondFile; ///< file where second label is declared
+        uint32_t secondLine; ///< line where second label is declared
+        CfStr    label;      ///< label itself
     } duplicateLabel;
 } CfLinkDetails;
 
@@ -55,6 +54,11 @@ CfLinkStatus cfLink(
     CfExecutable   * dst,
     CfLinkDetails  * details
 );
+
+/**
+ * @brief link details to file writing function
+ */
+void cfLinkDetailsWrite( FILE *output, CfLinkStatus status, const CfLinkDetails *details );
 
 #ifdef __cplusplus
 }

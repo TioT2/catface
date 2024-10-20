@@ -12,7 +12,7 @@
 
 /// @brief linker internal label and link representations
 typedef struct __CfLinkerLabelAndLink {
-    CfStr    sourceFile; ///< file label declared in
+    CfStr    sourceName; ///< file label declared in
     uint32_t sourceLine; ///< line label declared at
     uint32_t codeOffset; ///< (global) offset in linked code
     CfStr    label;      ///< label name reference
@@ -51,7 +51,7 @@ void cfLinkerThrow( CfLinker *const self, const CfLinkStatus error ) {
 CfLinkerLabel * cfLinkerFindLabel( CfLinker *const self, CfStr label ) {
     CfLinkerLabel *labels = (CfLinkerLabel *)cfDarrData(self->labels);
 
-    for (size_t i = 0, n = cfDarrSize(self->labels); i < n; n++)
+    for (size_t i = 0, n = cfDarrSize(self->labels); i < n; i++)
         if (cfStrIsSame(label, labels[i].label))
             return labels + i;
     return NULL;
@@ -68,9 +68,9 @@ void cfLinkerAddLabel( CfLinker *const self, const CfLinkerLabel *const label ) 
     // search for duplicate
     CfLinkerLabel *duplicate = cfLinkerFindLabel(self, label->label);
     if (duplicate != NULL) {
-        self->details->duplicateLabel.firstFile = duplicate->sourceFile;
+        self->details->duplicateLabel.firstFile = duplicate->sourceName;
         self->details->duplicateLabel.firstLine = duplicate->sourceLine;
-        self->details->duplicateLabel.secondFile = label->sourceFile;
+        self->details->duplicateLabel.secondFile = label->sourceName;
         self->details->duplicateLabel.secondLine = label->sourceLine;
         self->details->duplicateLabel.label = label->label;
 
@@ -100,7 +100,7 @@ void cfLinkerAddLink( CfLinker *const self, const CfLinkerLink *const link ) {
  * @param[in]     object object to add
  */
 void cfLinkerAddObject( CfLinker *const self, const CfObject *const object ) {
-    CfStr sourceFile = CF_STR(object->sourceFileName);
+    CfStr sourceName = CF_STR(object->sourceName);
     uint32_t codeSize = (uint32_t)cfDarrSize(self->code);
 
     // TODO: is it ok to duplicate code here?
@@ -108,7 +108,7 @@ void cfLinkerAddObject( CfLinker *const self, const CfObject *const object ) {
     // append labels
     for (size_t i = 0; i < object->labelCount; i++) {
         CfLinkerLabel label = {
-            .sourceFile = sourceFile,
+            .sourceName = sourceName,
             .sourceLine = object->labels[i].sourceLine,
             .codeOffset = object->labels[i].codeOffset + codeSize,
             .label      = CF_STR(object->labels[i].label),
@@ -120,7 +120,7 @@ void cfLinkerAddObject( CfLinker *const self, const CfObject *const object ) {
     // append links
     for (size_t i = 0; i < object->linkCount; i++) {
         CfLinkerLink link = {
-            .sourceFile = sourceFile,
+            .sourceName = sourceName,
             .sourceLine = object->links[i].sourceLine,
             .codeOffset = object->links[i].codeOffset + codeSize,
             .label      = CF_STR(object->links[i].label),
@@ -150,7 +150,7 @@ void cfLinkerBuildExecutable( CfLinker *const self, CfExecutable *const dst ) {
         CfLinkerLabel *label = cfLinkerFindLabel(self, link->label);
 
         if (label == NULL) {
-            self->details->unknownLabel.file  = link->sourceFile;
+            self->details->unknownLabel.file  = link->sourceName;
             self->details->unknownLabel.line  = link->sourceLine;
             self->details->unknownLabel.label = link->label;
 
@@ -159,6 +159,10 @@ void cfLinkerBuildExecutable( CfLinker *const self, CfExecutable *const dst ) {
 
         memcpy(code + link->codeOffset, &label->codeOffset, sizeof(link->codeOffset));
     }
+
+    dst->codeLength = cfDarrSize(self->code);
+    if (CF_DARR_OK != cfDarrIntoData(self->code, &dst->code))
+        cfLinkerThrow(self, CF_LINK_STATUS_INTERNAL_ERROR);
 } // cfLinkerBuildExecutable
 
 CfLinkStatus cfLink(
@@ -201,5 +205,39 @@ cfLink__end:
     cfDarrDtor(linker.labels);
     return linker.linkStatus;
 } // cfLink
+
+
+void cfLinkDetailsWrite( FILE *output, CfLinkStatus status, const CfLinkDetails *details ) {
+    assert(details != NULL);
+
+    switch (status) {
+    case CF_LINK_STATUS_INTERNAL_ERROR:
+        fprintf(output, "internal linker error.");
+        break;
+
+    case CF_LINK_STATUS_OK:
+        fprintf(output, "ok.");
+        break;
+
+    case CF_LINK_STATUS_DUPLICATE_LABEL:
+        fprintf(output, "duplicate declaration of label \"");
+        cfStrWrite(output, details->duplicateLabel.label);
+        fprintf(output, "\" (first: ");
+        cfStrWrite(output, details->duplicateLabel.firstFile);
+        fprintf(output, ":%d", details->duplicateLabel.firstLine);
+        fprintf(output, ", second: ");
+        cfStrWrite(output, details->duplicateLabel.secondFile);
+        fprintf(output, ":%d)", details->duplicateLabel.secondLine);
+        break;
+
+    case CF_LINK_STATUS_UNKNOWN_LABEL:
+        fprintf(output, "unknown label \"");
+        cfStrWrite(output, details->unknownLabel.label);
+        fprintf(output, "\" referenced at ");
+        cfStrWrite(output, details->unknownLabel.file);
+        fprintf(output, ":%d", details->unknownLabel.line);
+        break;
+    }
+} // cfLinkDetailsWrite
 
 // cf_linker.c

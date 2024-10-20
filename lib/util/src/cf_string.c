@@ -1,12 +1,13 @@
 #include <assert.h>
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
 
 #include "cf_string.h"
 
-int cfWriteStr( FILE *file, CfStr slice ) {
+int cfStrWrite( FILE *file, CfStr slice ) {
     return fprintf(file, "%*s", (int)(slice.end - slice.begin), slice.begin);
-} // cfWriteStr
+} // cfStrWrite
 
 bool cfStrStartsWith( CfStr slice, const char *start ) {
     if (slice.begin >= slice.end)
@@ -158,5 +159,18 @@ bool cfStrIsSame( CfStr lhs, CfStr rhs ) {
             return false;
     return true;
 } // cfStrIsSame
+
+
+char * cfStrOwnedCopy( CfStr str ) {
+    size_t len = str.end - str.begin;
+
+    char *buffer = (char *)calloc(len + 1, sizeof(char));
+    if (buffer == NULL)
+        return NULL;
+    memcpy(buffer, str.begin, len);
+    buffer[len] = '\0';
+
+    return buffer;
+} // strOwnedCopy
 
 // cf_string.cpp

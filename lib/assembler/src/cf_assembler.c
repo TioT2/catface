@@ -8,6 +8,8 @@
 
 #include "cf_assembler.h"
 
+// TODO: Rebuild assembler
+
 bool cfAsmNextLine( CfStr *self, size_t *line, CfStr *dst ) {
     CfStr slice;
 
@@ -215,63 +217,6 @@ static bool cfAsmParseRegister( CfStr slice, uint32_t *const dst ) {
 
 
 
-
-/**
- * @brief fixups repairing function
- * 
- * @param[in]     fixups     fixups to repair (non-null)
- * @param[in]     fixupCount fixup count
- * @param[in]     labels     labels to repair fixups by (non-null)
- * @param[in]     labelCount label count
- * @param[in,out] code       code to repair fixups in
- * @param[in]     codeSize   size of code (for fixup validation)
- * @param[in,out] details    assembling details to write error to
- * 
- * @return assembling (stage) status
- */
-static CfAssemblyStatus cfAsmRepairFixups(
-    const CfLink      * fixups,
-    const size_t        fixupCount,
-    const CfLabel     * labels,
-    const size_t        labelCount,
-    uint8_t           * code,
-    const size_t        codeSize,
-    CfAssemblyDetails * details
-) {
-    for (const CfLink *curr = fixups, *end = fixups + fixupCount; curr < end; curr++) {
-        const CfStr label = CF_STR(curr->label);
-        uint32_t actualOffset = 0;
-        bool found = false;
-
-        // try to find label
-        for (const CfLabel *lCurr = labels, *lEnd = labels + labelCount; lCurr < lEnd; lCurr++) {
-            if (0 == strcmp(curr->label, lCurr->label)) {
-                found = true;
-                actualOffset = lCurr->codeOffset;
-                break;
-            }
-        }
-
-        // return error if no labels found
-        if (!found) {
-            if (details != NULL) {
-                details->unknownLabel.label = label;
-                details->unknownLabel.line = curr->sourceLine;
-            }
-            return CF_ASSEMBLY_STATUS_UNKNOWN_LABEL;
-        }
-
-        // fixups validated - internal error.
-        if (curr->codeOffset > codeSize)
-            return CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
-
-        // actually, repair fixup
-        *(uint32_t *)((uint8_t *)code + curr->codeOffset) = actualOffset;
-    }
-
-    return CF_ASSEMBLY_STATUS_OK;
-} // cfAsmRepairFixups
-
 /**
  * @brief push/pop info immediate value parsing function
  */
@@ -403,21 +348,26 @@ bool cfAsmParsePushPopInfo(
 } // cfAsmParsePushPopInfo
 
 
-CfAssemblyStatus cfAssemble( CfStr text, CfExecutable *dst, CfAssemblyDetails *details ) {
+CfAssemblyStatus cfAssemble( CfStr text, CfStr sourceName, CfObject *dst, CfAssemblyDetails *details ) {
     assert(dst != NULL);
 
     CfStr line;
     size_t lineIndex = 0;
     CfDarr code = NULL;
-    CfDarr fixups = NULL;
+    CfDarr links = NULL;
     CfDarr labels = NULL;
+
+    uint8_t *resultCode;
+    CfLink *resultLinks;
+    CfLabel *resultLabels;
+    char *resultSourceName;
     CfAssemblyStatus resultStatus = CF_ASSEMBLY_STATUS_OK;
 
     code = cfDarrCtor(sizeof(uint8_t));
-    fixups = cfDarrCtor(sizeof(CfLink));
+    links = cfDarrCtor(sizeof(CfLink));
     labels = cfDarrCtor(sizeof(CfLabel));
 
-    if (code == NULL || fixups == NULL || labels == NULL) {
+    if (code == NULL || links == NULL || labels == NULL) {
         resultStatus = CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
         goto cfAssemble__end;
     }
@@ -571,7 +521,7 @@ CfAssemblyStatus cfAssemble( CfStr text, CfExecutable *dst, CfAssemblyDetails *d
                 fixup.label[CF_LABEL_MAX - 1] = '\0';
 
 
-                if (CF_DARR_OK != cfDarrPush(&fixups, &fixup)) {
+                if (CF_DARR_OK != cfDarrPush(&links, &fixup)) {
                     resultStatus = CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
                     goto cfAssemble__end;
                 }
@@ -602,21 +552,6 @@ CfAssemblyStatus cfAssemble( CfStr text, CfExecutable *dst, CfAssemblyDetails *d
             CfStr labelName = token.ident;
             if (cfAsmNextToken(&tokenSlice, &token) && token.type == CF_ASM_TOKEN_TYPE_COLON) {
                 // treat ident as label if parsed colon
-
-                // check for this line duplicates another one
-                CfLabel *labelArray = (CfLabel *)cfDarrData(labels);
-                for (size_t i = 0, n = cfDarrSize(labels); i < n; i++) {
-                    if (cfStrIsSame(CF_STR(labelArray[i].label), labelName)) {
-                        resultStatus = CF_ASSEMBLY_STATUS_DUPLICATE_LABEL;
-                        if (details != NULL) {
-                            details->duplicateLabel.label = labelName;
-                            details->duplicateLabel.firstDeclaration = labelArray[i].sourceLine;
-                            details->duplicateLabel.secondDeclaration = lineIndex;
-                        }
-                        goto cfAssemble__end;
-                    }
-                }
-
                 CfLabel newLabel = {
                     .sourceLine = (uint32_t)lineIndex,
                     .codeOffset = (uint32_t)cfDarrSize(code),
@@ -656,40 +591,37 @@ CfAssemblyStatus cfAssemble( CfStr text, CfExecutable *dst, CfAssemblyDetails *d
         }
     }
 
-    // repair fixups
-    {
-        CfAssemblyStatus fixupRepairStatus = cfAsmRepairFixups(
-            (CfLink *)cfDarrData(fixups),
-            cfDarrSize(fixups),
-            (CfLabel *)cfDarrData(labels),
-            cfDarrSize(labels),
-            (uint8_t *)cfDarrData(code),
-            cfDarrSize(code),
-            details
-        );
-
-        // propagate fixup repairing error in case it occured
-        if (fixupRepairStatus != CF_ASSEMBLY_STATUS_OK) {
-            resultStatus = fixupRepairStatus;
-            goto cfAssemble__end;
-        }
+    if (false
+        || CF_DARR_OK != cfDarrIntoData(links, (void **)&resultLinks)
+        || CF_DARR_OK != cfDarrIntoData(labels, (void **)&resultLabels)
+        || CF_DARR_OK != cfDarrIntoData(code, (void **)&resultCode)
+        || NULL == (resultSourceName = cfStrOwnedCopy(sourceName))
+    ) {
+        resultStatus = CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
+        goto cfAssemble__cleanResults;
     }
 
-    {
-        uint8_t *codeArray = NULL;
-        if (CF_DARR_OK != cfDarrIntoData(code, (void **)&codeArray)) {
-            resultStatus = CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
-            goto cfAssemble__end;
-        }
-        dst->code = codeArray;
-        dst->codeLength = cfDarrSize(code);
-    }
+    dst->sourceName = resultSourceName;
+    dst->code = resultCode;
+    dst->codeLength = cfDarrSize(code);
+    dst->labels = resultLabels;
+    dst->labelCount = cfDarrSize(labels);
+    dst->links = resultLinks;
+    dst->linkCount = cfDarrSize(links);
 
 cfAssemble__end:
     cfDarrDtor(code);
-    cfDarrDtor(fixups);
+    cfDarrDtor(links);
     cfDarrDtor(labels);
     return resultStatus;
+
+cfAssemble__cleanResults:
+    free(resultCode);
+    free(resultLabels);
+    free(resultLinks);
+    free(resultSourceName); // allowed by constructor specification
+
+    goto cfAssemble__end;
 } // cfAssemble
 
 const char * cfAssemblyStatusStr( const CfAssemblyStatus status ) {
@@ -698,16 +630,15 @@ const char * cfAssemblyStatusStr( const CfAssemblyStatus status ) {
     case CF_ASSEMBLY_STATUS_INTERNAL_ERROR           : return "internal error";
     case CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION      : return "unknown instruction";
     case CF_ASSEMBLY_STATUS_UNEXPECTED_TEXT_END      : return "unexpected text end";
-    case CF_ASSEMBLY_STATUS_UNKNOWN_LABEL            : return "unknown label";
     case CF_ASSEMBLY_STATUS_UNKNOWN_REGISTER         : return "unknown register";
-    case CF_ASSEMBLY_STATUS_DUPLICATE_LABEL          : return "duplicate label";
     case CF_ASSEMBLY_STATUS_INVALID_PUSHPOP_ARGUMENT : return "invalid push/pop argument";
+    case CF_ASSEMBLY_STATUS_TOO_LONG_LABEL           : return "too long label";
 
     default                                          : return "<invalid>";
     }
 } // cfAssemblyStatusStr
 
-void cfAssemblyDetailsDump(
+void cfAssemblyDetailsWrite(
     FILE *const               out,
     const CfAssemblyStatus    status,
     const CfAssemblyDetails * details
@@ -720,17 +651,7 @@ void cfAssemblyDetailsDump(
     switch (status) {
     case CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION: {
         fprintf(out, "unknown instruction (at %zu): ", details->unknownInstruction.line);
-        cfWriteStr(out, details->unknownInstruction.instruction);
-        break;
-    }
-
-    case CF_ASSEMBLY_STATUS_DUPLICATE_LABEL: {
-        fprintf(out, "duplicate label \"");
-        cfWriteStr(out, details->duplicateLabel.label);
-        fprintf(out, "\" at %zu (initially declared at %zu)",
-            details->duplicateLabel.firstDeclaration,
-            details->duplicateLabel.secondDeclaration
-        );
+        cfStrWrite(out, details->unknownInstruction.instruction);
         break;
     }
 
@@ -738,6 +659,6 @@ void cfAssemblyDetailsDump(
         fprintf(out, "%s", str);
     }
     }
-} // cfAssemblyDetailsDump
+} // cfAssemblyDetailsWrite
 
 // cf_assemble.c

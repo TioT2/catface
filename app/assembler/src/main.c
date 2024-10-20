@@ -3,6 +3,7 @@
  */
 
 #include <cf_assembler.h>
+#include <cf_linker.h>
 #include <cf_cli.h>
 
 #include <errno.h>
@@ -118,18 +119,31 @@ int main( const int _argc, const char **_argv ) {
         return 0;
     }
 
-    CfExecutable executable;
+    CfObject object;
     CfAssemblyDetails assemblyDetails;
     CfAssemblyStatus assemblyStatus = cfAssemble(
         (CfStr){text, text + textLen},
-        &executable,
+        CF_STR(options.inputFileName),
+        &object,
         &assemblyDetails
     );
 
     if (assemblyStatus != CF_ASSEMBLY_STATUS_OK) {
         printf("assembling failed.\n");
-        cfAssemblyDetailsDump(stdout, assemblyStatus, &assemblyDetails);
+        cfAssemblyDetailsWrite(stdout, assemblyStatus, &assemblyDetails);
         printf("\n");
+        free(text);
+        return 0;
+    }
+
+    CfExecutable executable;
+    CfLinkDetails linkDetails;
+    CfLinkStatus linkStatus = cfLink(&object, 1, &executable, &linkDetails);
+
+    if (linkStatus != CF_LINK_STATUS_OK) {
+        printf("linking failed.\n");
+        cfLinkDetailsWrite(stdout, linkStatus, &linkDetails);
+        cfObjectDtor(&object);
         free(text);
         return 0;
     }
@@ -151,6 +165,7 @@ int main( const int _argc, const char **_argv ) {
     fclose(output);
 
     free(text);
+    cfObjectDtor(&object);
     cfExecutableDtor(&executable);
 
     return 0;

@@ -25,7 +25,7 @@ typedef struct __CfLabelAndLink {
 
 /// @brief object (single .cfasm compilation result) represetnation structure
 typedef struct __CfObject {
-    const char * sourceFileName; ///< name of object source name
+    const char * sourceName; ///< name of object source name
     size_t       codeLength;     ///< length of bytecode
     uint8_t    * code;           ///< bytecode itself
     size_t       linkCount;      ///< count of links in bytecode

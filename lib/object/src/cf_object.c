@@ -9,11 +9,11 @@ const uint64_t CF_OBJECT_MAGIC = 0x00004A424F544143;
 
 /// @brief object file representation structure
 typedef struct __CfObjectFileHeader {
-    uint64_t magic;                ///< magic value
-    uint32_t sourceFileNameLength; ///< length of object source file path
-    uint32_t codeLength;           ///< code section length
-    uint32_t labelCount;          ///< label section lenght
-    uint32_t linkCount;           ///< link section length
+    uint64_t magic;            ///< magic value
+    uint32_t sourceNameLength; ///< length of object source file path
+    uint32_t codeLength;       ///< code section length
+    uint32_t labelCount;       ///< label section lenght
+    uint32_t linkCount;        ///< link section length
 } CfObjectFileHeader;
 
 CfObjectReadStatus cfObjectRead( FILE *file, CfObject *dst ) {
@@ -28,20 +28,20 @@ CfObjectReadStatus cfObjectRead( FILE *file, CfObject *dst ) {
         return CF_OBJECT_READ_STATUS_INVALID_OBJECT_MAGIC;
 
     // just for simplicity
-    char *sourceFileName = (char *)calloc(header.sourceFileNameLength, sizeof(char));
+    char *sourceName = (char *)calloc(header.sourceNameLength, sizeof(char));
     uint8_t *code = (uint8_t *)calloc(header.codeLength, sizeof(uint8_t));
     CfLink *links = (CfLink *)calloc(header.linkCount, sizeof(CfLink));
     CfLabel *labels = (CfLabel *)calloc(header.labelCount, sizeof(CfLabel));
     CfObjectReadStatus status = CF_OBJECT_READ_STATUS_OK;
 
-    if (sourceFileName == NULL || code == NULL || links == NULL || labels == NULL) {
+    if (sourceName == NULL || code == NULL || links == NULL || labels == NULL) {
         status = CF_OBJECT_READ_STATUS_INTERNAL_ERROR;
         goto cfObjectRead__error;
     }
 
     // read code/links/labels
     if (false
-        || header.sourceFileNameLength != fread(sourceFileName, sizeof(char),    header.sourceFileNameLength, file)
+        || header.sourceNameLength != fread(sourceName, sizeof(char),    header.sourceNameLength, file)
         || header.codeLength           != fread(code,           sizeof(uint8_t), header.codeLength,           file)
         || header.linkCount            != fread(links,          sizeof(CfLink),  header.linkCount,            file)
         || header.labelCount           != fread(labels,         sizeof(CfLabel), header.labelCount,           file)
@@ -72,7 +72,7 @@ bool cfObjectWrite( FILE *file, const CfObject *src ) {
 
     const CfObjectFileHeader header = {
         .magic = CF_OBJECT_MAGIC,
-        .sourceFileNameLength = (uint32_t)strlen(src->sourceFileName),
+        .sourceNameLength = (uint32_t)strlen(src->sourceName),
         .codeLength = (uint32_t)src->codeLength,
         .labelCount = (uint32_t)src->labelCount,
         .linkCount = (uint32_t)src->linkCount,
@@ -81,7 +81,7 @@ bool cfObjectWrite( FILE *file, const CfObject *src ) {
     // yeah functional style
     return true
         && 1 == fwrite(&header, sizeof(CfObjectFileHeader), 1, file)
-        && header.sourceFileNameLength == fwrite(src->sourceFileName, sizeof(char), header.sourceFileNameLength, file)
+        && header.sourceNameLength == fwrite(src->sourceName, sizeof(char), header.sourceNameLength, file)
         && header.codeLength == fwrite(src->code, sizeof(uint8_t), header.codeLength, file)
         && header.linkCount == fwrite(src->links, sizeof(CfLink), header.linkCount, file)
         && header.labelCount == fwrite(src->labels, sizeof(CfLabel), header.labelCount, file)
@@ -92,7 +92,7 @@ void cfObjectDtor( CfObject *object ) {
     // write NULLs or not?
 
     if (object != NULL) {
-        free((char *)object->sourceFileName);
+        free((char *)object->sourceName);
         free(object->code);
         free(object->labels);
         free(object->links);

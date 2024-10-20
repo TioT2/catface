@@ -14,7 +14,7 @@ extern "C" {
 #include <stdint.h>
 
 /// @brief string slice representation structure
-typedef struct __CfStringSlice {
+typedef struct __CfStr {
     const char *begin; ///< slice begin
     const char *end;   ///< slice end (non-inclusive, may not point on null)
 } CfStr;
@@ -30,7 +30,7 @@ typedef struct __CfStringSlice {
  * 
  * @return count of characters printed.
  */
-int cfWriteStr( FILE *file, CfStr slice );
+int cfStrWrite( FILE *file, CfStr slice );
 
 /**
  * @brief slice starting with zero-terminated string checking function
@@ -51,7 +51,6 @@ bool cfStrStartsWith( CfStr slice, const char *start );
  * @return true if string starts from start, false otherwise
  */
 bool cfRawStrStartsWith( const char *string, const char *start );
-
 
 /**
  * @brief hexadecimal integer from slice parsing function
@@ -113,6 +112,17 @@ CfStr cfStrParseDecimal( CfStr slice, CfParsedDecimal *dst );
  * @return decimal composed into double
  */
 double cfParsedDecimalCompose( const CfParsedDecimal *decimal );
+
+/**
+ * @brief owned slice copy getting function
+ * 
+ * @param[in]  str slice to get owned copy of
+ * 
+ * @return copied zero-terminated string
+ * @note resulting stirng is zero-terminated, so it's ok to use it with C functions
+ * @note it is ok to delete return value just by free() of it's .begin
+ */
+char * cfStrOwnedCopy( CfStr str );
 
 #ifdef __cplusplus
 }
