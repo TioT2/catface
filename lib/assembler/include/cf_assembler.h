@@ -6,6 +6,7 @@
 #define CF_ASSEMBLER_H_
 
 #include <cf_executable.h>
+#include <cf_object.h>
 #include <cf_string.h>
 
 #ifdef __cplusplus
@@ -22,11 +23,13 @@ typedef enum __CfAssemblyStatus {
     CF_ASSEMBLY_STATUS_UNKNOWN_LABEL,            ///< unknown label
     CF_ASSEMBLY_STATUS_DUPLICATE_LABEL,          ///< duplicated label declaration
     CF_ASSEMBLY_STATUS_INVALID_PUSHPOP_ARGUMENT, ///< invalid argument of push/pop instructions
+    CF_ASSEMBLY_STATUS_TOO_LONG_LABEL,           ///< label is longer than CF_LABEL_MAX
 } CfAssemblyStatus;
 
 /// @brief detailed info about assembling process
 typedef union __CfAssemblyDetails {
     CfStr unknownRegister;
+    CfStr tooLongLabel;
 
     struct {
         CfStr  instruction; ///< the instruction (whole line)
@@ -37,6 +40,7 @@ typedef union __CfAssemblyDetails {
         CfStr  label; ///< unknown label name
         size_t line;  ///< line reference of this label occured
     } unknownLabel;
+
 
     struct {
         CfStr  label;             ///< label itself

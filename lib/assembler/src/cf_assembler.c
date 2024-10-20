@@ -207,23 +207,10 @@ static bool cfAsmParseRegister( CfStr slice, uint32_t *const dst ) {
 
 
 
-/// @brief fixup representation structure
-typedef struct __CfAsmFixup {
-    CfStr  label;  ///< label to insert name
-    size_t line;   ///< line this fixup 
-    size_t offset; ///< offset to fixup number storage (4 bytes)
-} CfAsmFixup;
 
 
 
 
-
-/// @brief label representation structure
-typedef struct __CfAsmLabel {
-    CfStr    name;         ///< label name
-    uint32_t offset;       ///< code offset
-    size_t   lineDeclared; ///< line this label declared
-} CfAsmLabel;
 
 
 
@@ -243,24 +230,24 @@ typedef struct __CfAsmLabel {
  * @return assembling (stage) status
  */
 static CfAssemblyStatus cfAsmRepairFixups(
-    const CfAsmFixup  * fixups,
+    const CfLink      * fixups,
     const size_t        fixupCount,
-    const CfAsmLabel  * labels,
+    const CfLabel     * labels,
     const size_t        labelCount,
     uint8_t           * code,
     const size_t        codeSize,
     CfAssemblyDetails * details
 ) {
-    for (const CfAsmFixup *curr = fixups, *end = fixups + fixupCount; curr < end; curr++) {
-        const CfStr label = curr->label;
+    for (const CfLink *curr = fixups, *end = fixups + fixupCount; curr < end; curr++) {
+        const CfStr label = CF_STR(curr->label);
         uint32_t actualOffset = 0;
         bool found = false;
 
         // try to find label
-        for (const CfAsmLabel *lCurr = labels, *lEnd = labels + labelCount; lCurr < lEnd; lCurr++) {
-            if (cfStrIsSame(label, lCurr->name)) {
+        for (const CfLabel *lCurr = labels, *lEnd = labels + labelCount; lCurr < lEnd; lCurr++) {
+            if (0 == strcmp(curr->label, lCurr->label)) {
                 found = true;
-                actualOffset = lCurr->offset;
+                actualOffset = lCurr->codeOffset;
                 break;
             }
         }
@@ -269,17 +256,17 @@ static CfAssemblyStatus cfAsmRepairFixups(
         if (!found) {
             if (details != NULL) {
                 details->unknownLabel.label = label;
-                details->unknownLabel.line = curr->line;
+                details->unknownLabel.line = curr->sourceLine;
             }
             return CF_ASSEMBLY_STATUS_UNKNOWN_LABEL;
         }
 
         // fixups validated - internal error.
-        if (curr->offset > codeSize)
+        if (curr->codeOffset > codeSize)
             return CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
 
         // actually, repair fixup
-        *(uint32_t *)((uint8_t *)code + curr->offset) = actualOffset;
+        *(uint32_t *)((uint8_t *)code + curr->codeOffset) = actualOffset;
     }
 
     return CF_ASSEMBLY_STATUS_OK;
@@ -427,8 +414,8 @@ CfAssemblyStatus cfAssemble( CfStr text, CfExecutable *dst, CfAssemblyDetails *d
     CfAssemblyStatus resultStatus = CF_ASSEMBLY_STATUS_OK;
 
     code = cfDarrCtor(sizeof(uint8_t));
-    fixups = cfDarrCtor(sizeof(CfAsmFixup));
-    labels = cfDarrCtor(sizeof(CfAsmLabel));
+    fixups = cfDarrCtor(sizeof(CfLink));
+    labels = cfDarrCtor(sizeof(CfLabel));
 
     if (code == NULL || fixups == NULL || labels == NULL) {
         resultStatus = CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
@@ -569,11 +556,20 @@ CfAssemblyStatus cfAssemble( CfStr text, CfExecutable *dst, CfAssemblyDetails *d
             if (token.type == CF_ASM_TOKEN_TYPE_INTEGER) {
                 *(uint32_t *)(dataBuffer + 1) = token.integer;
             } else {
-                CfAsmFixup fixup = {
-                    .label = token.ident,
-                    .line = lineIndex,
-                    .offset = cfDarrSize(code) + 1,
+                CfLink fixup = {
+                    .sourceLine = (uint32_t)lineIndex,
+                    .codeOffset = (uint32_t)cfDarrSize(code) + 1,
                 };
+
+                if (token.ident.end - token.ident.begin > CF_LABEL_MAX) {
+                    resultStatus = CF_ASSEMBLY_STATUS_TOO_LONG_LABEL;
+                    if (details != NULL)
+                        details->tooLongLabel = token.ident;
+                    goto cfAssemble__end;
+                }
+                memcpy(fixup.label, token.ident.begin, token.ident.end - token.ident.begin);
+                fixup.label[CF_LABEL_MAX - 1] = '\0';
+
 
                 if (CF_DARR_OK != cfDarrPush(&fixups, &fixup)) {
                     resultStatus = CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
@@ -608,24 +604,33 @@ CfAssemblyStatus cfAssemble( CfStr text, CfExecutable *dst, CfAssemblyDetails *d
                 // treat ident as label if parsed colon
 
                 // check for this line duplicates another one
-                CfAsmLabel *labelArray = (CfAsmLabel *)cfDarrData(labels);
+                CfLabel *labelArray = (CfLabel *)cfDarrData(labels);
                 for (size_t i = 0, n = cfDarrSize(labels); i < n; i++) {
-                    if (cfStrIsSame(labelArray[i].name, labelName)) {
+                    if (cfStrIsSame(CF_STR(labelArray[i].label), labelName)) {
                         resultStatus = CF_ASSEMBLY_STATUS_DUPLICATE_LABEL;
                         if (details != NULL) {
                             details->duplicateLabel.label = labelName;
-                            details->duplicateLabel.firstDeclaration = labelArray[i].lineDeclared;
+                            details->duplicateLabel.firstDeclaration = labelArray[i].sourceLine;
                             details->duplicateLabel.secondDeclaration = lineIndex;
                         }
                         goto cfAssemble__end;
                     }
                 }
 
-                CfAsmLabel newLabel = {
-                    .name = labelName,
-                    .offset = (uint32_t)cfDarrSize(code),
-                    .lineDeclared = lineIndex,
+                CfLabel newLabel = {
+                    .sourceLine = (uint32_t)lineIndex,
+                    .codeOffset = (uint32_t)cfDarrSize(code),
                 };
+
+                if (token.ident.end - token.ident.begin > CF_LABEL_MAX) {
+                    resultStatus = CF_ASSEMBLY_STATUS_TOO_LONG_LABEL;
+                    if (details != NULL)
+                        details->tooLongLabel = token.ident;
+                    goto cfAssemble__end;
+                }
+                memcpy(newLabel.label, token.ident.begin, token.ident.end - token.ident.begin);
+                newLabel.label[CF_LABEL_MAX - 1] = '\0';
+
                 if (CF_DARR_OK != cfDarrPush(&labels, &newLabel)) {
                     resultStatus = CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
                     goto cfAssemble__end;
@@ -654,9 +659,9 @@ CfAssemblyStatus cfAssemble( CfStr text, CfExecutable *dst, CfAssemblyDetails *d
     // repair fixups
     {
         CfAssemblyStatus fixupRepairStatus = cfAsmRepairFixups(
-            (CfAsmFixup *)cfDarrData(fixups),
+            (CfLink *)cfDarrData(fixups),
             cfDarrSize(fixups),
-            (CfAsmLabel *)cfDarrData(labels),
+            (CfLabel *)cfDarrData(labels),
             cfDarrSize(labels),
             (uint8_t *)cfDarrData(code),
             cfDarrSize(code),
