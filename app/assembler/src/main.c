@@ -52,6 +52,7 @@ void printHelp( void ) {
         "\n"
         "Options:\n"
         "    -h              Display this message\n"
+        "    -l              Link result (emit executable)\n"
         "    -o <filename>   Write output to <filename>\n"
     );
 } // printHelp
@@ -62,6 +63,7 @@ int main( const int _argc, const char **_argv ) {
     //     "qq",
     //     "-o",
     //     "examples/sqrt_repl.cfmod",
+    //     "-l",
     //     "examples/sqrt_repl.cfasm",
     // };
     const int argc = _argc;
@@ -74,19 +76,20 @@ int main( const int _argc, const char **_argv ) {
     }
 
     // it's obviously NOT overengineering
-    const int optionCount = 2;
-    CfCommandLineOptionInfo optionInfos[2] = {
+    const int optionCount = 3;
+    CfCommandLineOptionInfo optionInfos[3] = {
         {"o", "output", 1},
+        {"l", "link",   0},
         {"h", "help",   0},
     };
-    int optionIndices[2];
+    int optionIndices[3];
 
     if (!cfParseCommandLineOptions(argc - 2, argv + 1, optionCount, optionInfos, optionIndices)) {
         // it's ok for cli utils to display something in stdout, so corresponding error message is already displayed.
         return 0;
     }
 
-    if (optionIndices[1] != -1) {
+    if (optionIndices[2] != -1) {
         printHelp();
         return 0;
     }
@@ -94,9 +97,11 @@ int main( const int _argc, const char **_argv ) {
     struct {
         const char *inputFileName;
         const char *outputFileName;
+        bool linkOutput;
     } options = {
         .inputFileName = argv[argc - 1],
         .outputFileName = "out.cfmod",
+        .linkOutput = (optionIndices[1] != -1),
     };
 
     // read filename from options
@@ -136,37 +141,45 @@ int main( const int _argc, const char **_argv ) {
         return 0;
     }
 
-    CfExecutable executable;
-    CfLinkDetails linkDetails;
-    CfLinkStatus linkStatus = cfLink(&object, 1, &executable, &linkDetails);
+    if (options.linkOutput) {
+        CfExecutable executable;
+        CfLinkDetails linkDetails;
+        CfLinkStatus linkStatus = cfLink(&object, 1, &executable, &linkDetails);
 
-    if (linkStatus != CF_LINK_STATUS_OK) {
-        printf("linking failed.\n");
-        cfLinkDetailsWrite(stdout, linkStatus, &linkDetails);
-        cfObjectDtor(&object);
-        free(text);
-        return 0;
-    }
+        if (linkStatus != CF_LINK_STATUS_OK) {
+            printf("linking failed.\n");
+            cfLinkDetailsWrite(stdout, linkStatus, &linkDetails);
+            cfObjectDtor(&object);
+            free(text);
+            return 0;
+        }
 
-    FILE *output = fopen(options.outputFileName, "wb");
-    if (output == NULL) {
-        printf("output file opening error: %s\n", strerror(errno));
-        return 0;
-    }
+        FILE *output = fopen(options.outputFileName, "wb");
+        if (output == NULL) {
+            printf("output file opening error: %s\n", strerror(errno));
+            return 0;
+        }
 
-    if (!cfExecutableWrite(&executable, output)) {
-        printf("executable writing failed.\n");
+        if (!cfExecutableWrite(&executable, output))
+            printf("executable writing failed.\n");
 
         fclose(output);
-        free(text);
         cfExecutableDtor(&executable);
-        return 0;
+    } else {
+        FILE *output = fopen(options.outputFileName, "wb");
+        if (output == NULL) {
+            printf("output file opening error: %s\n", strerror(errno));
+            return 0;
+        }
+
+        if (!cfObjectWrite(output, &object))
+            printf("object writing failed.\n");
+
+        fclose(output);
     }
-    fclose(output);
 
     free(text);
     cfObjectDtor(&object);
-    cfExecutableDtor(&executable);
 
     return 0;
 } // main
