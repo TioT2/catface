@@ -21,9 +21,43 @@ void printHelp( void ) {
     printf("Usage: cf_exec executable\n");
 } // printHelp
 
+/// @brief font representation structure
+typedef struct __SandboxFont {
+    uint64_t letters[256]; ///< font 8x8 letters
+} SandboxFont;
+
+/**
+ * @brief font loading function
+ * 
+ * @param[in] path font path
+ * 
+ * @return font pointer if loaded, NULL otherwise
+ */
+SandboxFont * sandboxFontLoad( const char *path ) {
+    FILE *file = fopen(path, "rb");
+    if (file == NULL)
+        return NULL;
+    SandboxFont *font = (SandboxFont *)calloc(1, 2048);
+    if (font != NULL)
+        fread(font, 2048, 1, file);
+    fclose(file);
+    return font;
+} // sandboxFontLoad
+
+/**
+ * @brief font destructor
+ * 
+ * @param[in] font font to destroy
+ */
+void sandboxFontDtor( SandboxFont *font ) {
+    free(font);
+} // sandboxFontDtor
+
 /// @brief sandbox context representation structure
 typedef struct __SandboxContext {
-    SDL_Thread *sandboxThread;          ///< sandbox thread pointer
+    SandboxFont * font;                 ///< font
+
+    SDL_Thread * sandboxThread;         ///< sandbox thread pointer
 
     // SDL -> VM
     SDL_atomic_t isTerminated;          ///< true if SDL thread terminated, FALSE otherwise
@@ -82,6 +116,7 @@ int SDLCALL sandboxThreadFn( void *userContext ) {
         0
     );
 
+
     if (window == NULL) {
         // set terminate flag to true
         SDL_AtomicSet(&context->isTerminated, true);
@@ -130,8 +165,29 @@ int SDLCALL sandboxThreadFn( void *userContext ) {
 
             // perform different actions for different storage formats
             switch (storageFormat) {
-            case CF_VIDEO_STORAGE_FORMAT_TEXT:
-                break; // not supported yet
+            case CF_VIDEO_STORAGE_FORMAT_TEXT: {
+                if (0 != SDL_LockSurface(windowSurface))
+                    break;
+
+                for (size_t y = 0; y < CF_VIDEO_TEXT_HEIGHT; y++) {
+                    uint32_t *lineStart = (uint32_t *)((uint8_t *)windowSurface->pixels + y * windowSurface->pitch * 8);
+
+                    for (size_t x = 0; x < CF_VIDEO_TEXT_WIDTH; x++) {
+                        uint32_t *letterStart = lineStart + x * 8;
+                        uint8_t letter = ((uint8_t *)context->memory)[y * CF_VIDEO_TEXT_WIDTH + x];
+                        uint64_t fontLetter = context->font->letters[letter];
+
+                        for (size_t ly = 0; ly < 8; ly++)
+                            for (size_t lx = 0; lx < 8; lx++)
+                                ((uint32_t *)((uint8_t *)letterStart + windowSurface->pitch * ly))[lx] = ((fontLetter >> ((ly) * 8)) >> (7 - lx)) & 1 ? 0xFFFFFF : 0x000000;
+                        // *letterStart = 0x00FF00;
+                    }
+                }
+
+                SDL_UnlockSurface(windowSurface);
+                break;
+            }
+
             case CF_VIDEO_STORAGE_FORMAT_COLORED_TEXT:
                 break; // not supported yet
             case CF_VIDEO_STORAGE_FORMAT_COLOR_PALETTE:
@@ -172,7 +228,12 @@ int SDLCALL sandboxThreadFn( void *userContext ) {
 bool sandboxInitialize( void *userContext, const CfExecContext *execContext ) {
     SandboxContext *context = (SandboxContext *)userContext;
 
+    context->font = sandboxFontLoad("bin/8x8t.fnt");
+    if (context->font == NULL)
+        return false;
+
     // initialize VM -> SDL
+
     SDL_AtomicSet(&context->pixelStorageFormat, CF_VIDEO_STORAGE_FORMAT_TEXT);
     SDL_AtomicSet(&context->alwaysUpdate, true);
     SDL_AtomicSet(&context->manualUpdateRequested, false);
@@ -197,6 +258,8 @@ bool sandboxInitialize( void *userContext, const CfExecContext *execContext ) {
  */
 void sandboxTerminate( void *userContext, const CfTermInfo *termInfo ) {
     SandboxContext *context = (SandboxContext *)userContext;
+
+    sandboxFontDtor(context->font);
 
     assert(termInfo != NULL);
 
@@ -338,10 +401,10 @@ bool sandboxSetVideoMode(
 }
 
 int main( const int _argc, const char **_argv ) {
-    // const int argc = 2;
-    // const char *argv[] = { "qq", "examples/sqrt_repl/out.cfexe" };
-    const int argc = _argc;
-    const char **argv = _argv;
+    const int argc = 2;
+    const char *argv[] = { "qq", "examples/cgsg.cfexe" };
+    // const int argc = _argc;
+    // const char **argv = _argv;
 
     if (argc < 2) {
         printHelp();

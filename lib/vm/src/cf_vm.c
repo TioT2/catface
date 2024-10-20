@@ -236,6 +236,7 @@ void cfVmStart( CfVm *const self ) {
         self->registers.fl.cmpIsLt = (lhs  < rhs); \
         break;                                     \
     }
+
 #define GENERIC_CONVERSION(src, dst) \
     {                                \
         union {                      \
@@ -298,6 +299,9 @@ void cfVmStart( CfVm *const self ) {
         case CF_OPCODE_SHL : GENERIC_BINARY_OPERATION(uint32_t, <<)
         case CF_OPCODE_SHR : GENERIC_BINARY_OPERATION(uint32_t, >>)
         case CF_OPCODE_SAR : GENERIC_BINARY_OPERATION( int32_t, >>)
+        case CF_OPCODE_AND : GENERIC_BINARY_OPERATION(uint32_t,  &)
+        case CF_OPCODE_OR  : GENERIC_BINARY_OPERATION(uint32_t,  |)
+        case CF_OPCODE_XOR : GENERIC_BINARY_OPERATION(uint32_t,  ^)
         case CF_OPCODE_IMUL: GENERIC_BINARY_OPERATION( int32_t,  *)
         case CF_OPCODE_MUL : GENERIC_BINARY_OPERATION(uint32_t,  *)
         case CF_OPCODE_IDIV: GENERIC_BINARY_OPERATION( int32_t,  /)

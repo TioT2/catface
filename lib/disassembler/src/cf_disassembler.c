@@ -106,6 +106,18 @@ CfDisassemblyStatus cfDisassemble( const CfExecutable *exec, char **dest, CfDisa
             strcpy(line, "add");
             break;
         }
+        case CF_OPCODE_AND        : {
+            strcpy(line, "and");
+            break;
+        }
+        case CF_OPCODE_OR        : {
+            strcpy(line, "or");
+            break;
+        }
+        case CF_OPCODE_XOR        : {
+            strcpy(line, "xor");
+            break;
+        }
         case CF_OPCODE_SUB        : {
             strcpy(line, "sub");
             break;

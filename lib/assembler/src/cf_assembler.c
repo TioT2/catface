@@ -401,6 +401,12 @@ CfAssemblyStatus cfAssemble( CfStr text, CfStr sourceName, CfObject *dst, CfAsse
             dataBuffer[0] = CF_OPCODE_SUB;
         } else if (cfStrStartsWith(token.ident, "shl")) {
             dataBuffer[0] = CF_OPCODE_SHL;
+        } else if (cfStrStartsWith(token.ident, "and")) {
+            dataBuffer[0] = CF_OPCODE_AND;
+        } else if (cfStrStartsWith(token.ident, "or")) {
+            dataBuffer[0] = CF_OPCODE_OR;
+        } else if (cfStrStartsWith(token.ident, "xor")) {
+            dataBuffer[0] = CF_OPCODE_XOR;
         } else if (cfStrStartsWith(token.ident, "imul")) {
             dataBuffer[0] = CF_OPCODE_IMUL;
         } else if (cfStrStartsWith(token.ident, "mul")) {

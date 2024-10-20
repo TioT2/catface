@@ -1,0 +1,79 @@
+; 'CGSG' text displaying program
+
+call _start
+halt
+
+; pixel setting function
+; stack: y x
+; violates: ax
+_set_cgsg:
+    push 40
+    mul
+    add
+    push 4
+    mul
+    pop ax
+    push 0x47534743
+    pop [ax]
+ret
+
+_start:
+    ; set video mode
+    push 0x0 ; 0000, where 0 - manualUpdate, 000 - single-colored text
+    vsm
+
+    ; cx - Y, bx - X
+    _start__main_loop_start:
+
+        push 0
+        pop cx
+
+        _start__yloop_start:
+
+            push 0
+            pop bx
+
+            _start__xloop_start:
+
+                push bx
+                push cx
+                xor
+                push 1
+                and
+                push 1
+                cmp
+                jne _start__xloop_inc:
+
+                push bx
+                push cx
+                call _set_cgsg
+
+                _start__xloop_inc:
+                push bx
+                push 1
+                add
+                pop bx
+
+                push bx
+                push 40
+                cmp
+                jne _start__xloop_start:
+            _start__xloop_end:
+
+            push cx
+            push 1
+            add
+            pop cx
+
+            push cx
+            push 25
+            cmp
+            jne _start__yloop_start:
+        _start__yloop_end:
+
+        ; refresh screen
+        vrs
+        jmp _start__main_loop_start
+
+    _start__main_loop_end:
+ret

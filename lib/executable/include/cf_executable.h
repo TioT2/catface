@@ -24,6 +24,20 @@ extern "C" {
 /// @brief screen height
 #define CF_VIDEO_SCREEN_HEIGHT ((size_t)200)
 
+
+/// @brief screen width in text mode
+#define CF_VIDEO_FONT_WIDTH  ((size_t)8)
+
+/// @brief screen height in text mode
+#define CF_VIDEO_FONT_HEIGHT ((size_t)8)
+
+
+/// @brief screen width in text mode
+#define CF_VIDEO_TEXT_WIDTH  (CF_VIDEO_SCREEN_WIDTH / CF_VIDEO_FONT_WIDTH)
+
+/// @brief screen height in text mode
+#define CF_VIDEO_TEXT_HEIGHT (CF_VIDEO_SCREEN_HEIGHT / CF_VIDEO_FONT_HEIGHT)
+
 /// @brief flag register layout
 typedef struct __CfRegisterFlags {
     // comparison flag family
@@ -93,6 +107,9 @@ typedef enum __CfOpcode {
     CF_OPCODE_SHL,    ///< shift 32-bit integer left
     CF_OPCODE_SHR,    ///< shift signed   i32 right
     CF_OPCODE_SAR,    ///< shift unsigned i32 right
+    CF_OPCODE_OR,     ///< shift unsigned i32 right
+    CF_OPCODE_XOR,    ///< shift unsigned i32 right
+    CF_OPCODE_AND,    ///< shift unsigned i32 right
 
     // i32 signed/unsigned instructions
     CF_OPCODE_IMUL,   ///< signed   i32 multiplication
@@ -149,8 +166,8 @@ typedef struct __CfColoredCharacter {
 /// @brief video memory layout in different modes representation union
 typedef union __CfVideoMemory {
     uint32_t           trueColor  [CF_VIDEO_SCREEN_WIDTH * CF_VIDEO_SCREEN_HEIGHT]; ///< trueColor pixels
-    uint8_t            text       [CF_VIDEO_SCREEN_WIDTH * CF_VIDEO_SCREEN_HEIGHT]; ///< text characters
-    CfColoredCharacter coloredText[CF_VIDEO_SCREEN_WIDTH * CF_VIDEO_SCREEN_HEIGHT]; ///< colored text characters
+    uint8_t            text       [CF_VIDEO_TEXT_WIDTH   * CF_VIDEO_TEXT_HEIGHT  ]; ///< text characters
+    CfColoredCharacter coloredText[CF_VIDEO_TEXT_WIDTH   * CF_VIDEO_TEXT_HEIGHT  ]; ///< colored text characters
 
     struct {
         uint32_t palette[256];                                            ///< color palette itself
