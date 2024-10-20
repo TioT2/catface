@@ -2,7 +2,7 @@
  * @brief cfasm file assembler utility
  */
 
-#include <cf_asm.h>
+#include <cf_assembler.h>
 #include <cf_cli.h>
 
 #include <errno.h>

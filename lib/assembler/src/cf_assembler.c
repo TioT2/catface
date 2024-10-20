@@ -3,9 +3,10 @@
 #include <assert.h>
 #include <math.h>
 
-#include "cf_asm.h"
-#include "cf_darr.h"
-#include "cf_string.h"
+#include <cf_darr.h>
+#include <cf_string.h>
+
+#include "cf_assembler.h"
 
 bool cfAsmNextLine( CfStr *self, size_t *line, CfStr *dst ) {
     CfStr slice;
@@ -685,5 +686,53 @@ cfAssemble__end:
     cfDarrDtor(labels);
     return resultStatus;
 } // cfAssemble
+
+const char * cfAssemblyStatusStr( const CfAssemblyStatus status ) {
+    switch (status) {
+    case CF_ASSEMBLY_STATUS_OK                       : return "ok";
+    case CF_ASSEMBLY_STATUS_INTERNAL_ERROR           : return "internal error";
+    case CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION      : return "unknown instruction";
+    case CF_ASSEMBLY_STATUS_UNEXPECTED_TEXT_END      : return "unexpected text end";
+    case CF_ASSEMBLY_STATUS_UNKNOWN_LABEL            : return "unknown label";
+    case CF_ASSEMBLY_STATUS_UNKNOWN_REGISTER         : return "unknown register";
+    case CF_ASSEMBLY_STATUS_DUPLICATE_LABEL          : return "duplicate label";
+    case CF_ASSEMBLY_STATUS_INVALID_PUSHPOP_ARGUMENT : return "invalid push/pop argument";
+
+    default                                          : return "<invalid>";
+    }
+} // cfAssemblyStatusStr
+
+void cfAssemblyDetailsDump(
+    FILE *const               out,
+    const CfAssemblyStatus    status,
+    const CfAssemblyDetails * details
+) {
+    assert(out != NULL);
+    assert(details != NULL);
+
+    const char *str = cfAssemblyStatusStr(status);
+
+    switch (status) {
+    case CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION: {
+        fprintf(out, "unknown instruction (at %zu): ", details->unknownInstruction.line);
+        cfWriteStr(out, details->unknownInstruction.instruction);
+        break;
+    }
+
+    case CF_ASSEMBLY_STATUS_DUPLICATE_LABEL: {
+        fprintf(out, "duplicate label \"");
+        cfWriteStr(out, details->duplicateLabel.label);
+        fprintf(out, "\" at %zu (initially declared at %zu)",
+            details->duplicateLabel.firstDeclaration,
+            details->duplicateLabel.secondDeclaration
+        );
+        break;
+    }
+
+    default: {
+        fprintf(out, "%s", str);
+    }
+    }
+} // cfAssemblyDetailsDump
 
 // cf_assemble.c

@@ -1,9 +1,9 @@
 /**
- * @brief CfModule to CfAsm and CfAsm to CfModule converters declaratoin files
+ * @brief CFASM -> CFOBJ compilation module
  */
 
-#ifndef CF_ASM_H_
-#define CF_ASM_H_
+#ifndef CF_ASSEMBLER_H_
+#define CF_ASSEMBLER_H_
 
 #include <cf_module.h>
 #include <cf_string.h>
@@ -61,33 +61,6 @@ typedef union __CfAssemblyDetails {
  */
 CfAssemblyStatus cfAssemble( CfStr text, CfModule *dst, CfAssemblyDetails *details );
 
-/// @brief general disassembling process status
-typedef enum __CfDisassemblyStatus {
-    CF_DISASSEMBLY_STATUS_OK,                  ///< all's ok
-    CF_DISASSEMBLY_STATUS_INTERNAL_ERROR,      ///< internal disassembling error occured
-    CF_DISASSEMBLY_STATUS_UNKNOWN_OPCODE,      ///< unknown CF opcode
-    CF_DISASSEMBLY_STATUS_UNEXPECTED_CODE_END, ///< unexpected code block end
-} CfDisassemblyStatus;
-
-/// @brief disassembling process detailed info
-typedef union __CfDisassemblyDetails {
-    struct {
-        uint16_t opcode; ///< the opcode bytes
-    } unknownOpcode;
-} CfDisassemblyDetails;
-
-/**
- * @brief module disassembling function
- * 
- * @param[in] module  module pointer
- * @param[in] dest    code destination
- * @param[in] details disassembling detailed info
- * 
- * @return disassembling status
- */
-CfDisassemblyStatus cfDisassemble( const CfModule *module, char **dest, CfDisassemblyDetails *details );
-
-
 /**
  * @brief assembly status to string conversion error
  * 
@@ -98,15 +71,6 @@ CfDisassemblyStatus cfDisassemble( const CfModule *module, char **dest, CfDisass
 const char * cfAssemblyStatusStr( CfAssemblyStatus status );
 
 /**
- * @brief disassembly status to string conversion error
- * 
- * @param[in] status disassembly status
- * 
- * @return disassembly status converted to string. In case of invalid status <invalid> returned
- */
-const char * cfDisassemblyStatusStr( CfDisassemblyStatus status );
-
-/**
  * @brief assembly details dumping function
  * 
  * @param[in,out] out     output file
@@ -115,19 +79,10 @@ const char * cfDisassemblyStatusStr( CfDisassemblyStatus status );
  */
 void cfAssemblyDetailsDump( FILE *out, CfAssemblyStatus status, const CfAssemblyDetails *details );
 
-/**
- * @brief disassembly details dumping function
- * 
- * @param[in,out] out     output file
- * @param[in]     status  assembly operation status
- * @param[in]     details corresponding assembly details (non-null)
- */
-void cfDisassemblyDetailsDump( FILE *out, CfDisassemblyStatus status, const CfDisassemblyDetails *details );
-
 #ifdef __cplusplus
 }
 #endif
 
-#endif // !defined(CF_ASM_H_)
+#endif // !defined(CF_ASSEMBLER_H_)
 
 // cf_asm.h

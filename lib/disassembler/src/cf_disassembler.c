@@ -1,4 +1,4 @@
-#include "cf_asm.h"
+#include "cf_disassembler.h"
 #include "cf_darr.h"
 
 #include <assert.h>
@@ -277,5 +277,35 @@ CfDisassemblyStatus cfDisassemble( const CfModule *module, char **dest, CfDisass
     cfDarrDtor(outStack);
     return CF_DISASSEMBLY_STATUS_OK;
 } // cfDisassemble
+
+
+const char * cfDisassemblyStatusStr( const CfDisassemblyStatus status ) {
+    switch (status) {
+    case CF_DISASSEMBLY_STATUS_OK                  : return "ok";
+    case CF_DISASSEMBLY_STATUS_INTERNAL_ERROR      : return "internal error";
+    case CF_DISASSEMBLY_STATUS_UNKNOWN_OPCODE      : return "unknown opcode";
+    case CF_DISASSEMBLY_STATUS_UNEXPECTED_CODE_END : return "unexpected code end";
+
+    default                                        : return "<invalid>";
+    }
+} // cfDisassemblyStatusStr
+
+
+void cfDisassemblyDetailsDump(
+    FILE *const                  out,
+    const CfDisassemblyStatus    status,
+    const CfDisassemblyDetails * details
+) {
+    assert(out != NULL);
+    assert(details != NULL);
+
+    const char *str = cfDisassemblyStatusStr(status);
+
+    if (status == CF_DISASSEMBLY_STATUS_UNKNOWN_OPCODE) {
+        fprintf(out, "unknown opcode: 0x%4X", (int)details->unknownOpcode.opcode);
+    } else {
+        fprintf(out, "%s", str);
+    }
+} // cfDisassemblyDetailsDump
 
 // cf_disassemble.c
