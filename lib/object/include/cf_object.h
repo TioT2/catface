@@ -5,6 +5,7 @@
 #ifndef CF_OBJECT_H_
 #define CF_OBJECT_H_
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -15,19 +16,12 @@ extern "C" {
 /// @brief maximal length of jump label supported
 #define CF_LABEL_MAX 64
 
-/// @brief link from code point to label representation structure
-typedef struct __CfLink {
-    uint32_t sourceLine;     ///< line in source code link delcared at
-    uint32_t codeOffset;     ///< offset to source code
-    char     label     [64]; ///< label link refers to
-} CfLink;
-
-/// @brief label (reference to certain code point) representation structure
-typedef struct __CfLabel {
+/// @brief label and link (references to certain code point with different semantics)
+typedef struct __CfLabelAndLink {
     uint32_t sourceLine;     ///< line label declared at
     uint32_t codeOffset;     ///< offset link encodes
     char     label     [64]; ///< label
-} CfLabel;
+} CfLabel, CfLink;
 
 /// @brief object (single .cfasm compilation result) represetnation structure
 typedef struct __CfObject {

@@ -19,7 +19,7 @@ typedef struct __CfStringSlice {
     const char *end;   ///< slice end (non-inclusive, may not point on null)
 } CfStr;
 
-/// @brief string ident to slice conversion macro
+/// @brief zero-terminated string to str conversion macro
 #define CF_STR(literal) ((CfStr){ (literal), (literal) + strlen((literal)) })
 
 /**

@@ -8,4 +8,5 @@ target_include_directories("linker" PUBLIC include)
 set_property(TARGET "linker" PROPERTY CXX_STANDARD 20)
 
 target_link_libraries("linker" PUBLIC util)
+target_link_libraries("linker" PUBLIC object)
 target_link_libraries("linker" PUBLIC executable)
