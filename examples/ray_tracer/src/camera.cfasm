@@ -6,58 +6,65 @@ _camera_update:
     push cx
 
     time
-    push 1.0
-    fdiv
     pop ax
 
-    ; x = cos(time) * 10.0
+    ; x = sin(time) * 6.0
     push ax
-    fcos
-    push 10.0
+    fsin
+    push 6.0
     fmul
     pop [256000]
 
-    ; y = 8.0
-    push 8.0
+    ; y = 4.0
+    push 4.0
     pop [256004]
 
-    ; z = sin(time) * 10.0
+    ; z = cos(time) * 6.0
     push ax
-    fsin
-    push 10.0
+    fcos
+    push 6.0
     fmul
     pop [256008]
 
-    ; ax = &direction
-    ; bx = &location
     ; direction = -normalize(location)
-    push 256012
+    push 256012 ; direction
     pop ax
-    push 256000
+    push 256000 ; location
     pop bx
     call _vec_copy
     call _vec_normalize
     call _vec_negate
 
-    ; ax = &right
-    ; bx = &direction
-    ; cx = &up
-    push 256024
-    pop ax
-    push 256012
-    pop bx
-    push 256036
+    ; make (right, dir, up) orthonormal basis
+    call _camera_orthonormalize_basis
+
     pop cx
+    pop bx
+    pop ax
+ret ; _camera_update
+
+_camera_orthonormalize_basis:
+    push ax
+    push bx
+    push cx
 
     ; up = (0, 1, 0)
+    push 256036
+    pop ax
     push 0.0
+    pop [ax+0]
     push 1.0
+    pop [ax+4]
     push 0.0
-    pop [cx+0]
-    pop [cx+4]
-    pop [cx+8]
+    pop [ax+8]
 
     ; right = normalize(direction % up)
+    push 256024 ; right
+    pop ax
+    push 256012 ; direction
+    pop bx
+    push 256036 ; up
+    pop cx
     call _vec_cross
     call _vec_normalize
 
@@ -74,7 +81,7 @@ _camera_update:
     pop cx
     pop bx
     pop ax
-ret ; _camera_update
+ret ; _camera_orthonormalize_basis
 
 ; bx, cx = x, y
 _camera_calculate_pixel_vector:
@@ -94,16 +101,16 @@ _camera_calculate_pixel_vector:
     fsub
     pop bx
 
-    ; ny = y * (200 / 2) - 1
+    ; ny = 1 - y * (200 / 2)
+    push 1.0
     push cx
     itof
     push 100.0
     fdiv
-    push 1.0
     fsub
     pop cx
 
-    ; ax = right * bx + up * cx + direction
+    ; *ax = right * bx + up * cx + direction
 
     push [256024]
     push bx

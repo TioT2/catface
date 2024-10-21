@@ -78,8 +78,8 @@ ret ; _vec_to_color
 
 _start:
     ; set video mode
-    ; 1011 - manual, true color
-    push 0x3
+    ; 1011 - manual update, true color
+    push 0xB
     vsm
 
     ; setup sphere 0
@@ -108,7 +108,6 @@ _start:
 
         ; update camera
         call _camera_update
-
 
         ; initialize Y counter
         push 0
