@@ -1,7 +1,7 @@
 ; Vector math module
 
 ; ax, bx - *vec3, *vec3
-; -> result
+; result on stack
 _vec_dot:
     push [ax+0]
     push [bx+0]
@@ -104,5 +104,46 @@ _vec_cross:
     fsub
     pop  [ax+8]
 ret
+
+; normalized vec to color transformation function
+; ax - *vec3
+; result on stack
+_vec_to_color:
+    push [ax+0]
+    push 1.0
+    fadd
+    push 0.5
+    fmul
+    push 255.0
+    fmul
+    ftoi
+
+    push [ax+4]
+    push 1.0
+    fadd
+    push 0.5
+    fmul
+    push 255.0
+    fmul
+    ftoi
+
+    push 8
+    shl
+
+    push [ax+8]
+    push 1.0
+    fadd
+    push 0.5
+    fmul
+    push 255.0
+    fmul
+    ftoi
+
+    push 16
+    shl
+
+    or
+    or
+ret ; _vec_to_color
 
 ; vec.cfasm

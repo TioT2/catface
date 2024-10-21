@@ -35,54 +35,13 @@ _set_pixel:
     pop [ax]
 ret ; _set_pixel
 
-; normalized vec to color transformation function
-; ax - *vec3
-; result on stack
-_vec_to_color:
-    push [ax+0]
-    push 1.0
-    fadd
-    push 0.5
-    fmul
-    push 255.0
-    fmul
-    ftoi
-
-    push [ax+4]
-    push 1.0
-    fadd
-    push 0.5
-    fmul
-    push 255.0
-    fmul
-    ftoi
-
-    push 8
-    shl
-
-    push [ax+8]
-    push 1.0
-    fadd
-    push 0.5
-    fmul
-    push 255.0
-    fmul
-    ftoi
-
-    push 16
-    shl
-
-    or
-    or
-ret ; _vec_to_color
-
 ; ax - count
 ; (distance, color) pairs on stack
 ; uses bx, cx, dx, ex
 ; dx - best_distance
 ; ex - best_color
 _find_best_distance:
-    ; best distance and color
+    ; initialize best distance and color
     push 150000000.0
     pop dx ; best_distance
     push 0
@@ -92,10 +51,11 @@ _find_best_distance:
         pop bx ; curr_distance
         pop cx ; curr_color
 
-        push bx
-        push 0.0
-        fcmp
-        jle _find_best_distance__continue
+        ; check for negative distance
+        ; push bx
+        ; push 0.0
+        ; fcmp
+        ; jle _find_best_distance__continue
 
         push dx
         push bx
@@ -177,22 +137,23 @@ _start:
                  pop ax
                  call _vec_to_color
                  ; set env distance (env 'infinity' should be less that geometry 'infinity' for proper geometry display.)
-                 push 1000000.0
+                 push 149000000.0
 
-                 push 0xFFFFFF
                  ; calculate first sphere intersection
+                 push 0xFFFFFF
                  push 256060
                  pop ax
                  call _camera_check_sphere_intersection
                  push ax
 
-                 push 0x000000
                  ; calculate second sphere intersection
+                 push 0x000000
                  push 256076
                  pop ax
                  call _camera_check_sphere_intersection
                  push ax
 
+                 ; set object count to 3
                  push 3
                  pop ax
 
@@ -202,7 +163,7 @@ _start:
                  pop cx
                  pop bx
 
-                 ; see calling convention
+                 ; pop color of intersection with least distance to camera (see '_find_best_distance' header)
                  push ex
 
                  ; set pixel on X, Y
@@ -231,6 +192,7 @@ _start:
             cmp
             jne _start__yloop
 
+        ; request screen refresh
         vrs
         jmp _start__main_loop
 ret ; _start
