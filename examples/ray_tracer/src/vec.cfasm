@@ -1,4 +1,4 @@
-; vector math library
+; Vector math module
 
 ; ax, bx - *vec3, *vec3
 ; -> result
@@ -17,7 +17,7 @@ _vec_dot:
 
     fadd
     fadd
-ret
+ret ; _vec_dot
 
 ; ax - *vec3
 _vec_normalize:
@@ -46,7 +46,7 @@ _vec_normalize:
     pop  [ax+8]
 
     pop bx
-ret
+ret ; _vec_normalize
 
 ; ax - *vec3
 _vec_negate:
@@ -61,61 +61,7 @@ _vec_negate:
     push [ax+8]
     fneg
     pop  [ax+8]
-ret
-
-; ax: *vec3, bx: *vec3
-_vec_sub_assign:
-    push [ax+0]
-    push [bx+0]
-    fsub
-    pop  [ax+0]
-
-    push [ax+4]
-    push [bx+4]
-    fsub
-    pop  [ax+4]
-
-    push [ax+8]
-    push [bx+8]
-    fsub
-    pop  [ax+8]
-ret
-
-; ax: *vec3, bx: *vec3
-_vec_add_assign:
-    push [ax+0]
-    push [bx+0]
-    fadd
-    pop  [ax+0]
-
-    push [ax+4]
-    push [bx+4]
-    fadd
-    pop  [ax+4]
-
-    push [ax+8]
-    push [bx+8]
-    fadd
-    pop  [ax+8]
-ret
-
-; ax: *vec3, bx: float
-_vec_mul_n_assign:
-    push [ax+0]
-    push bx
-    fmul
-    pop  [ax+0]
-
-    push [ax+4]
-    push bx
-    fmul
-    pop  [ax+4]
-
-    push [ax+8]
-    push bx
-    fmul
-    pop  [ax+8]
-ret
+ret ; _vec_negate
 
 ; ax - dst, bx - src
 _vec_copy:
@@ -127,21 +73,6 @@ _vec_copy:
 
     push [bx+8]
     pop  [ax+8]
-ret
-
-; ax - src
-_vec_push:
-    push [ax+0]
-    push [ax+4]
-    push [ax+8]
-    push ax
-ret
-
-_vec_pop:
-    pop ax
-    pop [ax+8]
-    pop [ax+4]
-    pop [ax+0]
 ret
 
 ; ax - dst; bx, cx - src
@@ -173,3 +104,5 @@ _vec_cross:
     fsub
     pop  [ax+8]
 ret
+
+; vec.cfasm
