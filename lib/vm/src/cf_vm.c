@@ -436,14 +436,8 @@ void cfVmStart( CfVm *const self ) {
                 cfVmRead(self, &value, sizeof(value));
             value += cfVmReadRegister(self, info.registerIndex);
 
-            if (info.isMemoryAccess) {
-                void *ptr = cfVmGetMemoryPointer(
-                    self,
-                    cfVmReadRegister(self, info.registerIndex) + value
-                );
-
-                memcpy(&value, ptr, 4);
-            }
+            if (info.isMemoryAccess)
+                memcpy(&value, cfVmGetMemoryPointer(self, value), 4);
 
             cfVmPushOperand(self, &value);
             break;

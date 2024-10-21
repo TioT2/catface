@@ -3,7 +3,7 @@
 call _start
 halt
 
-; pixel setting function
+; CGSG text setting function
 ; stack: y x
 ; violates: ax
 _set_cgsg:

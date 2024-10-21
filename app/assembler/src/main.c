@@ -100,7 +100,7 @@ int main( const int _argc, const char **_argv ) {
         bool linkOutput;
     } options = {
         .inputFileName = argv[argc - 1],
-        .outputFileName = "out.cfmod",
+        .outputFileName = "out.cfexe",
         .linkOutput = (optionIndices[1] != -1),
     };
 

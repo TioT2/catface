@@ -26,33 +26,6 @@ typedef struct __SandboxFont {
     uint64_t letters[256]; ///< font 8x8 letters
 } SandboxFont;
 
-/**
- * @brief font loading function
- * 
- * @param[in] path font path
- * 
- * @return font pointer if loaded, NULL otherwise
- */
-SandboxFont * sandboxFontLoad( const char *path ) {
-    FILE *file = fopen(path, "rb");
-    if (file == NULL)
-        return NULL;
-    SandboxFont *font = (SandboxFont *)calloc(1, 2048);
-    if (font != NULL)
-        fread(font, 2048, 1, file);
-    fclose(file);
-    return font;
-} // sandboxFontLoad
-
-/**
- * @brief font destructor
- * 
- * @param[in] font font to destroy
- */
-void sandboxFontDtor( SandboxFont *font ) {
-    free(font);
-} // sandboxFontDtor
-
 /// @brief sandbox context representation structure
 typedef struct __SandboxContext {
     SandboxFont * font;                 ///< font
@@ -243,6 +216,9 @@ int SDLCALL sandboxThreadFn( void *userContext ) {
  */
 bool sandboxGetExecutionTime( void *userContext, float *dst ) {
     SandboxContext *context = (SandboxContext *)userContext;
+    if (SDL_AtomicGet(&context->isTerminated))
+        return false;
+
     const uint64_t now = SDL_GetPerformanceCounter();
 
     *dst = (now - context->initialPerformanceCounter) / (float)context->performanceFrequency;
@@ -258,10 +234,12 @@ bool sandboxGetExecutionTime( void *userContext, float *dst ) {
 bool sandboxInitialize( void *userContext, const CfExecContext *execContext ) {
     SandboxContext *context = (SandboxContext *)userContext;
 
-    context->font = sandboxFontLoad("bin/8x8t.fnt");
-    if (context->font == NULL)
-        return false;
+    // definetly not sh*tcode
+    static uint8_t font[2048] = {
+        #include "font.inc"
+    };
 
+    context->font = (SandboxFont *)font;
     context->initialPerformanceCounter = SDL_GetPerformanceCounter();
     context->performanceFrequency = SDL_GetPerformanceFrequency();
 
@@ -291,8 +269,6 @@ bool sandboxInitialize( void *userContext, const CfExecContext *execContext ) {
  */
 void sandboxTerminate( void *userContext, const CfTermInfo *termInfo ) {
     SandboxContext *context = (SandboxContext *)userContext;
-
-    sandboxFontDtor(context->font);
 
     assert(termInfo != NULL);
 
@@ -428,7 +404,7 @@ bool sandboxSetVideoMode(
     }
 
     SDL_AtomicSet(&context->pixelStorageFormat, storageFormat);
-    SDL_AtomicSet(&context->alwaysUpdate, true);
+    SDL_AtomicSet(&context->alwaysUpdate, alwaysUpdate);
 
     return true;
 }

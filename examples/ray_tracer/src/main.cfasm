@@ -1,0 +1,498 @@
+; Ray tracer program
+
+; vec.cfasm
+
+call _start
+halt
+
+; args: y x color
+_set_pixel:
+    push 320
+    mul
+    add
+    push 4
+    mul
+    pop ax
+    pop [ax]
+ret
+
+; camera:  256000+00..60
+
+; 256000+00 - location
+; 256000+12 - direction
+; 256000+24 - right
+; 256000+36 - up
+; 256000+48 - current_pixel_dir
+
+; spheres: 256000+60..92
+
+; 256000+60 - sphere1 position/radius
+; 256000+76 - sphere1 position/radius
+
+; update camera with time
+_update_camera:
+    push ax
+    push bx
+    push cx
+
+    time
+    push 1.0
+    fdiv
+    pop ax
+
+    ; x = cos(time) * 10.0
+    push ax
+    fcos
+    push 10.0
+    fmul
+    pop [256000]
+
+    ; y = 8.0
+    push 8.0
+    pop [256004]
+
+    ; z = sin(time) * 10.0
+    push ax
+    fsin
+    push 10.0
+    fmul
+    pop [256008]
+
+    ; ax = &direction
+    ; bx = &location
+    ; direction = -normalize(location)
+    push 256012
+    pop ax
+    push 256000
+    pop bx
+    call _vec_copy
+    call _vec_normalize
+    call _vec_negate
+
+    ; ax = &right
+    ; bx = &direction
+    ; cx = &up
+    push 256024
+    pop ax
+    push 256012
+    pop bx
+    push 256036
+    pop cx
+
+    ; up = (0, 1, 0)
+    push 0.0
+    push 1.0
+    push 0.0
+    pop [cx+0]
+    pop [cx+4]
+    pop [cx+8]
+
+    ; right = normalize(direction % up)
+    call _vec_cross
+    call _vec_normalize
+
+    ; up = normalize(right % direction)
+    push 256036 ; up
+    pop ax
+    push 256024 ; right
+    pop bx
+    push 256012 ; direction
+    pop cx
+    call _vec_cross
+    call _vec_normalize
+
+    pop cx
+    pop bx
+    pop ax
+ret
+
+; ax - destination; bx, cx = x, y
+_get_pixel_vector:
+    push bx
+    push cx
+
+    ; nx = x * (320 / 2) - 1
+    push bx
+    itof
+    push 160.0
+    fdiv
+    push 1.0
+    fsub
+    pop bx
+
+    ; ny = y * (200 / 2) - 1
+    push cx
+    itof
+    push 100.0
+    fdiv
+    push 1.0
+    fsub
+    pop cx
+
+    ; ax = right * bx + up * cx + direction
+
+    push [256024]
+    push bx
+    fmul
+    push [256036]
+    push cx
+    fmul
+    push [256012]
+    fadd
+    fadd
+    pop [ax+0]
+
+    push [256028]
+    push bx
+    fmul
+    push [256040]
+    push cx
+    fmul
+    push [256016]
+    fadd
+    fadd
+    pop [ax+4]
+
+    push [256032]
+    push bx
+    fmul
+    push [256044]
+    push cx
+    fmul
+    push [256020]
+    fadd
+    fadd
+    pop [ax+8]
+
+    ; normalize vec3
+    call _vec_normalize
+
+    pop cx
+    pop bx
+ret
+
+; ax - *vec3
+; result on stack
+_vec_to_color:
+    push [ax+0]
+    push 1.0
+    fadd
+    push 0.5
+    fmul
+    push 255.0
+    fmul
+    ftoi
+
+    push [ax+4]
+    push 1.0
+    fadd
+    push 0.5
+    fmul
+    push 255.0
+    fmul
+    ftoi
+
+    push 8
+    shl
+
+    push [ax+8]
+    push 1.0
+    fadd
+    push 0.5
+    fmul
+    push 255.0
+    fmul
+    ftoi
+
+    push 16
+    shl
+
+    or
+    or
+ret
+
+; ax - sphere, ax - result
+; checks intersection with current pixel_dir (256048)
+_check_sphere_intersection2:
+    push bx
+    push cx
+
+    ; bx = dot(sphere.position - location, pixel_dir)
+    push [ax+0]
+    push [256000]
+    fsub
+    push [256048]
+    fmul
+
+    push [ax+4]
+    push [256004]
+    fsub
+    push [256052]
+    fmul
+
+    push [ax+8]
+    push [256008]
+    fsub
+    push [256056]
+    fmul
+
+    fadd
+    fadd
+    pop bx
+
+    push [256048]
+    push bx
+    fmul
+    push [256000]
+    fadd
+    push [ax+0]
+    fsub
+    pop cx
+    push cx
+    push cx
+    fmul
+
+    push [256052]
+    push bx
+    fmul
+    push [256004]
+    fadd
+    push [ax+4]
+    fsub
+    pop cx
+    push cx
+    push cx
+    fmul
+
+    push [256056]
+    push bx
+    fmul
+    push [256008]
+    fadd
+    push [ax+8]
+    fsub
+    pop cx
+    push cx
+    push cx
+    fmul
+
+    fadd
+    fadd
+    fsqrt
+    push [ax+12]
+    fsub
+    push 31
+    sar
+    pop ax
+
+    pop cx
+    pop bx
+ret
+
+; ax - sphere pointer
+; 256000 - location  - bx
+; 256012 - direction - cx
+_check_sphere_intersection:
+    push bx
+    push cx
+    push dx
+    push ex
+
+    push 256000
+    pop bx
+    push 256012
+    pop cx
+
+    push [bx+0]
+    push [ax+0]
+    fsub
+    push [cx+0]
+    fmul
+
+    push [bx+4]
+    push [ax+4]
+    fsub
+    push [cx+4]
+    fmul
+
+    push [bx+8]
+    push [ax+8]
+    fsub
+    push [cx+8]
+    fmul
+
+    fadd
+    fadd
+    pop dx
+
+    push dx
+    push [cx+0]
+    fmul
+    push [ax+0]
+    fadd
+    push [bx+0]
+    fsub
+    pop ex
+    push ex
+    push ex
+    fmul
+
+    push dx
+    push [cx+4]
+    fmul
+    push [ax+4]
+    fadd
+    push [bx+4]
+    fsub
+    pop ex
+    push ex
+    push ex
+    fmul
+
+    push dx
+    push [cx+8]
+    fmul
+    push [ax+8]
+    fadd
+    push [bx+8]
+    fsub
+    pop ex
+    push ex
+    push ex
+    fmul
+
+    fadd
+    fadd
+    fsqrt
+    push [ax+12]
+    fsub
+    pop ax
+
+    pop ex
+    pop dx
+    pop cx
+    pop bx
+
+    ftoi
+    push 31
+    sar
+ret
+
+_start:
+    ; 1011 - manual, true color
+    push 0x3
+    vsm
+
+    ; reserve fx as stack pointer
+    push 1048576
+    push 256
+    sub
+    pop fx
+
+    ; setup sphere0
+    push 2.0
+    pop [256060]
+    push 0.0
+    pop [256064]
+    push 0.0
+    pop [256068]
+    push 2.0
+    pop [256072]
+
+    ; setup sphere1
+    push 2.0
+    fneg
+    pop  [256076]
+    push 0.0
+    pop  [256080]
+    push 0.0
+    pop  [256084]
+    push 1.0
+    pop  [256088]
+
+    _start__main_loop:
+        ; new frame loop
+
+        ; update camera
+        call _update_camera
+
+
+        ; initialize Y counter
+        push 0
+        pop cx
+
+        _start__yloop:
+
+            ; initialize X counter
+            push 0
+            pop bx
+
+            _start__xloop:
+                 ; ; render pixel at (bx, cx)
+                 ; push bx
+                 ; push 2
+                 ; div
+                 ; push 90
+                 ; add
+                 ; push 8
+                 ; shl
+                 ; push cx
+                 ; push 50
+                 ; add
+                 ; or
+
+                 ; get vector pointing to pixel
+                 push 256048
+                 pop ax
+                 call _get_pixel_vector
+
+                 ; calculate environment color
+                 push 256048
+                 pop ax
+                 call _vec_to_color
+
+                 ; calculate first sphere intersection
+                 push 256060
+                 pop ax
+                 call _check_sphere_intersection2
+                 push ax
+
+                 ; calculate second sphere intersection
+                 push 256076
+                 pop ax
+                 call _check_sphere_intersection2
+                 push ax
+
+                 ; just...or the colors (that's MUCH MORE SIMPLE, than sorting by distance etc.)
+                 or
+                 or
+
+                 ; set pixel on X, Y
+                 push bx
+                 push cx
+                 call _set_pixel
+
+                 ; increment and check
+                 push bx
+                 push 1
+                 add
+                 pop bx
+
+                 push bx
+                 push 320
+                 cmp
+                 jne _start__xloop
+            ; increment and check
+            push cx
+            push 1
+            add
+            pop cx
+
+            push cx
+            push 200
+            cmp
+            jne _start__yloop
+
+        vrs
+        jmp _start__main_loop
+ret
