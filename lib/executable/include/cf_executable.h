@@ -127,6 +127,11 @@ typedef enum __CfOpcode {
     CF_OPCODE_FTOI,   ///< f32 into signed i32 conversion
     CF_OPCODE_ITOF,   ///< signed i32 into f32 conversion
 
+    CF_OPCODE_FSIN,   ///< float sine calculation
+    CF_OPCODE_FCOS,   ///< float cosine calculation
+    CF_OPCODE_FNEG,   ///< float negation
+    CF_OPCODE_FSQRT,  ///< Square RooT calculation
+
     // push-pop instructions
     CF_OPCODE_PUSH,   ///< 32-bit literal pushing opcode
     CF_OPCODE_POP,    ///< 32-bit value removing opcode
@@ -155,6 +160,9 @@ typedef enum __CfOpcode {
     // update video mode
     CF_OPCODE_VSM,  ///< Video Set Mode
     CF_OPCODE_VRS,  ///< Video Refresh Screen
+
+    // get current time
+    CF_OPCODE_TIME, ///< current time getting opcode
 } CfOpcode;
 
 /// @brief colored character representation structure (used in coloredText video mode)

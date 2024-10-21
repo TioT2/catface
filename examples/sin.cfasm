@@ -1,0 +1,69 @@
+; Sine displaying program
+
+call _start
+halt
+
+; args: y x color
+; violates ax
+_set_pixel:
+    push 320
+    mul
+    add
+    push 4
+    mul
+    pop ax
+    pop [ax]
+ret
+
+_start:
+     ; 1011 - manual, true color
+     push 0xB
+     vsm
+
+     _start__main_loop:
+         ; bx - x
+         ; cx - time
+
+         time
+         pop cx
+
+         push 0
+         pop bx
+
+         _start__color_start:
+
+             push 0x00FFFF
+             push bx
+
+             push bx
+             itof
+             push cx
+             push 8.0
+             fmul
+             fadd
+             push 30.0
+             fdiv
+             fsin
+             push 80.0
+             fmul
+             ftoi
+             push 100
+             add
+
+             call _set_pixel
+             
+             push bx
+             push 1
+             add
+             pop bx
+
+             push bx
+             push 320
+             cmp
+             jl _start__color_start
+         _start__color_end:
+         
+         vrs
+
+     jmp _start__main_loop
+ret

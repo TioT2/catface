@@ -68,6 +68,9 @@ typedef struct __SandboxContext {
     SDL_atomic_t manualUpdateRequested; ///< 
     SDL_atomic_t pixelStorageFormat;    ///< 
 
+    uint64_t performanceFrequency;      ///< SDL timer frequency
+    uint64_t initialPerformanceCounter; ///< initial time
+
     void *memory;                       ///< 
 } SandboxContext;
 
@@ -168,19 +171,29 @@ int SDLCALL sandboxThreadFn( void *userContext ) {
             case CF_VIDEO_STORAGE_FORMAT_TEXT: {
                 if (0 != SDL_LockSurface(windowSurface))
                     break;
+                uint8_t *const pixels = (uint8_t *)windowSurface->pixels;
+                const uint8_t *const memory = (const uint8_t *)context->memory;
+                const size_t pitch = windowSurface->pitch;
+                const uint64_t *fontLetters = context->font->letters;
 
                 for (size_t y = 0; y < CF_VIDEO_TEXT_HEIGHT; y++) {
-                    uint32_t *lineStart = (uint32_t *)((uint8_t *)windowSurface->pixels + y * windowSurface->pitch * 8);
+                    uint32_t *lineStart = (uint32_t *)(pixels + y * pitch * CF_VIDEO_FONT_HEIGHT);
 
                     for (size_t x = 0; x < CF_VIDEO_TEXT_WIDTH; x++) {
-                        uint32_t *letterStart = lineStart + x * 8;
-                        uint8_t letter = ((uint8_t *)context->memory)[y * CF_VIDEO_TEXT_WIDTH + x];
-                        uint64_t fontLetter = context->font->letters[letter];
+                        uint64_t fontLetter = fontLetters[memory[y * CF_VIDEO_TEXT_WIDTH + x]];
+                        uint32_t *pixel = lineStart + x * CF_VIDEO_FONT_WIDTH;
+                        uint8_t ly = 8;
+                        uint8_t lx;
 
-                        for (size_t ly = 0; ly < 8; ly++)
-                            for (size_t lx = 0; lx < 8; lx++)
-                                ((uint32_t *)((uint8_t *)letterStart + windowSurface->pitch * ly))[lx] = ((fontLetter >> ((ly) * 8)) >> (7 - lx)) & 1 ? 0xFFFFFF : 0x000000;
-                        // *letterStart = 0x00FF00;
+                        while (ly--) {
+                            lx = 8;
+                            while (lx--) {
+                                *pixel++ = fontLetter & 0x80 ? ~0 : 0;
+                                fontLetter <<= 1;
+                            }
+                            fontLetter >>= 16;
+                            pixel = (uint32_t *)((uint8_t *)pixel + pitch - CF_VIDEO_FONT_WIDTH * sizeof(uint32_t));
+                        }
                     }
                 }
 
@@ -188,8 +201,9 @@ int SDLCALL sandboxThreadFn( void *userContext ) {
                 break;
             }
 
-            case CF_VIDEO_STORAGE_FORMAT_COLORED_TEXT:
+            case CF_VIDEO_STORAGE_FORMAT_COLORED_TEXT: {
                 break; // not supported yet
+            }
             case CF_VIDEO_STORAGE_FORMAT_COLOR_PALETTE:
                 break; // not supported yet
             case CF_VIDEO_STORAGE_FORMAT_TRUE_COLOR: {
@@ -220,6 +234,22 @@ int SDLCALL sandboxThreadFn( void *userContext ) {
 } // sandboxThreadFn
 
 /**
+ * @brief program execution time (in seconds) getting function
+ * 
+ * @param[in]  userContext user-provided context
+ * @param[out] dst         time destination
+ * 
+ * @return true if succeeded, false if something went wrong.
+ */
+bool sandboxGetExecutionTime( void *userContext, float *dst ) {
+    SandboxContext *context = (SandboxContext *)userContext;
+    const uint64_t now = SDL_GetPerformanceCounter();
+
+    *dst = (now - context->initialPerformanceCounter) / (float)context->performanceFrequency;
+    return true;
+} // sandboxGetExecutionTime
+
+/**
  * @brief sandbox initialization function
  * 
  * @param[in] context     user context
@@ -231,6 +261,9 @@ bool sandboxInitialize( void *userContext, const CfExecContext *execContext ) {
     context->font = sandboxFontLoad("bin/8x8t.fnt");
     if (context->font == NULL)
         return false;
+
+    context->initialPerformanceCounter = SDL_GetPerformanceCounter();
+    context->performanceFrequency = SDL_GetPerformanceFrequency();
 
     // initialize VM -> SDL
 
@@ -401,10 +434,10 @@ bool sandboxSetVideoMode(
 }
 
 int main( const int _argc, const char **_argv ) {
-    const int argc = 2;
-    const char *argv[] = { "qq", "examples/cgsg.cfexe" };
-    // const int argc = _argc;
-    // const char **argv = _argv;
+    // const int argc = 2;
+    // const char *argv[] = { "qq", "examples/sin.cfexe" };
+    const int argc = _argc;
+    const char **argv = _argv;
 
     if (argc < 2) {
         printHelp();
@@ -440,6 +473,9 @@ int main( const int _argc, const char **_argv ) {
         // video
         .refreshScreen = sandboxRefreshScreen,
         .setVideoMode = sandboxSetVideoMode,
+
+        // time
+        .getExecutionTime = sandboxGetExecutionTime,
 
         // outdated sh*t
         .readFloat64 = readFloat64,

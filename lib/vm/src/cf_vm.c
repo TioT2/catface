@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <setjmp.h>
+#include <math.h>
 
 #include <cf_vm.h>
 #include <cf_stack.h>
@@ -236,6 +237,14 @@ void cfVmStart( CfVm *const self ) {
         self->registers.fl.cmpIsLt = (lhs  < rhs); \
         break;                                     \
     }
+#define GENERIC_UNARY_OPERATION(ty, name, op) \
+    {                                         \
+        ty name;                              \
+        cfVmPopOperand(self, &name);          \
+        name = op;                            \
+        cfVmPushOperand(self, &name);         \
+        break;                                \
+    }
 
 #define GENERIC_CONVERSION(src, dst) \
     {                                \
@@ -320,6 +329,11 @@ void cfVmStart( CfVm *const self ) {
         case CF_OPCODE_FTOI: GENERIC_CONVERSION(float, int32_t)
         case CF_OPCODE_ITOF: GENERIC_CONVERSION(int32_t, float)
 
+        case CF_OPCODE_FSIN : GENERIC_UNARY_OPERATION(float, f, sinf(f));
+        case CF_OPCODE_FCOS : GENERIC_UNARY_OPERATION(float, f, cosf(f));
+        case CF_OPCODE_FNEG : GENERIC_UNARY_OPERATION(float, f, -f);
+        case CF_OPCODE_FSQRT: GENERIC_UNARY_OPERATION(float, f, sqrtf(f));
+
         case CF_OPCODE_JMP: cfVmGenericConditionalJump(self,
             true
         ); break;
@@ -402,6 +416,14 @@ void cfVmStart( CfVm *const self ) {
             // refresh screen
             if (!self->sandbox->refreshScreen(self->sandbox->userContext))
                 cfVmTerminate(self, CF_TERM_REASON_SANDBOX_ERROR);
+            break;
+        }
+
+        case CF_OPCODE_TIME: {
+            float time;
+            if (!self->sandbox->getExecutionTime(self->sandbox->userContext, &time))
+                cfVmTerminate(self, CF_TERM_REASON_SANDBOX_ERROR);
+            cfVmPushOperand(self, &time);
             break;
         }
 

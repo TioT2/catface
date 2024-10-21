@@ -182,6 +182,27 @@ CfDisassemblyStatus cfDisassemble( const CfExecutable *exec, char **dest, CfDisa
             strcpy(line, "itof");
             break;
         }
+        case CF_OPCODE_FSQRT: {
+            strcpy(line, "fsqrt");
+            break;
+        }
+        case CF_OPCODE_FNEG: {
+            strcpy(line, "fneg");
+            break;
+        }
+        case CF_OPCODE_FSIN: {
+            strcpy(line, "fsin");
+            break;
+        }
+        case CF_OPCODE_FCOS: {
+            strcpy(line, "fcos");
+            break;
+        }
+
+        case CF_OPCODE_TIME: {
+            strcpy(line, "time");
+            break;
+        }
 
         case CF_OPCODE_JL:
         case CF_OPCODE_JLE:
@@ -211,7 +232,7 @@ CfDisassemblyStatus cfDisassemble( const CfExecutable *exec, char **dest, CfDisa
             case CF_OPCODE_CALL: name = "call"; break;
             }
 
-            snprintf(line, lineLengthMax, "%s 0x%08X", name, r32);
+            snprintf(line, lineLengthMax, "%s  0x%08X", name, r32);
             break;
         }
 
@@ -255,7 +276,7 @@ CfDisassemblyStatus cfDisassemble( const CfExecutable *exec, char **dest, CfDisa
                 bytecode += sizeof(uint32_t);
             }
 
-            const char *name = opcode == CF_OPCODE_PUSH ? "push " : "pop  ";
+            const char *name = opcode == CF_OPCODE_PUSH ? "push  " : "pop   ";
 
             strncpy(line, name, lineLengthMax);
             cfAsmFormatPushPopInfo(

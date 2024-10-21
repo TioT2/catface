@@ -431,6 +431,14 @@ CfAssemblyStatus cfAssemble( CfStr text, CfStr sourceName, CfObject *dst, CfAsse
             dataBuffer[0] = CF_OPCODE_FDIV;
         } else if (cfStrStartsWith(token.ident, "itof")) {
             dataBuffer[0] = CF_OPCODE_ITOF;
+        } else if (cfStrStartsWith(token.ident, "fsqrt")) {
+            dataBuffer[0] = CF_OPCODE_FSQRT;
+        } else if (cfStrStartsWith(token.ident, "fneg")) {
+            dataBuffer[0] = CF_OPCODE_FNEG;
+        } else if (cfStrStartsWith(token.ident, "fsin")) {
+            dataBuffer[0] = CF_OPCODE_FSIN;
+        } else if (cfStrStartsWith(token.ident, "fcos")) {
+            dataBuffer[0] = CF_OPCODE_FCOS;
         } else if (cfStrStartsWith(token.ident, "cmp")) {
             dataBuffer[0] = CF_OPCODE_CMP;
         } else if (cfStrStartsWith(token.ident, "icmp")) {
@@ -447,6 +455,8 @@ CfAssemblyStatus cfAssemble( CfStr text, CfStr sourceName, CfObject *dst, CfAsse
             dataBuffer[0] = CF_OPCODE_VSM;
         } else if (cfStrStartsWith(token.ident, "vrs")) {
             dataBuffer[0] = CF_OPCODE_VRS;
+        } else if (cfStrStartsWith(token.ident, "time")) {
+            dataBuffer[0] = CF_OPCODE_TIME;
         } else if (false
             || cfStrIsSame(token.ident, CF_STR("push"))
             || cfStrIsSame(token.ident, CF_STR("pop" ))

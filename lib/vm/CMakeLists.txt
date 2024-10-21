@@ -9,3 +9,5 @@ set_property(TARGET "vm" PROPERTY CXX_STANDARD 20)
 
 target_link_libraries("vm" PUBLIC util)
 target_link_libraries("vm" PUBLIC executable)
+
+target_link_libraries("vm" PRIVATE m)

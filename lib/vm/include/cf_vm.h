@@ -103,7 +103,26 @@ typedef struct __CfSandbox {
      */
     bool (*refreshScreen)( void *userContext );
 
+    /**
+     * @brief video mode setting callback
+     * 
+     * @param[in] userContext   user-provided context
+     * @param[in] storageFormat new video data storage format
+     * @param[in] updateMode    new screen update mode
+     * 
+     * @return true if succeeded, false if something went wrong.
+     */
     bool (*setVideoMode)( void *userContext, CfVideoStorageFormat storageFormat, CfVideoUpdateMode updateMode );
+
+    /**
+     * @brief program execution time (in seconds) getting function
+     * 
+     * @param[in]  userContext user-provided context
+     * @param[out] dst         time destination
+     * 
+     * @return true if succeeded, false if something went wrong.
+     */
+    bool (*getExecutionTime)( void *userContext, float *dst );
 
     /**
      * @brief 64-bit integer reading function pointer
