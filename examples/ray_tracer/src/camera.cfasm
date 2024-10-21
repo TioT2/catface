@@ -183,50 +183,84 @@ _camera_check_sphere_intersection:
     fadd
     pop bx
 
-    push [256048]
-    push bx
-    fmul
-    push [256000]
-    fadd
+    ; cx = dot2(sphere.position - location)
     push [ax+0]
+    push [256000]
     fsub
     pop cx
     push cx
     push cx
     fmul
 
-    push [256052]
-    push bx
-    fmul
-    push [256004]
-    fadd
     push [ax+4]
+    push [256004]
     fsub
     pop cx
     push cx
     push cx
     fmul
 
-    push [256056]
+    push [ax+8]
+    push [256008]
+    fsub
+    pop cx
+    push cx
+    push cx
+    fmul
+
+    fadd
+    fadd
+    pop cx
+
+    ; cx = bx * bx - cx + sphere.radius * sphere.radius
+    push bx
     push bx
     fmul
-    push [256008]
-    fadd
-    push [ax+8]
+    push cx
     fsub
-    pop cx
-    push cx
-    push cx
-    fmul
-
-    fadd
-    fadd
-    fsqrt
     push [ax+12]
+    push [ax+12]
+    fmul
+    fadd
+    pop cx
+
+    push cx
+    push 0.0
+    fcmp
+    jle _camera_check_sphere_intersection__no_intersections
+
+    ; cx = sqrt(cx)
+    push cx
+    fsqrt
+    pop cx
+
+    ; ax = bx - cx
+    push bx
+    push cx
     fsub
-    push 31
-    sar
     pop ax
+    push ax
+    push 0.0
+    fcmp
+    jg _camera_check_sphere_intersection__end
+
+    ; ax = bx + cx
+    push bx
+    push cx
+    fadd
+    pop ax
+    push ax
+    push 0.0
+    fcmp
+    jg _camera_check_sphere_intersection__end
+
+    _camera_check_sphere_intersection__no_intersections:
+
+    ; 'infinity' for geometry
+    push 150000000.0
+    pop ax
+
+    _camera_check_sphere_intersection__end:
 
     pop cx
     pop bx
