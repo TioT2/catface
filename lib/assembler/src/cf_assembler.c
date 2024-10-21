@@ -2,6 +2,7 @@
 #include <string.h>
 #include <assert.h>
 #include <math.h>
+#include <stdlib.h>
 
 #include <cf_darr.h>
 #include <cf_string.h>
