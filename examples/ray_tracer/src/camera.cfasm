@@ -182,12 +182,19 @@ _camera_calculate_pixel_vector:
     pop bx
 ret ; _camera_calculate_pixel_vector
 
+; sphere intersection getting function
+;
 ; sphere: (sphere *) ax
-; result: (i32) ax
-; checks sphere intersection
+; result:
+;     distance: (f32) ax
+;     normalX : (f32) bx
+;     normalY : (f32) cx
+;     normalZ : (f32) dx
 _camera_check_sphere_intersection:
-    push bx
-    push cx
+    push ex
+
+    ; save sphere pointer for end
+    push ax
 
     ; bx = dot(sphere.position - location, pixel_dir)
     push [ax+0]
@@ -285,14 +292,49 @@ _camera_check_sphere_intersection:
 
     _camera_check_sphere_intersection__no_intersections:
 
+    ; remove saved ax
+    pop ex
+    pop ex
+
     ; 'infinity' for geometry
     push 150000000.0
     pop ax
+    ret
 
     _camera_check_sphere_intersection__end:
 
-    pop cx
+    ; ex = sphere_pointer
+    pop ex
+
+    ; calculate normal
+    push ax
+    push [256048]
+    fmul
+    push [256000]
+    fadd
+    push [ex+0]
+    fsub
     pop bx
+
+    push ax
+    push [256052]
+    fmul
+    push [256004]
+    fadd
+    push [ex+4]
+    fsub
+    pop cx
+
+    push ax
+    push [256056]
+    fmul
+    push [256008]
+    fadd
+    push [ex+8]
+    fsub
+    pop dx
+
+    pop ex
 ret ; _camera_check_sphere_intersection
 
 ; camera.cfasm

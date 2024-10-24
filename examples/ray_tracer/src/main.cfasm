@@ -36,7 +36,7 @@ _set_pixel:
 ret ; _set_pixel
 
 ; ax - count
-; (distance, color) pairs on stack
+; (distance, nx, ny, nz, color) pairs on stack
 ; uses bx, cx, dx, ex
 ; dx - best_distance
 ; ex - best_color
@@ -60,13 +60,16 @@ _find_best_distance:
         push dx
         push bx
         fcmp
-        jle _find_best_distance__continue
+        jle _find_best_distance__drop
 
         ; (best_distance, best_color) = (curr_distance, curr_color)
         push bx
         pop  dx
         push cx
         pop  ex
+        jmp _find_best_distance__continue
+
+        _find_best_distance__drop:
 
         _find_best_distance__continue:
         ; ax -= 1
@@ -131,6 +134,7 @@ _start:
 
                  push bx
                  push cx
+                 push dx
 
                  ; calculate environment color
                  push 256048
@@ -160,6 +164,7 @@ _start:
                  ; find best distance
                  call _find_best_distance
 
+                 pop dx
                  pop cx
                  pop bx
 

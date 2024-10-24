@@ -14,3 +14,6 @@ out/camera.cfobj: src/camera.cfasm
 
 clean:
 	rm -rf out/*
+
+run: out/out.cfexe
+	cf/cf_executor out/out.cfexe

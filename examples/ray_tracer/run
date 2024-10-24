@@ -1,4 +1,0 @@
-#!/bin/sh
-
-make
-./cf/cf_executor out/out.cfexe
