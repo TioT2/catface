@@ -81,7 +81,7 @@ typedef struct __CfSandbox {
      * @return true if initialized, false if something went wrong
      * 
      * @note user **must not** save pointer of execContext, because execContext is temporary structure.
-     * @note terminate() callback **is not called** in case this function returns false.
+     * @note any sandbox function **will not be called** in case this function returns false (e.g. sandbox initialization fails).
      */
     bool (*initialize)( void *userContext, const CfExecContext *execContext );
 
@@ -148,7 +148,7 @@ typedef struct __CfSandbox {
  * @param[in] executable  executable to execute (non-null, assumed to be valid ASM)
  * @param[in] sandbox connection of VM with environment (non-null)
  * 
- * @return true if execution started, false if not
+ * @return true if execution even started, false if not
  */
 bool cfExecute( const CfExecutable *executable, const CfSandbox *sandbox );
 

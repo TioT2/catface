@@ -12,7 +12,7 @@ typedef struct __CfVm {
     uint8_t *         memory;                  ///< operative memory
     size_t            memorySize;              ///< current memory size (1 MB, actually)
 
-    const CfExecutable  * executable;                  ///< executed executable
+    const CfExecutable * executable;           ///< executed executable
     const CfSandbox * sandbox;                 ///< execution environment (sandbox, actually)
 
     // registers
@@ -230,7 +230,7 @@ void cfVmStart( CfVm *const self ) {
 
 #define GENERIC_COMPARISON(ty)                     \
     {                                              \
-        ty lhs, rhs;                               \
+        ty lhs = (ty)0, rhs = (ty)0;               \
         cfVmPopOperand(self, &rhs);                \
         cfVmPopOperand(self, &lhs);                \
         self->registers.fl.cmpIsEq = (lhs == rhs); \
@@ -239,7 +239,7 @@ void cfVmStart( CfVm *const self ) {
     }
 #define GENERIC_UNARY_OPERATION(ty, name, op) \
     {                                         \
-        ty name;                              \
+        ty name = (ty)0;                      \
         cfVmPopOperand(self, &name);          \
         name = op;                            \
         cfVmPushOperand(self, &name);         \
@@ -427,6 +427,14 @@ void cfVmStart( CfVm *const self ) {
             break;
         }
 
+        case CF_OPCODE_MEOW: {
+            uint32_t meowCount;
+            cfVmPopOperand(self, &meowCount);
+            for (uint32_t i = 0; i < meowCount; i++)
+                printf("MEOW!\n");
+            break;
+        }
+
         case CF_OPCODE_PUSH: {
             CfPushPopInfo info;
             cfVmRead(self, &info, sizeof(info));
@@ -540,6 +548,8 @@ bool cfExecute( const CfExecutable *executable, const CfSandbox *sandbox ) {
         };
 
         // finish if initialization failed
+        // standard termination mechanism is not used, because (by specification?)
+        // ANY sandbox function (terminate() too) MUST NOT be called if sandbox initialization failed.
         if (!sandbox->initialize(sandbox->userContext, &execContext)) {
             isOk = false;
             goto cfExecute__cleanup;

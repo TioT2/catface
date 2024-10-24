@@ -81,7 +81,6 @@ typedef struct __CfAsmToken {
     };
 } CfAsmToken;
 
-
 /**
  * @brief next token from line getting function
  * 
@@ -139,7 +138,7 @@ static bool cfAsmNextToken( CfStr *line, CfAsmToken *dst ) {
             dst->integer = res;
             return true;
         } else {
-            // parse decimal (or floating)
+            // parse decimal
             CfParsedDecimal res;
 
             *line = cfStrParseDecimal(*line, &res);
@@ -161,7 +160,7 @@ static bool cfAsmNextToken( CfStr *line, CfAsmToken *dst ) {
         while (ident.end < line->end && cfAsmIsIdentCharacter(*ident.end))
             ident.end++;
 
-        dst->floating = CF_ASM_TOKEN_TYPE_IDENT;
+        dst->type = CF_ASM_TOKEN_TYPE_IDENT;
         dst->ident = ident;
 
         line->begin = ident.end;
@@ -348,8 +347,14 @@ bool cfAsmParsePushPopInfo(
     return false;
 } // cfAsmParsePushPopInfo
 
-
 CfAssemblyStatus cfAssemble( CfStr text, CfStr sourceName, CfObject *dst, CfAssemblyDetails *details ) {
+#define OPCODE_HASH(name) (0        \
+        | ((uint32_t)name[0] <<  0) \
+        | ((uint32_t)name[1] <<  8) \
+        | ((uint32_t)name[2] << 16) \
+        | ((uint32_t)name[3] << 24) \
+    )
+
     assert(dst != NULL);
 
     CfStr line;
@@ -376,7 +381,7 @@ CfAssemblyStatus cfAssemble( CfStr text, CfStr sourceName, CfObject *dst, CfAsse
     // parse code
     while (cfAsmNextLine(&text, &lineIndex, &line)) {
         uint8_t dataBuffer[16];
-        size_t dataElementCount = 1;
+        size_t dataElementCount = 0;
 
         CfAsmToken token = {};
         CfStr tokenSlice = line;
@@ -387,183 +392,172 @@ CfAssemblyStatus cfAssemble( CfStr text, CfStr sourceName, CfObject *dst, CfAsse
 
         if (token.type != CF_ASM_TOKEN_TYPE_IDENT) {
             if (details != NULL) {
-
-                details->unknownInstruction.instruction = line;
-                details->unknownInstruction.line = lineIndex;
+                details->unknownInstruction = line;
+                details->line = lineIndex;
             }
             resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION;
             goto cfAssemble__end;
         }
 
-        // then try to parse opcode
-               if (cfStrStartsWith(token.ident, "add")) {
-            dataBuffer[0] = CF_OPCODE_ADD;
-        } else if (cfStrStartsWith(token.ident, "sub")) {
-            dataBuffer[0] = CF_OPCODE_SUB;
-        } else if (cfStrStartsWith(token.ident, "shl")) {
-            dataBuffer[0] = CF_OPCODE_SHL;
-        } else if (cfStrStartsWith(token.ident, "and")) {
-            dataBuffer[0] = CF_OPCODE_AND;
-        } else if (cfStrStartsWith(token.ident, "or")) {
-            dataBuffer[0] = CF_OPCODE_OR;
-        } else if (cfStrStartsWith(token.ident, "xor")) {
-            dataBuffer[0] = CF_OPCODE_XOR;
-        } else if (cfStrStartsWith(token.ident, "imul")) {
-            dataBuffer[0] = CF_OPCODE_IMUL;
-        } else if (cfStrStartsWith(token.ident, "mul")) {
-            dataBuffer[0] = CF_OPCODE_MUL;
-        } else if (cfStrStartsWith(token.ident, "idiv")) {
-            dataBuffer[0] = CF_OPCODE_IDIV;
-        } else if (cfStrStartsWith(token.ident, "div")) {
-            dataBuffer[0] = CF_OPCODE_DIV;
-        } else if (cfStrStartsWith(token.ident, "shr")) {
-            dataBuffer[0] = CF_OPCODE_SHR;
-        } else if (cfStrStartsWith(token.ident, "sar")) {
-            dataBuffer[0] = CF_OPCODE_SAR;
-        } else if (cfStrStartsWith(token.ident, "ftoi")) {
-            dataBuffer[0] = CF_OPCODE_FTOI;
-        } else if (cfStrStartsWith(token.ident, "fadd")) {
-            dataBuffer[0] = CF_OPCODE_FADD;
-        } else if (cfStrStartsWith(token.ident, "fsub")) {
-            dataBuffer[0] = CF_OPCODE_FSUB;
-        } else if (cfStrStartsWith(token.ident, "fmul")) {
-            dataBuffer[0] = CF_OPCODE_FMUL;
-        } else if (cfStrStartsWith(token.ident, "fdiv")) {
-            dataBuffer[0] = CF_OPCODE_FDIV;
-        } else if (cfStrStartsWith(token.ident, "itof")) {
-            dataBuffer[0] = CF_OPCODE_ITOF;
-        } else if (cfStrStartsWith(token.ident, "fsqrt")) {
-            dataBuffer[0] = CF_OPCODE_FSQRT;
-        } else if (cfStrStartsWith(token.ident, "fneg")) {
-            dataBuffer[0] = CF_OPCODE_FNEG;
-        } else if (cfStrStartsWith(token.ident, "fsin")) {
-            dataBuffer[0] = CF_OPCODE_FSIN;
-        } else if (cfStrStartsWith(token.ident, "fcos")) {
-            dataBuffer[0] = CF_OPCODE_FCOS;
-        } else if (cfStrStartsWith(token.ident, "cmp")) {
-            dataBuffer[0] = CF_OPCODE_CMP;
-        } else if (cfStrStartsWith(token.ident, "icmp")) {
-            dataBuffer[0] = CF_OPCODE_ICMP;
-        } else if (cfStrStartsWith(token.ident, "fcmp")) {
-            dataBuffer[0] = CF_OPCODE_FCMP;
-        } else if (cfStrStartsWith(token.ident, "ret")) {
-            dataBuffer[0] = CF_OPCODE_RET;
-        } else if (cfStrStartsWith(token.ident, "unreachable")) {
-            dataBuffer[0] = CF_OPCODE_UNREACHABLE;
-        } else if (cfStrStartsWith(token.ident, "halt")) {
-            dataBuffer[0] = CF_OPCODE_HALT;
-        } else if (cfStrStartsWith(token.ident, "vsm")) {
-            dataBuffer[0] = CF_OPCODE_VSM;
-        } else if (cfStrStartsWith(token.ident, "vrs")) {
-            dataBuffer[0] = CF_OPCODE_VRS;
-        } else if (cfStrStartsWith(token.ident, "time")) {
-            dataBuffer[0] = CF_OPCODE_TIME;
-        } else if (false
-            || cfStrIsSame(token.ident, CF_STR("push"))
-            || cfStrIsSame(token.ident, CF_STR("pop" ))
-        ) {
-            // yeah, functional programming
-            dataBuffer[0] = token.ident.begin[1] == 'u'
-                ? CF_OPCODE_PUSH
-                : CF_OPCODE_POP
-            ;
+        uint32_t opcodeHash = OPCODE_HASH(token.ident.begin);
+        // cut last characters
 
-            const CfStr argumentStr = tokenSlice;
+        uint32_t opcodeMask = (uint32_t)~((~(uint64_t)0) << ((token.ident.end - token.ident.begin) * 8));
+        opcodeHash &= opcodeMask;
 
-            uint32_t imm = 0;
-            CfPushPopInfo info = {0};
+        bool opcodeFound = true;
+        CfOpcode opcode;
 
-            if (!cfAsmParsePushPopInfo(&tokenSlice, &info, &imm)) {
-                if (details != NULL) {
-                    details->invalidPushPopArgument.argument = argumentStr;
-                    details->invalidPushPopArgument.line     = lineIndex;
+        switch (opcodeHash) {
+        case OPCODE_HASH("unreachable" ): opcode = CF_OPCODE_UNREACHABLE; break;
+        case OPCODE_HASH("syscall"     ): opcode = CF_OPCODE_SYSCALL;     break;
+        case OPCODE_HASH("halt"        ): opcode = CF_OPCODE_HALT;        break;
+        case OPCODE_HASH("add"         ): opcode = CF_OPCODE_ADD;         break;
+        case OPCODE_HASH("sub"         ): opcode = CF_OPCODE_SUB;         break;
+        case OPCODE_HASH("shl"         ): opcode = CF_OPCODE_SHL;         break;
+        case OPCODE_HASH("shr"         ): opcode = CF_OPCODE_SHR;         break;
+        case OPCODE_HASH("sar"         ): opcode = CF_OPCODE_SAR;         break;
+        case OPCODE_HASH("or\0"        ): opcode = CF_OPCODE_OR;          break;
+        case OPCODE_HASH("xor"         ): opcode = CF_OPCODE_XOR;         break;
+        case OPCODE_HASH("and"         ): opcode = CF_OPCODE_AND;         break;
+        case OPCODE_HASH("imul"        ): opcode = CF_OPCODE_IMUL;        break;
+        case OPCODE_HASH("mul"         ): opcode = CF_OPCODE_MUL;         break;
+        case OPCODE_HASH("idiv"        ): opcode = CF_OPCODE_IDIV;        break;
+        case OPCODE_HASH("div"         ): opcode = CF_OPCODE_DIV;         break;
+        case OPCODE_HASH("fadd"        ): opcode = CF_OPCODE_FADD;        break;
+        case OPCODE_HASH("fsub"        ): opcode = CF_OPCODE_FSUB;        break;
+        case OPCODE_HASH("fmul"        ): opcode = CF_OPCODE_FMUL;        break;
+        case OPCODE_HASH("fdiv"        ): opcode = CF_OPCODE_FDIV;        break;
+        case OPCODE_HASH("ftoi"        ): opcode = CF_OPCODE_FTOI;        break;
+        case OPCODE_HASH("itof"        ): opcode = CF_OPCODE_ITOF;        break;
+        case OPCODE_HASH("fsin"        ): opcode = CF_OPCODE_FSIN;        break;
+        case OPCODE_HASH("fcos"        ): opcode = CF_OPCODE_FCOS;        break;
+        case OPCODE_HASH("fneg"        ): opcode = CF_OPCODE_FNEG;        break;
+        case OPCODE_HASH("fsqrt"       ): opcode = CF_OPCODE_FSQRT;       break;
+        case OPCODE_HASH("push"        ): opcode = CF_OPCODE_PUSH;        break;
+        case OPCODE_HASH("pop"         ): opcode = CF_OPCODE_POP;         break;
+        case OPCODE_HASH("cmp"         ): opcode = CF_OPCODE_CMP;         break;
+        case OPCODE_HASH("icmp"        ): opcode = CF_OPCODE_ICMP;        break;
+        case OPCODE_HASH("fcmp"        ): opcode = CF_OPCODE_FCMP;        break;
+        case OPCODE_HASH("jmp"         ): opcode = CF_OPCODE_JMP;         break;
+        case OPCODE_HASH("jle"         ): opcode = CF_OPCODE_JLE;         break;
+        case OPCODE_HASH("jl\0"        ): opcode = CF_OPCODE_JL;          break;
+        case OPCODE_HASH("jge"         ): opcode = CF_OPCODE_JGE;         break;
+        case OPCODE_HASH("jg\0"        ): opcode = CF_OPCODE_JG;          break;
+        case OPCODE_HASH("je\0"        ): opcode = CF_OPCODE_JE;          break;
+        case OPCODE_HASH("jne"         ): opcode = CF_OPCODE_JNE;         break;
+        case OPCODE_HASH("call"        ): opcode = CF_OPCODE_CALL;        break;
+        case OPCODE_HASH("ret"         ): opcode = CF_OPCODE_RET;         break;
+        case OPCODE_HASH("vsm"         ): opcode = CF_OPCODE_VSM;         break;
+        case OPCODE_HASH("vrs"         ): opcode = CF_OPCODE_VRS;         break;
+        case OPCODE_HASH("meow"        ): opcode = CF_OPCODE_MEOW;        break;
+        case OPCODE_HASH("time"        ): opcode = CF_OPCODE_TIME;        break;
+        default:
+            opcodeFound = false;
+        }
+
+        if (opcodeFound) {
+            dataBuffer[0] = opcode;
+            dataElementCount = 1;
+
+            switch (opcode) {
+            case CF_OPCODE_SYSCALL: {
+                if (
+                    !cfAsmNextToken(&tokenSlice, &token) ||
+                    token.type != CF_ASM_TOKEN_TYPE_INTEGER
+                ) {
+                    if (details != NULL) {
+                        details->unknownInstruction = line;
+                        details->line = lineIndex;
+
+                    }
+                    resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION;
+                    goto cfAssemble__end;
                 }
-                resultStatus = CF_ASSEMBLY_STATUS_INVALID_PUSHPOP_ARGUMENT;
-                goto cfAssemble__end;
-            }
 
-            // write info to data buffer
-            *(CfPushPopInfo *)(dataBuffer + 1) = info;
-            dataElementCount = 2;
-
-            if (info.doReadImmediate) {
-                *(uint32_t *)(dataBuffer + 2) = imm;
-                dataElementCount = 6;
-            }
-
-        } else if (false
-            || cfStrIsSame(token.ident, CF_STR("jmp" ))
-            || cfStrIsSame(token.ident, CF_STR("jle" ))
-            || cfStrIsSame(token.ident, CF_STR("jl"  ))
-            || cfStrIsSame(token.ident, CF_STR("jge" ))
-            || cfStrIsSame(token.ident, CF_STR("jg"  ))
-            || cfStrIsSame(token.ident, CF_STR("jne" ))
-            || cfStrIsSame(token.ident, CF_STR("je"  ))
-            || cfStrIsSame(token.ident, CF_STR("call"))
-        ) {
-                 if (cfStrIsSame(token.ident, CF_STR("jmp" ))) dataBuffer[0] = CF_OPCODE_JMP;
-            else if (cfStrIsSame(token.ident, CF_STR("jle" ))) dataBuffer[0] = CF_OPCODE_JLE;
-            else if (cfStrIsSame(token.ident, CF_STR("jl"  ))) dataBuffer[0] = CF_OPCODE_JL;
-            else if (cfStrIsSame(token.ident, CF_STR("jge" ))) dataBuffer[0] = CF_OPCODE_JGE;
-            else if (cfStrIsSame(token.ident, CF_STR("jg"  ))) dataBuffer[0] = CF_OPCODE_JG;
-            else if (cfStrIsSame(token.ident, CF_STR("jne" ))) dataBuffer[0] = CF_OPCODE_JNE;
-            else if (cfStrIsSame(token.ident, CF_STR("je"  ))) dataBuffer[0] = CF_OPCODE_JE;
-            else if (cfStrIsSame(token.ident, CF_STR("call"))) dataBuffer[0] = CF_OPCODE_CALL;
-
-            // read label
-            if (!cfAsmNextToken(&tokenSlice, &token) || (token.type != CF_ASM_TOKEN_TYPE_IDENT && token.type != CF_ASM_TOKEN_TYPE_INTEGER)) {
-                if (details != NULL) {
-                    details->unknownInstruction.instruction = line;
-                    details->unknownInstruction.line = lineIndex;
-                }
-                resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION;
-                goto cfAssemble__end;
-            }
-
-            if (token.type == CF_ASM_TOKEN_TYPE_INTEGER) {
                 *(uint32_t *)(dataBuffer + 1) = token.integer;
-            } else {
-                CfLink fixup = {
-                    .sourceLine = (uint32_t)lineIndex,
-                    .codeOffset = (uint32_t)cfDarrSize(code) + 1,
-                };
+                dataElementCount = 5;
 
-                if (token.ident.end - token.ident.begin > CF_LABEL_MAX) {
-                    resultStatus = CF_ASSEMBLY_STATUS_TOO_LONG_LABEL;
-                    if (details != NULL)
-                        details->tooLongLabel = token.ident;
-                    goto cfAssemble__end;
-                }
-                memcpy(fixup.label, token.ident.begin, token.ident.end - token.ident.begin);
-                fixup.label[CF_LABEL_MAX - 1] = '\0';
-
-
-                if (CF_DARR_OK != cfDarrPush(&links, &fixup)) {
-                    resultStatus = CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
-                    goto cfAssemble__end;
-                }
-                *(uint32_t *)(dataBuffer + 1) = ~0U; // for (kind of) safety
+                break;
             }
 
-            dataElementCount = 5;
-        } else if (cfStrStartsWith(token.ident, "syscall")) {
-            dataBuffer[0] = CF_OPCODE_SYSCALL;
+            case CF_OPCODE_PUSH:
+            case CF_OPCODE_POP: {
+                const CfStr argumentStr = tokenSlice;
 
-            if (
-                !cfAsmNextToken(&tokenSlice, &token) ||
-                token.type != CF_ASM_TOKEN_TYPE_INTEGER
-            ) {
-                if (details != NULL) {
-                    details->unknownInstruction.instruction = line;
-                    details->unknownInstruction.line = lineIndex;
+                uint32_t imm = 0;
+                CfPushPopInfo info = {0};
 
+                if (!cfAsmParsePushPopInfo(&tokenSlice, &info, &imm)) {
+                    if (details != NULL) {
+                        details->invalidPushPopArgument = argumentStr;
+                        details->line                   = lineIndex;
+                    }
+                    resultStatus = CF_ASSEMBLY_STATUS_INVALID_PUSHPOP_ARGUMENT;
+                    goto cfAssemble__end;
                 }
-                resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION;
-                goto cfAssemble__end;
+
+                // write info to data buffer
+                *(CfPushPopInfo *)(dataBuffer + 1) = info;
+                dataElementCount = 2;
+
+                if (info.doReadImmediate) {
+                    *(uint32_t *)(dataBuffer + 2) = imm;
+                    dataElementCount = 6;
+                }
+                break;
             }
 
-            *(uint32_t *)(dataBuffer + 1) = token.integer;
-            dataElementCount = 5;
+            case CF_OPCODE_JMP:
+            case CF_OPCODE_JLE:
+            case CF_OPCODE_JL:
+            case CF_OPCODE_JGE:
+            case CF_OPCODE_JG:
+            case CF_OPCODE_JE:
+            case CF_OPCODE_JNE:
+            case CF_OPCODE_CALL: {
+                // read label
+                if (!cfAsmNextToken(&tokenSlice, &token) || (token.type != CF_ASM_TOKEN_TYPE_IDENT && token.type != CF_ASM_TOKEN_TYPE_INTEGER)) {
+                    if (details != NULL) {
+                        details->unknownInstruction = line;
+                        details->line = lineIndex;
+                    }
+                    resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION;
+                    goto cfAssemble__end;
+                }
+
+                if (token.type == CF_ASM_TOKEN_TYPE_INTEGER) {
+                    *(uint32_t *)(dataBuffer + 1) = token.integer;
+                } else {
+                    CfLink fixup = {
+                        .sourceLine = (uint32_t)lineIndex,
+                        .codeOffset = (uint32_t)cfDarrSize(code) + 1,
+                    };
+
+                    if (token.ident.end - token.ident.begin > CF_LABEL_MAX) {
+                        resultStatus = CF_ASSEMBLY_STATUS_TOO_LONG_LABEL;
+                        if (details != NULL)
+                            details->tooLongLabel = token.ident;
+                        goto cfAssemble__end;
+                    }
+                    memcpy(fixup.label, token.ident.begin, token.ident.end - token.ident.begin);
+                    fixup.label[CF_LABEL_MAX - 1] = '\0';
+
+
+                    if (CF_DARR_OK != cfDarrPush(&links, &fixup)) {
+                        resultStatus = CF_ASSEMBLY_STATUS_INTERNAL_ERROR;
+                        goto cfAssemble__end;
+                    }
+                    *(uint32_t *)(dataBuffer + 1) = ~0U; // for (kind of) safety
+                }
+
+                dataElementCount = 5;
+                break;
+            }
+
+            default:
+                break;
+            }
         } else {
             // try to parse token
             CfStr labelName = token.ident;
@@ -590,14 +584,13 @@ CfAssemblyStatus cfAssemble( CfStr text, CfStr sourceName, CfObject *dst, CfAsse
                 dataElementCount = 0;
             } else {
                 if (details != NULL) {
-                    details->unknownInstruction.instruction = line;
-                    details->unknownInstruction.line = lineIndex;
+                    details->unknownInstruction = line;
+                    details->line = lineIndex;
                 }
 
                 resultStatus = CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION;
                 goto cfAssemble__end;
             }
-
         }
 
         // append element to code
@@ -667,8 +660,8 @@ void cfAssemblyDetailsWrite(
 
     switch (status) {
     case CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION: {
-        fprintf(out, "unknown instruction (at %zu): ", details->unknownInstruction.line);
-        cfStrWrite(out, details->unknownInstruction.instruction);
+        fprintf(out, "unknown instruction (at %zu): ", details->line);
+        cfStrWrite(out, details->unknownInstruction);
         break;
     }
 
@@ -676,6 +669,7 @@ void cfAssemblyDetailsWrite(
         fprintf(out, "%s", str);
     }
     }
+#undef OPCODE_HASH
 } // cfAssemblyDetailsWrite
 
 // cf_assemble.c

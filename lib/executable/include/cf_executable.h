@@ -161,6 +161,8 @@ typedef enum __CfOpcode {
     CF_OPCODE_VSM,  ///< Video Set Mode
     CF_OPCODE_VRS,  ///< Video Refresh Screen
 
+    CF_OPCODE_MEOW, ///< The MEOW instruction
+
     // get current time
     CF_OPCODE_TIME, ///< current time getting opcode
 } CfOpcode;

@@ -58,13 +58,13 @@ void printHelp( void ) {
 } // printHelp
 
 int main( const int _argc, const char **_argv ) {
-    // const int argc = 4;
+    // const int argc = 5;
     // const char *argv[] = {
     //     "qq",
     //     "-o",
-    //     "examples/sqrt_repl.cfexe",
+    //     "examples/sin.cfexe",
     //     "-l",
-    //     "examples/sqrt_repl.cfasm",
+    //     "examples/sin.cfasm",
     // };
     const int argc = _argc;
     const char **argv = _argv;

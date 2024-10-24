@@ -134,6 +134,10 @@ CfDisassemblyStatus cfDisassemble( const CfExecutable *exec, char **dest, CfDisa
             strcpy(line, "mul");
             break;
         }
+        case CF_OPCODE_MEOW     : {
+            strcpy(line, "meow");
+            break;
+        }
         case CF_OPCODE_IDIV      : {
             strcpy(line, "idiv");
             break;
