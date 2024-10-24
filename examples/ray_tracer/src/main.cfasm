@@ -14,11 +14,14 @@
 ; sphere:
 ;     00..12 (vec) center
 ;     12..16 (f32) radius
+; light:
+;     00..12 (vec) direction
 
 ; GLOBAL VARIABLE SPANS
-; camera   : (camera) 256000+00..60
-; sphere 0 : (sphere) 256000+60..76
-; sphere 1 : (sphere) 256000+76..92
+; camera   : (camera) 256000+000..060
+; light    : (light ) 256000+060..072
+; sphere 0 : (sphere) 256000+072..088
+; sphere 1 : (sphere) 256000+088..104
 
 call _start
 halt
@@ -35,21 +38,99 @@ _set_pixel:
     pop [ax]
 ret ; _set_pixel
 
+; calculate lambertian lighting 
+; normal - bx cx dx
+; color  - on stack
+; result - bx
+_calculate_lighting:
+    push bx
+    push 0.30
+    fmul
+
+    push cx
+    push 0.47
+    fmul
+
+    push dx
+    push 0.80
+    fmul
+
+    fadd
+    fadd
+
+    pop ax
+
+    push ax
+    push 0.0
+    fcmp
+    jge _calculate_lighting__end
+
+    push 0.0
+    pop ax
+
+    _calculate_lighting__end:
+
+    ; bx = 0
+    push 0
+    pop  bx
+
+    ; bx |= (i32)(pop() * ax * 255.0) << 0
+    push ax
+    fmul
+    push 255.0
+    fmul
+    ftoi
+    push 0
+    shl
+
+    push bx
+    or
+    pop  bx
+
+    ; bx |= (i32)(pop() * ax * 255.0) << 8
+    push ax
+    fmul
+    push 255.0
+    fmul
+    ftoi
+    push 8
+    shl
+
+    push bx
+    or
+    pop  bx
+
+    ; bx |= (i32)(pop() * ax * 255.0) << 16
+    push ax
+    fmul
+    push 255.0
+    fmul
+    ftoi
+    push 16
+    shl
+
+    push bx
+    or
+    pop  bx
+ret
+
 ; ax - count
-; (distance, nx, ny, nz, color) pairs on stack
+; (distance, color) pairs on stack
 ; uses bx, cx, dx, ex
 ; dx - best_distance
 ; ex - best_color
 _find_best_distance:
     ; initialize best distance and color
+    ; dx = best_distance
+    ; ex - best_color
     push 150000000.0
     pop dx ; best_distance
     push 0
     pop ex ; best_color
 
     _find_best_distance__loop:
-        pop bx ; curr_distance
         pop cx ; curr_color
+        pop bx ; curr_distance
 
         ; check for negative distance
         ; push bx
@@ -137,25 +218,35 @@ _start:
                  push dx
 
                  ; calculate environment color
+                 ; set env distance (env 'infinity' should be less that geometry 'infinity' for proper geometry display.)
+                 push 149000000.0
                  push 256048
                  pop ax
                  call _vec_to_color
-                 ; set env distance (env 'infinity' should be less that geometry 'infinity' for proper geometry display.)
-                 push 149000000.0
 
                  ; calculate first sphere intersection
-                 push 0xFFFFFF
                  push 256060
                  pop ax
                  call _camera_check_sphere_intersection
                  push ax
 
+                 push 1.0
+                 push 1.0
+                 push 1.0
+                 call _calculate_lighting
+                 push bx
+
                  ; calculate second sphere intersection
-                 push 0x000000
                  push 256076
                  pop ax
                  call _camera_check_sphere_intersection
                  push ax
+
+                 push 1.0
+                 push 0.0
+                 push 0.0
+                 call _calculate_lighting
+                 push bx
 
                  ; set object count to 3
                  push 3

@@ -314,6 +314,8 @@ _camera_check_sphere_intersection:
     fadd
     push [ex+0]
     fsub
+    push [ex+12]
+    fdiv
     pop bx
 
     push ax
@@ -323,6 +325,8 @@ _camera_check_sphere_intersection:
     fadd
     push [ex+4]
     fsub
+    push [ex+12]
+    fdiv
     pop cx
 
     push ax
@@ -332,6 +336,8 @@ _camera_check_sphere_intersection:
     fadd
     push [ex+8]
     fsub
+    push [ex+12]
+    fdiv
     pop dx
 
     pop ex
