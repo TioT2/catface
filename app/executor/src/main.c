@@ -46,7 +46,7 @@ void writeFloat64( void *context, double number ) {
 
 int main( const int _argc, const char **_argv ) {
     // const int argc = 2;
-    // const char *argv[] = { "qq", "examples/factorial.cfexe" };
+    // const char *argv[] = { "qq", "examples/ray_tracer/out/out.cfexe" };
     const int argc = _argc;
     const char **argv = _argv;
 

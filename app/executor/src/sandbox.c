@@ -21,26 +21,22 @@ static int SDLCALL sandboxThreadFn( void *userContext ) {
 
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
 
-    SDL_Window *window = SDL_CreateWindow("CATFACE",
-        30,
-        30,
-        320,
-        200,
-        0
-    );
-
+    SDL_Window *window = SDL_CreateWindow("CATFACE", 30, 30, 640, 400, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
 
     if (window == NULL) {
         // set terminate flag to true
         SDL_AtomicSet(&context->isTerminated, true);
+        SDL_Quit();
         return 0;
     }
 
-    SDL_Surface *windowSurface = SDL_GetWindowSurface(window);
+    // create surface for custom (such as text or palette-based) rendering
+    SDL_Surface *targetSurface = SDL_CreateRGBSurface(0, 320, 200, 32, 0, 0, 0, 0);
 
-    if (windowSurface == NULL) {
-        SDL_DestroyWindow(window);
+    if (targetSurface == NULL) {
         SDL_AtomicSet(&context->isTerminated, true);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
         return 0;
     }
 
@@ -52,7 +48,6 @@ static int SDLCALL sandboxThreadFn( void *userContext ) {
         CF_VIDEO_SCREEN_WIDTH * 4,
         SDL_PIXELFORMAT_RGBX32
     );
-
 
     bool continueExecution = true;
     while (continueExecution && !SDL_AtomicGet(&context->shouldTerminate)) {
@@ -73,17 +68,19 @@ static int SDLCALL sandboxThreadFn( void *userContext ) {
         if (SDL_AtomicGet(&context->alwaysUpdate) || SDL_AtomicGet(&context->manualUpdateRequested)) {
             const CfVideoStorageFormat storageFormat = (CfVideoStorageFormat)SDL_AtomicGet(&context->pixelStorageFormat);
 
+            SDL_Surface *blitSurface = NULL;
+
             // remove update request
             SDL_AtomicSet(&context->manualUpdateRequested, false);
 
             // perform different actions for different storage formats
             switch (storageFormat) {
             case CF_VIDEO_STORAGE_FORMAT_TEXT: {
-                if (0 != SDL_LockSurface(windowSurface))
+                if (0 != SDL_LockSurface(targetSurface))
                     break;
-                uint8_t *const pixels = (uint8_t *)windowSurface->pixels;
+                uint8_t *const pixels = (uint8_t *)targetSurface->pixels;
                 const uint8_t *const memory = (const uint8_t *)context->memory;
-                const size_t pitch = windowSurface->pitch;
+                const size_t pitch = targetSurface->pitch;
                 const uint64_t *fontLetters = context->font->letters;
 
                 for (size_t y = 0; y < CF_VIDEO_TEXT_HEIGHT; y++) {
@@ -107,7 +104,8 @@ static int SDLCALL sandboxThreadFn( void *userContext ) {
                     }
                 }
 
-                SDL_UnlockSurface(windowSurface);
+                SDL_UnlockSurface(targetSurface);
+                blitSurface = targetSurface;
                 break;
             }
 
@@ -116,24 +114,28 @@ static int SDLCALL sandboxThreadFn( void *userContext ) {
             }
             case CF_VIDEO_STORAGE_FORMAT_COLOR_PALETTE:
                 break; // not supported yet
-            case CF_VIDEO_STORAGE_FORMAT_TRUE_COLOR: {
-                const SDL_Rect srcRect = {
-                    0,
-                    0,
-                    (int)CF_VIDEO_SCREEN_WIDTH,
-                    (int)CF_VIDEO_SCREEN_HEIGHT,
-                };
-                SDL_Rect dstRect = srcRect;
 
-                SDL_BlitSurface(trueColorSurface, &srcRect, windowSurface, &dstRect);
+            // just cop
+            case CF_VIDEO_STORAGE_FORMAT_TRUE_COLOR: {
+                blitSurface = trueColorSurface;
                 break;
             }
             }
 
-            SDL_UpdateWindowSurface(window);
+            SDL_Surface *windowSurface = SDL_GetWindowSurface(window);
+            // yay code nesting
+            if (windowSurface != NULL) {
+                if (blitSurface != NULL) {
+                    const SDL_Rect srcRect = { 0, 0, CF_VIDEO_SCREEN_WIDTH, CF_VIDEO_SCREEN_HEIGHT };
+                    SDL_Rect dstRect = { 0, 0, windowSurface->w, windowSurface->h };
+                    SDL_BlitScaled(blitSurface, &srcRect, windowSurface, &dstRect);
+                }
+                SDL_UpdateWindowSurface(window);
+            }
         }
-        // update screen
     }
+
+    SDL_FreeSurface(targetSurface);
 
     SDL_DestroyWindow(window);
 
