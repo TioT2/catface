@@ -19,6 +19,9 @@ add_subdirectory(lib/disassembler)
 add_subdirectory(lib/linker)
 add_subdirectory(lib/vm)
 
+# add implementation librariess
+add_subdirectory(impl/sandbox_sdl2)
+
 # compile applications
 add_subdirectory(app/executor)
 add_subdirectory(app/assembler)

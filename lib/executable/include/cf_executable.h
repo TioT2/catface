@@ -169,19 +169,27 @@ typedef enum __CfOpcode {
 
 /// @brief colored character representation structure (used in coloredText video mode)
 typedef struct __CfColoredCharacter {
-    uint8_t character; ///< character itself
-    uint8_t color;     ///< character color
+    uint8_t character;               ///< character itself
+    struct {
+        uint8_t foregroundColor : 4; ///< character color
+        uint8_t backgroundColor : 4; ///< character background color
+    };
 } CfColoredCharacter;
 
 /// @brief video memory layout in different modes representation union
 typedef union __CfVideoMemory {
     uint32_t           trueColor  [CF_VIDEO_SCREEN_WIDTH * CF_VIDEO_SCREEN_HEIGHT]; ///< trueColor pixels
     uint8_t            text       [CF_VIDEO_TEXT_WIDTH   * CF_VIDEO_TEXT_HEIGHT  ]; ///< text characters
-    CfColoredCharacter coloredText[CF_VIDEO_TEXT_WIDTH   * CF_VIDEO_TEXT_HEIGHT  ]; ///< colored text characters
 
     struct {
+        CfColoredCharacter coloredText[CF_VIDEO_TEXT_WIDTH   * CF_VIDEO_TEXT_HEIGHT]; ///< colored text characters
+        uint32_t foregroundPalette[16];                                               ///< text color palette
+        uint32_t backgroundPalette[16];                                               ///< background color palette
+    };
+
+    struct {
+        uint8_t  indices[CF_VIDEO_SCREEN_WIDTH * CF_VIDEO_SCREEN_HEIGHT]; ///< indices of colors in palette
         uint32_t palette[256];                                            ///< color palette itself
-        uint8_t  colors [CF_VIDEO_SCREEN_WIDTH * CF_VIDEO_SCREEN_HEIGHT]; ///< pixels that refers to certain colors in palette
     } colorPalette;
 } CfVideoMemory;
 

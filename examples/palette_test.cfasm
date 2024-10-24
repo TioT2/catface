@@ -1,0 +1,129 @@
+; Palette-based rendering test
+
+call _start
+halt
+
+; stack: y x color
+_set_pixel:
+    push 320
+    mul
+    add
+    pop ax
+
+    push [ax]
+    push 0xFFFFFF00
+    and
+    or
+    pop  [ax]
+ret
+
+_wait:
+    push 1000
+    pop ax
+
+    _wait__loop:
+        push ax
+        push 1
+        sub
+        pop ax
+
+        push ax
+        push 0
+        cmp
+        jg _wait__loop
+ret
+
+; palette color setting function
+; stack: index color
+_set_palette_color:
+    push 4
+    mul
+    pop ax
+    pop [ax+64000]
+ret
+
+_start:
+    push 0x2 ; 1010 - manual; 256-colored palette
+    vsm
+
+    push 0
+    pop bx
+
+    _start__palette_fill_loop:
+        push bx
+        push 0
+        shl
+
+        push bx
+        push 8
+        shl
+
+        push bx
+        push 16
+        shl
+
+        or
+        or
+
+        push bx
+        call _set_palette_color
+
+        push bx
+        push 1
+        add
+        pop bx
+
+        push bx
+        push 256
+        cmp
+        jl _start__palette_fill_loop
+
+    push 0
+    pop dx
+
+    _start__main_loop:
+
+        push 0
+        pop cx
+
+        _start__y_loop:
+            push 0
+            pop bx
+
+            _start__x_loop:
+                push dx
+                push bx
+                push cx
+                call _set_pixel
+
+                push bx
+                push 1
+                add
+                pop bx
+
+                push bx
+                push 320
+                cmp
+                jl _start__x_loop
+
+            push cx
+            push 1
+            add
+            pop cx
+
+            push cx
+            push 200
+            cmp
+            jl _start__y_loop
+
+        push dx
+        push 1
+        add
+        push 0xFF
+        and
+        pop dx
+
+        vrs
+
+    	jmp _start__main_loop
+ret

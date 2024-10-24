@@ -8,6 +8,26 @@
 
 #include "sandbox.h"
 
+static void sandboxWriteCharacter(
+    uint32_t *dst,
+    const size_t dstPitch,
+    uint64_t letter,
+    const uint32_t foregroundColor,
+    const uint32_t backgroundColor
+) {
+    uint8_t ly = 8;
+    uint8_t lx;
+
+    while (ly--) {
+        lx = 8;
+        while (lx--) {
+            *dst++ = letter & 0x80 ? ~0 : 0;
+            letter <<= 1;
+        }
+        letter >>= 16;
+        dst = (uint32_t *)((uint8_t *)dst + dstPitch - CF_VIDEO_FONT_WIDTH * sizeof(uint32_t));
+    }
+}
 
 /**
  * @brief sandbox SDL therad function
@@ -44,10 +64,20 @@ static int SDLCALL sandboxThreadFn( void *userContext ) {
         context->memory,
         CF_VIDEO_SCREEN_WIDTH,
         CF_VIDEO_SCREEN_HEIGHT,
-        1,
+        32,
         CF_VIDEO_SCREEN_WIDTH * 4,
         SDL_PIXELFORMAT_RGBX32
     );
+
+    SDL_Surface *paletteSurface = SDL_CreateRGBSurfaceWithFormatFrom(
+        context->memory,
+        CF_VIDEO_SCREEN_WIDTH,
+        CF_VIDEO_SCREEN_HEIGHT,
+        8,
+        CF_VIDEO_SCREEN_WIDTH,
+        SDL_PIXELFORMAT_INDEX8
+    );
+    SDL_SetPaletteColors(paletteSurface->format->palette, (SDL_Color *)((CfVideoMemory *)context->memory)->colorPalette.palette, 0, 256);
 
     bool continueExecution = true;
     while (continueExecution && !SDL_AtomicGet(&context->shouldTerminate)) {
@@ -81,27 +111,18 @@ static int SDLCALL sandboxThreadFn( void *userContext ) {
                 uint8_t *const pixels = (uint8_t *)targetSurface->pixels;
                 const uint8_t *const memory = (const uint8_t *)context->memory;
                 const size_t pitch = targetSurface->pitch;
-                const uint64_t *fontLetters = context->font->letters;
 
                 for (size_t y = 0; y < CF_VIDEO_TEXT_HEIGHT; y++) {
                     uint32_t *lineStart = (uint32_t *)(pixels + y * pitch * CF_VIDEO_FONT_HEIGHT);
 
-                    for (size_t x = 0; x < CF_VIDEO_TEXT_WIDTH; x++) {
-                        uint64_t fontLetter = fontLetters[memory[y * CF_VIDEO_TEXT_WIDTH + x]];
-                        uint32_t *pixel = lineStart + x * CF_VIDEO_FONT_WIDTH;
-                        uint8_t ly = 8;
-                        uint8_t lx;
-
-                        while (ly--) {
-                            lx = 8;
-                            while (lx--) {
-                                *pixel++ = fontLetter & 0x80 ? ~0 : 0;
-                                fontLetter <<= 1;
-                            }
-                            fontLetter >>= 16;
-                            pixel = (uint32_t *)((uint8_t *)pixel + pitch - CF_VIDEO_FONT_WIDTH * sizeof(uint32_t));
-                        }
-                    }
+                    for (size_t x = 0; x < CF_VIDEO_TEXT_WIDTH; x++)
+                        sandboxWriteCharacter(
+                            lineStart + x * CF_VIDEO_FONT_WIDTH,
+                            pitch,
+                            context->font[memory[y * CF_VIDEO_TEXT_WIDTH + x]],
+                            ~0,
+                            0
+                        );
                 }
 
                 SDL_UnlockSurface(targetSurface);
@@ -110,10 +131,43 @@ static int SDLCALL sandboxThreadFn( void *userContext ) {
             }
 
             case CF_VIDEO_STORAGE_FORMAT_COLORED_TEXT: {
+                if (0 != SDL_LockSurface(targetSurface))
+                    break;
+                uint8_t *const pixels = (uint8_t *)targetSurface->pixels;
+                const CfColoredCharacter *const memory = (const CfColoredCharacter *)context->memory;
+                const size_t pitch = targetSurface->pitch;
+
+                const uint32_t *foregroundPalette = ((const CfVideoMemory *)context->memory)->foregroundPalette;
+                const uint32_t *backgroundPalette = ((const CfVideoMemory *)context->memory)->backgroundPalette;
+
+                for (size_t y = 0; y < CF_VIDEO_TEXT_HEIGHT; y++) {
+                    uint32_t *lineStart = (uint32_t *)(pixels + y * pitch * CF_VIDEO_FONT_HEIGHT);
+
+                    for (size_t x = 0; x < CF_VIDEO_TEXT_WIDTH; x++) {
+                        const CfColoredCharacter ch = memory[y * CF_VIDEO_TEXT_WIDTH + x];
+
+                        sandboxWriteCharacter(
+                            lineStart + x * CF_VIDEO_FONT_WIDTH,
+                            pitch,
+                            context->font[ch.character],
+                            foregroundPalette[ch.foregroundColor],
+                            backgroundPalette[ch.backgroundColor]
+                        );
+                    }
+                }
+
+                SDL_UnlockSurface(targetSurface);
+                blitSurface = targetSurface;
                 break; // not supported yet
             }
-            case CF_VIDEO_STORAGE_FORMAT_COLOR_PALETTE:
+            case CF_VIDEO_STORAGE_FORMAT_COLOR_PALETTE: {
+                const SDL_Rect src = {0, 0, CF_VIDEO_SCREEN_WIDTH, CF_VIDEO_SCREEN_HEIGHT};
+                SDL_Rect dst = src;
+
+                SDL_BlitSurface(paletteSurface, &src, targetSurface, &dst);
+                blitSurface = targetSurface;
                 break; // not supported yet
+            }
 
             // just cop
             case CF_VIDEO_STORAGE_FORMAT_TRUE_COLOR: {
@@ -145,7 +199,17 @@ static int SDLCALL sandboxThreadFn( void *userContext ) {
     return 0;
 } // sandboxThreadFn
 
-bool sandboxGetExecutionTime( void *userContext, float *dst ) {
+/**
+ * @brief program execution time (in seconds) getting function
+ * 
+ * @param[in]  userContext user-provided context
+ * @param[out] dst         time destination
+ * 
+ * @return true if succeeded, false if something went wrong.
+ * 
+ * @note matches prototype of 'CfSandbox::getExecutionTime' function pointer
+ */
+static bool sandboxGetExecutionTime( void *userContext, float *dst ) {
     SandboxContext *context = (SandboxContext *)userContext;
     if (SDL_AtomicGet(&context->isTerminated))
         return false;
@@ -156,15 +220,24 @@ bool sandboxGetExecutionTime( void *userContext, float *dst ) {
     return true;
 } // sandboxGetExecutionTime
 
-bool sandboxInitialize( void *userContext, const CfExecContext *execContext ) {
+/**
+ * @brief sandbox initialization function
+ * 
+ * @param[in] context     user context
+ * @param[in] execContext execution context
+ * 
+ * @note matches prototype of 'CfSandbox::initialize' function pointer
+ */
+static bool sandboxInitialize( void *userContext, const CfExecContext *execContext ) {
     SandboxContext *context = (SandboxContext *)userContext;
 
-    // definetly not sh*tcode
+    // definetely not sh*tcode
     static uint8_t font[2048] = {
         #include "sandbox_font.inc"
     };
 
-    context->font = (SandboxFont *)font;
+    memcpy(context->font, font, sizeof(context->font));
+
     context->initialPerformanceCounter = SDL_GetPerformanceCounter();
     context->performanceFrequency = SDL_GetPerformanceFrequency();
 
@@ -190,7 +263,15 @@ bool sandboxInitialize( void *userContext, const CfExecContext *execContext ) {
     return true;
 } // sandboxInitialize
 
-void sandboxTerminate( void *userContext, const CfTermInfo *termInfo ) {
+/**
+ * @brief vm panic handling function
+ * 
+ * @param context   sandbox user context
+ * @param termInfo describes occured panic (non-null)
+ * 
+ * @note matches prototype of 'CfSandbox::terminate' function pointer
+ */
+static void sandboxTerminate( void *userContext, const CfTermInfo *termInfo ) {
     SandboxContext *context = (SandboxContext *)userContext;
 
     assert(termInfo != NULL);
@@ -283,7 +364,17 @@ void sandboxTerminate( void *userContext, const CfTermInfo *termInfo ) {
     }
 } // sandboxTerminate
 
-bool sandboxRefreshScreen( void *userContext ) {
+
+/**
+ * @brief screen update function
+ * 
+ * @param[in] userContext user context reference
+ * 
+ * @return true if succeeded, false otherwise.
+ * 
+ * @note matches prototype of 'CfSandbox::refreshScreen' function pointer
+ */
+static bool sandboxRefreshScreen( void *userContext ) {
 
     SandboxContext *context = (SandboxContext *)userContext;
 
@@ -294,7 +385,16 @@ bool sandboxRefreshScreen( void *userContext ) {
     return true;
 } // sandboxRefreshScreen
 
-bool sandboxSetVideoMode(
+/**
+ * @brief video mode setting function
+ * 
+ * @param userContext   sandbox context pointer
+ * @param storageFormat pixel storage format
+ * @param updateMode    screen update mode
+ * 
+ * @note matches prototype of 'CfSandbox::setVideoMode' function pointer
+ */
+static bool sandboxSetVideoMode(
     void                       *userContext,
     const CfVideoStorageFormat  storageFormat,
     const CfVideoUpdateMode     updateMode
@@ -317,5 +417,43 @@ bool sandboxSetVideoMode(
 
     return true;
 } // sandboxSetVideoMode
+
+/**
+ * @brief int64 from stdin reading function
+ * 
+ * @param context context that user can send to internal functions from sandbox, in this case value ignore
+ * 
+ * @return parsed int64 if succeeded and -1 otherwise. (This function is debug-only and will be eliminated after keyboard supoprt adding)
+ */
+static double readFloat64( void *context ) {
+    double num;
+    if (scanf("%lf", &num) != 1)
+        return -1;
+    return num;
+} // readFloat64
+
+/**
+ * @brief int64 to stdin writing function
+ * 
+ * @param context sandbox user context
+ * @param number  number to write
+ */
+static void writeFloat64( void *context, double number ) {
+    printf("%lf\n", number);
+} // writeFloat64
+
+void sandboxConfigure( CfSandbox *vmSandbox, SandboxContext *context ) {
+    vmSandbox->userContext = context;
+
+    vmSandbox->initialize = sandboxInitialize;
+    vmSandbox->terminate = sandboxTerminate;
+
+    vmSandbox->setVideoMode = sandboxSetVideoMode;
+    vmSandbox->refreshScreen = sandboxRefreshScreen;
+    vmSandbox->getExecutionTime = sandboxGetExecutionTime;
+
+    vmSandbox->readFloat64 = readFloat64;
+    vmSandbox->writeFloat64 = writeFloat64;
+} // sandboxConfigure
 
 // sandbox.c

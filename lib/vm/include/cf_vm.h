@@ -129,7 +129,7 @@ typedef struct __CfSandbox {
      * 
      * @param userContext pointer to some user context
      * 
-     * @return some 64-bit integer
+     * @return some 64-bit floating-point number
      */
     double (*readFloat64)( void *userContext );
 
