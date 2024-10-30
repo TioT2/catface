@@ -399,61 +399,70 @@ CfAssemblyStatus cfAssemble( CfStr text, CfStr sourceName, CfObject *dst, CfAsse
             goto cfAssemble__end;
         }
 
-        uint32_t opcodeHash = OPCODE_HASH(token.ident.begin);
-        // cut last characters
+        // 'switch' refactored to set of stuctures because by portability reasons
+        static const struct __CfOpcodeTableElement {
+            uint32_t opcodeHash; ///< hash that corresponds to some opcode
+            CfOpcode opcode;     ///< opcode itself
+        } opcodeHashTable[] = {
+            {OPCODE_HASH("unreachable" ), CF_OPCODE_UNREACHABLE },
+            {OPCODE_HASH("syscall"     ), CF_OPCODE_SYSCALL     },
+            {OPCODE_HASH("halt"        ), CF_OPCODE_HALT        },
+            {OPCODE_HASH("add"         ), CF_OPCODE_ADD         },
+            {OPCODE_HASH("sub"         ), CF_OPCODE_SUB         },
+            {OPCODE_HASH("shl"         ), CF_OPCODE_SHL         },
+            {OPCODE_HASH("shr"         ), CF_OPCODE_SHR         },
+            {OPCODE_HASH("sar"         ), CF_OPCODE_SAR         },
+            {OPCODE_HASH("or\0"        ), CF_OPCODE_OR          },
+            {OPCODE_HASH("xor"         ), CF_OPCODE_XOR         },
+            {OPCODE_HASH("and"         ), CF_OPCODE_AND         },
+            {OPCODE_HASH("imul"        ), CF_OPCODE_IMUL        },
+            {OPCODE_HASH("mul"         ), CF_OPCODE_MUL         },
+            {OPCODE_HASH("idiv"        ), CF_OPCODE_IDIV        },
+            {OPCODE_HASH("div"         ), CF_OPCODE_DIV         },
+            {OPCODE_HASH("fadd"        ), CF_OPCODE_FADD        },
+            {OPCODE_HASH("fsub"        ), CF_OPCODE_FSUB        },
+            {OPCODE_HASH("fmul"        ), CF_OPCODE_FMUL        },
+            {OPCODE_HASH("fdiv"        ), CF_OPCODE_FDIV        },
+            {OPCODE_HASH("ftoi"        ), CF_OPCODE_FTOI        },
+            {OPCODE_HASH("itof"        ), CF_OPCODE_ITOF        },
+            {OPCODE_HASH("fsin"        ), CF_OPCODE_FSIN        },
+            {OPCODE_HASH("fcos"        ), CF_OPCODE_FCOS        },
+            {OPCODE_HASH("fneg"        ), CF_OPCODE_FNEG        },
+            {OPCODE_HASH("fsqrt"       ), CF_OPCODE_FSQRT       },
+            {OPCODE_HASH("push"        ), CF_OPCODE_PUSH        },
+            {OPCODE_HASH("pop"         ), CF_OPCODE_POP         },
+            {OPCODE_HASH("cmp"         ), CF_OPCODE_CMP         },
+            {OPCODE_HASH("icmp"        ), CF_OPCODE_ICMP        },
+            {OPCODE_HASH("fcmp"        ), CF_OPCODE_FCMP        },
+            {OPCODE_HASH("jmp"         ), CF_OPCODE_JMP         },
+            {OPCODE_HASH("jle"         ), CF_OPCODE_JLE         },
+            {OPCODE_HASH("jl\0"        ), CF_OPCODE_JL          },
+            {OPCODE_HASH("jge"         ), CF_OPCODE_JGE         },
+            {OPCODE_HASH("jg\0"        ), CF_OPCODE_JG          },
+            {OPCODE_HASH("je\0"        ), CF_OPCODE_JE          },
+            {OPCODE_HASH("jne"         ), CF_OPCODE_JNE         },
+            {OPCODE_HASH("call"        ), CF_OPCODE_CALL        },
+            {OPCODE_HASH("ret"         ), CF_OPCODE_RET         },
+            {OPCODE_HASH("vsm"         ), CF_OPCODE_VSM         },
+            {OPCODE_HASH("vrs"         ), CF_OPCODE_VRS         },
+            {OPCODE_HASH("meow"        ), CF_OPCODE_MEOW        },
+            {OPCODE_HASH("time"        ), CF_OPCODE_TIME        },
+        };
 
-        uint32_t opcodeMask = (uint32_t)~((~(uint64_t)0) << ((token.ident.end - token.ident.begin) * 8));
-        opcodeHash &= opcodeMask;
+        // calculate opcode hash
+        const uint32_t opcodeHash = OPCODE_HASH(token.ident.begin)
+            & (uint32_t)~((~(uint64_t)0) << ((token.ident.end - token.ident.begin) * 8))
+        ;
 
-        bool opcodeFound = true;
+        bool opcodeFound = false;
         CfOpcode opcode;
 
-        switch (opcodeHash) {
-        case OPCODE_HASH("unreachable" ): opcode = CF_OPCODE_UNREACHABLE; break;
-        case OPCODE_HASH("syscall"     ): opcode = CF_OPCODE_SYSCALL;     break;
-        case OPCODE_HASH("halt"        ): opcode = CF_OPCODE_HALT;        break;
-        case OPCODE_HASH("add"         ): opcode = CF_OPCODE_ADD;         break;
-        case OPCODE_HASH("sub"         ): opcode = CF_OPCODE_SUB;         break;
-        case OPCODE_HASH("shl"         ): opcode = CF_OPCODE_SHL;         break;
-        case OPCODE_HASH("shr"         ): opcode = CF_OPCODE_SHR;         break;
-        case OPCODE_HASH("sar"         ): opcode = CF_OPCODE_SAR;         break;
-        case OPCODE_HASH("or\0"        ): opcode = CF_OPCODE_OR;          break;
-        case OPCODE_HASH("xor"         ): opcode = CF_OPCODE_XOR;         break;
-        case OPCODE_HASH("and"         ): opcode = CF_OPCODE_AND;         break;
-        case OPCODE_HASH("imul"        ): opcode = CF_OPCODE_IMUL;        break;
-        case OPCODE_HASH("mul"         ): opcode = CF_OPCODE_MUL;         break;
-        case OPCODE_HASH("idiv"        ): opcode = CF_OPCODE_IDIV;        break;
-        case OPCODE_HASH("div"         ): opcode = CF_OPCODE_DIV;         break;
-        case OPCODE_HASH("fadd"        ): opcode = CF_OPCODE_FADD;        break;
-        case OPCODE_HASH("fsub"        ): opcode = CF_OPCODE_FSUB;        break;
-        case OPCODE_HASH("fmul"        ): opcode = CF_OPCODE_FMUL;        break;
-        case OPCODE_HASH("fdiv"        ): opcode = CF_OPCODE_FDIV;        break;
-        case OPCODE_HASH("ftoi"        ): opcode = CF_OPCODE_FTOI;        break;
-        case OPCODE_HASH("itof"        ): opcode = CF_OPCODE_ITOF;        break;
-        case OPCODE_HASH("fsin"        ): opcode = CF_OPCODE_FSIN;        break;
-        case OPCODE_HASH("fcos"        ): opcode = CF_OPCODE_FCOS;        break;
-        case OPCODE_HASH("fneg"        ): opcode = CF_OPCODE_FNEG;        break;
-        case OPCODE_HASH("fsqrt"       ): opcode = CF_OPCODE_FSQRT;       break;
-        case OPCODE_HASH("push"        ): opcode = CF_OPCODE_PUSH;        break;
-        case OPCODE_HASH("pop"         ): opcode = CF_OPCODE_POP;         break;
-        case OPCODE_HASH("cmp"         ): opcode = CF_OPCODE_CMP;         break;
-        case OPCODE_HASH("icmp"        ): opcode = CF_OPCODE_ICMP;        break;
-        case OPCODE_HASH("fcmp"        ): opcode = CF_OPCODE_FCMP;        break;
-        case OPCODE_HASH("jmp"         ): opcode = CF_OPCODE_JMP;         break;
-        case OPCODE_HASH("jle"         ): opcode = CF_OPCODE_JLE;         break;
-        case OPCODE_HASH("jl\0"        ): opcode = CF_OPCODE_JL;          break;
-        case OPCODE_HASH("jge"         ): opcode = CF_OPCODE_JGE;         break;
-        case OPCODE_HASH("jg\0"        ): opcode = CF_OPCODE_JG;          break;
-        case OPCODE_HASH("je\0"        ): opcode = CF_OPCODE_JE;          break;
-        case OPCODE_HASH("jne"         ): opcode = CF_OPCODE_JNE;         break;
-        case OPCODE_HASH("call"        ): opcode = CF_OPCODE_CALL;        break;
-        case OPCODE_HASH("ret"         ): opcode = CF_OPCODE_RET;         break;
-        case OPCODE_HASH("vsm"         ): opcode = CF_OPCODE_VSM;         break;
-        case OPCODE_HASH("vrs"         ): opcode = CF_OPCODE_VRS;         break;
-        case OPCODE_HASH("meow"        ): opcode = CF_OPCODE_MEOW;        break;
-        case OPCODE_HASH("time"        ): opcode = CF_OPCODE_TIME;        break;
-        default:
-            opcodeFound = false;
+        for (uint32_t i = 0; i < sizeof(opcodeHashTable) / sizeof(opcodeHashTable[0]); i++) {
+            if (opcodeHash == opcodeHashTable[i].opcodeHash) {
+                opcodeFound = true;
+                opcode = opcodeHashTable[i].opcode;
+                break;
+            }
         }
 
         if (opcodeFound) {

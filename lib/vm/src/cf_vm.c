@@ -1,34 +1,12 @@
+/**
+ * @brief VM internal misc functions implementation file
+ */
+
 #include <assert.h>
 #include <string.h>
-#include <stdlib.h>
-#include <setjmp.h>
 #include <math.h>
 
-#include <cf_vm.h>
-#include <cf_stack.h>
-
-/// @brief VM context representation structure
-typedef struct __CfVm {
-    uint8_t *         memory;                  ///< operative memory
-    size_t            memorySize;              ///< current memory size (1 MB, actually)
-
-    const CfExecutable * executable;           ///< executed executable
-    const CfSandbox * sandbox;                 ///< execution environment (sandbox, actually)
-
-    // registers
-    CfRegisters       registers;               ///< user visible register
-    const uint8_t   * instructionCounter;      ///< next instruction to execute pointer
-    const uint8_t   * instructionCounterBegin; ///< pointer to first instruction
-    const uint8_t   * instructionCounterEnd;   ///< pointer to first byte AFTER last instruciton
-
-    // stascks
-    CfStack           operandStack;            ///< function operand stack
-    CfStack           callStack;               ///< call stack (contains previous instructionCounter's)
-
-    /// panic-related fields
-    CfTermInfo        termInfo;                ///< info to give to user if panic occured
-    jmp_buf           panicJumpBuffer;         ///< to panic handler jump buffer
-} CfVm;
+#include "cf_vm_internal.h"
 
 /**
  * @brief execution termination function
@@ -215,7 +193,7 @@ void * cfVmGetMemoryPointer( CfVm *const self, const uint32_t addr ) {
  * 
  * @param[in] vm reference of VM to start execution in
  */
-void cfVmStart( CfVm *const self ) {
+void cfVmRun( CfVm *const self ) {
 
 // macro definition, because there's no way to abstract type
 #define GENERIC_BINARY_OPERATION(ty, operation) \
@@ -491,80 +469,4 @@ void cfVmStart( CfVm *const self ) {
 #undef GENERIC_COMPARISON
 #undef GENERIC_BINARY_OPERATION
 #undef GENERIC_CONVERSION
-} // cfVmStart
-
-/**
- * @brief executable execution function
- * 
- * @param[in] executable  executable to execute
- * @param[in] sandbox execution environment
- * 
- * @return true if execution started, false if not
- */
-bool cfExecute( const CfExecutable *executable, const CfSandbox *sandbox ) {
-    assert(executable != NULL);
-    assert(sandbox != NULL);
-
-    // TODO: validate sandbox
-
-    // perform minimal context setup
-    CfVm vm = {
-        .executable = executable,
-        .sandbox = sandbox,
-    };
-    bool isOk = true;
-
-    // setup jumpBuffer
-    // note: after jumpBuffer setup it's ok to do cleanup and call panic.
-    int jmp = setjmp(vm.panicJumpBuffer);
-    if (jmp) {
-        sandbox->terminate(sandbox->userContext, &vm.termInfo);
-        // then go to cleanup
-        goto cfExecute__cleanup;
-    }
-
-    // allocate memory
-    vm.memorySize = 1 << 20;
-    vm.memory = (uint8_t *)calloc(vm.memorySize, 1);
-    vm.callStack = cfStackCtor(sizeof(uint8_t *));
-    vm.operandStack = cfStackCtor(sizeof(uint32_t));
-
-    // here VM is not even initialized
-    if (vm.memory == NULL || vm.callStack == NULL || vm.operandStack == NULL) {
-        isOk = false;
-        goto cfExecute__cleanup;
-    }
-
-    vm.instructionCounterBegin = (const uint8_t *)vm.executable->code;
-    vm.instructionCounterEnd   = (const uint8_t *)vm.executable->code + vm.executable->codeLength;
-
-    vm.instructionCounter = vm.instructionCounterBegin;
-
-    // try to initialize sandbox
-    {
-        CfExecContext execContext = {
-            .memory = vm.memory,
-            .memorySize = vm.memorySize,
-        };
-
-        // finish if initialization failed
-        // standard termination mechanism is not used, because (by specification?)
-        // ANY sandbox function (terminate() too) MUST NOT be called if sandbox initialization failed.
-        if (!sandbox->initialize(sandbox->userContext, &execContext)) {
-            isOk = false;
-            goto cfExecute__cleanup;
-        }
-    }
-
-    // start execution
-    cfVmStart(&vm);
-
-    // perform cleanup
-cfExecute__cleanup:
-    free(vm.memory);
-    cfStackDtor(vm.callStack);
-    cfStackDtor(vm.operandStack);
-    return isOk;
-} // cfExecute
-
-// cf_vm.c
+} // cfVmRun

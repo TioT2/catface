@@ -7,6 +7,10 @@
 
 #include <SDL2/SDL.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// @brief sandbox context representation structure
 typedef struct __SandboxContext {
     uint64_t font[256];                        ///< font
@@ -38,6 +42,10 @@ typedef struct __SandboxContext {
  * @param[in]  context   context to configure vm sandbox to be used with (non-null)
  */
 void sandboxConfigure( CfSandbox *vmSandbox, SandboxContext *context );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // !defined(SANDBOX_SDL2_H_)
 
