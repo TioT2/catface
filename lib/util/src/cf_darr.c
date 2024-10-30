@@ -4,6 +4,7 @@
 
 #include "cf_darr.h"
 
+/// @brief dynamic array implementation structure
 typedef struct __CfDarrImpl {
     size_t elementSize; ///< size of single array element
     size_t size;        ///< count of elements in array
