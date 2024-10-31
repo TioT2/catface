@@ -124,18 +124,21 @@ void * cfListIterNext( CfListIterator *iter );
  * 
  * @param[in,out] file    file to dump element to
  * @param[in]     element element to dump
+ * 
+ * @note callback of this type may be used for binary and for text dumping too.
  */
-typedef void (* CfElementDumpFn)( FILE *out, void *element );
+typedef void (* CfListElementDumpFn)( FILE *out, void *element );
 
 /**
- * @brief list dumping function
+ * @brief list printig function
  * 
- * @param[in] out  file to dump list to
- * @param[in] list list to dump (non-null)
- * @param[in] dump element dumping function (nullable)
+ * @param[in] out   file to dump list to
+ * @param[in] list  list to dump (non-null)
+ * @param[in] print element printing function (nullable)
+ * 
+ * @note in this case 'print' function recieves file in binary format
  */
-void cfListDump( FILE *out, CfList list, CfElementDumpFn dumpElement );
-
+void cfListPrint( FILE *out, CfList list, CfListElementDumpFn print );
 
 /***
  * Debugging-related functions. Actually, may be removed.

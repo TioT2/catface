@@ -1,12 +1,11 @@
 /**
- * @brief VM interface implementation file
+ * @brief VM user interface implementation file
  */
 
 #include <assert.h>
 #include <stdlib.h>
 #include <math.h>
 
-#include <cf_stack.h>
 #include "cf_vm_internal.h"
 
 /**
@@ -66,8 +65,8 @@ bool cfExecute( const CfExecutable *executable, const CfSandbox *sandbox ) {
     // allocate memory
     vm.memorySize = 1 << 20;
     vm.memory = (uint8_t *)calloc(vm.memorySize, 1);
-    vm.callStack = cfStackCtor(sizeof(uint8_t *));
-    vm.operandStack = cfStackCtor(sizeof(uint32_t));
+    vm.callStack = cfDarrCtor(sizeof(uint8_t *));
+    vm.operandStack = cfDarrCtor(sizeof(uint32_t));
 
     // here VM is not even initialized
     if (vm.memory == NULL || vm.callStack == NULL || vm.operandStack == NULL) {
@@ -102,8 +101,8 @@ bool cfExecute( const CfExecutable *executable, const CfSandbox *sandbox ) {
     // perform cleanup
 cfExecute__cleanup:
     free(vm.memory);
-    cfStackDtor(vm.callStack);
-    cfStackDtor(vm.operandStack);
+    cfDarrDtor(vm.callStack);
+    cfDarrDtor(vm.operandStack);
     return isOk;
 } // cfExecute
 

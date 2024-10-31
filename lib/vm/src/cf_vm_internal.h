@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-#include <cf_stack.h>
+#include <cf_darr.h>
 #include <setjmp.h>
 
 #include "cf_vm.h"
@@ -29,8 +29,8 @@ typedef struct __CfVm {
     const uint8_t   * instructionCounterEnd;   ///< pointer to first byte AFTER last instruciton
 
     // stascks
-    CfStack           operandStack;            ///< function operand stack
-    CfStack           callStack;               ///< call stack (contains previous instructionCounter's)
+    CfDarr           operandStack;             ///< function operand stack
+    CfDarr           callStack;                ///< call stack (contains previous instructionCounter's)
 
     /// panic-related fields
     CfTermInfo        termInfo;                ///< info to give to user if panic occured

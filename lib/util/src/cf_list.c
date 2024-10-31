@@ -358,7 +358,7 @@ void * cfListIterNext( CfListIterator *const iter ) {
     return data;
 } // cfListIterNext
 
-void cfListDump( FILE *const out, CfList list, CfElementDumpFn dumpElement ) {
+void cfListPrint( FILE *const out, CfList list, CfListElementDumpFn dumpElement ) {
     uint32_t listIndex = list->usedStartIndex;
     uint32_t index = 0;
     uint8_t *data = (uint8_t *)cfListGetData(list);
@@ -379,7 +379,7 @@ void cfListDump( FILE *const out, CfList list, CfElementDumpFn dumpElement ) {
             return;
         listIndex = next;
     }
-} // cfListDump
+} // cfListPrint
 
 bool cfListDbgCheckPrevNext( CfList list ) {
     uint32_t index = list->usedStartIndex;

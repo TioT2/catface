@@ -46,7 +46,7 @@ void cfVmRead( CfVm *const self, void *const dst, const size_t count ) {
  * @param[out]    src  operand source (non-null, 4 bytes readable)
  */
 void cfVmPushOperand( CfVm *const self, const void *const src ) {
-    if (CF_STACK_OK != cfStackPush(&self->operandStack, src))
+    if (CF_DARR_OK != cfDarrPush(&self->operandStack, src))
         cfVmTerminate(self, CF_TERM_REASON_INTERNAL_ERROR);
 } // cfVmPushOperand
 
@@ -57,10 +57,10 @@ void cfVmPushOperand( CfVm *const self, const void *const src ) {
  * @param[out]    dst  popping destination destination (non-null, 4 bytes writable)
  */
 void cfVmPopOperand( CfVm *const self, void *const dst ) {
-    switch (cfStackPop(&self->operandStack, dst)) {
-    case CF_STACK_INTERNAL_ERROR : cfVmTerminate(self, CF_TERM_REASON_INTERNAL_ERROR);
-    case CF_STACK_NO_VALUES      : cfVmTerminate(self, CF_TERM_REASON_NO_OPERANDS);
-    case CF_STACK_OK             : break;
+    switch (cfDarrPop(&self->operandStack, dst)) {
+    case CF_DARR_INTERNAL_ERROR : cfVmTerminate(self, CF_TERM_REASON_INTERNAL_ERROR);
+    case CF_DARR_NO_VALUES      : cfVmTerminate(self, CF_TERM_REASON_NO_OPERANDS);
+    case CF_DARR_OK             : break;
     }
 } // cfVmPopOperand
 
@@ -97,7 +97,7 @@ void cfVmGenericConditionalJump( CfVm *const self, const bool condition ) {
  * @param[in,out] self virtual machine to perform operation in
  */
 void cfVmPushIC( CfVm *const self ) {
-    if (CF_STACK_OK != cfStackPush(&self->callStack, &self->instructionCounter))
+    if (CF_DARR_OK != cfDarrPush(&self->callStack, &self->instructionCounter))
         cfVmTerminate(self, CF_TERM_REASON_INTERNAL_ERROR);
 } // cfVmPushCall
 
@@ -107,10 +107,10 @@ void cfVmPushIC( CfVm *const self ) {
  * @param[in,out] self virtual machine to perform operation in
  */
 void cfVmPopIC( CfVm *const self ) {
-    switch (cfStackPop(&self->callStack, &self->instructionCounter)) {
-    case CF_STACK_INTERNAL_ERROR : cfVmTerminate(self, CF_TERM_REASON_INTERNAL_ERROR);
-    case CF_STACK_NO_VALUES      : cfVmTerminate(self, CF_TERM_REASON_CALL_STACK_UNDERFLOW);
-    case CF_STACK_OK             : break;
+    switch (cfDarrPop(&self->callStack, &self->instructionCounter)) {
+    case CF_DARR_INTERNAL_ERROR : cfVmTerminate(self, CF_TERM_REASON_INTERNAL_ERROR);
+    case CF_DARR_NO_VALUES      : cfVmTerminate(self, CF_TERM_REASON_CALL_STACK_UNDERFLOW);
+    case CF_DARR_OK             : break;
     }
 } // cfVmPopIC
 
