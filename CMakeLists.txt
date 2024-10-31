@@ -32,6 +32,6 @@ add_subdirectory(app/disassembler)
 add_subdirectory(app/linker)
 
 # compile tests (debug-only)
-if (CMAKE_BUILD_TYPE MATCHES DEBUG)
+if (CMAKE_BUILD_TYPE MATCHES Debug)
     add_subdirectory(test/list)
 endif()

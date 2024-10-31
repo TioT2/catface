@@ -20,7 +20,7 @@ int main( void ) {
     CfList list = cfListCtor(sizeof(uint64_t), 0);
     std::deque<uint64_t> controlList;
 
-    for (size_t i = 0; i < 10000; i++) {
+    for (size_t i = 0; i < 32768; i++) {
         uint32_t operation = rand() % 4;
 
         if (i % 5 == 0)
