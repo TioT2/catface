@@ -27,7 +27,7 @@ const static uint32_t CF_constTable[64] = {
  * 
  * @return bit-rotated 32-bit number
  */
-static inline uint16_t cfRotl32( const uint16_t n, const uint16_t at ) {
+static inline uint32_t cfRotl32( const uint32_t n, const uint32_t at ) {
     assert(at <= 32);
     return (n << at) | (n >> (32 - at));
 } // cfRotl32 function end
@@ -40,18 +40,18 @@ static inline uint16_t cfRotl32( const uint16_t n, const uint16_t at ) {
  * 
  * @return bit-rotated 32-bit number
  */
-static inline uint16_t cfRotr32( const uint16_t n, const uint16_t at ) {
+static inline uint32_t cfRotr32( const uint32_t n, const uint32_t at ) {
     assert(at <= 32);
     return (n >> at) | (n << (32 - at));
 } // cfRotr32 function end
 
 /**
- * @brief hash step performing function
+ * @brief hash calculation step performing function
  * 
- * @param[in,out] ctx   hash calculation context
- * @param[in]     batch chunk of data to perform step based on
+ * @param[in,out] hash  hash calculation destination
+ * @param[in]     batch chunk of data to perform step on
  */
-static void cfHashStep( CfHashContext *const ctx, const uint32_t *const batch ) {
+static void cfHashStep( CfHash *const hash, const uint32_t *const batch ) {
     uint32_t words[64] = {0};
 
     memcpy(words, batch, sizeof(uint32_t) * 16);
@@ -73,14 +73,14 @@ static void cfHashStep( CfHashContext *const ctx, const uint32_t *const batch ) 
         words[i] = words[i - 16] + s0 + words[i - 7] + s1;
     }
 
-    uint32_t a = ctx->h0;
-    uint32_t b = ctx->h1;
-    uint32_t c = ctx->h2;
-    uint32_t d = ctx->h3;
-    uint32_t e = ctx->h4;
-    uint32_t f = ctx->h5;
-    uint32_t g = ctx->h6;
-    uint32_t h = ctx->h7;
+    uint32_t a = hash->hash[0];
+    uint32_t b = hash->hash[1];
+    uint32_t c = hash->hash[2];
+    uint32_t d = hash->hash[3];
+    uint32_t e = hash->hash[4];
+    uint32_t f = hash->hash[5];
+    uint32_t g = hash->hash[6];
+    uint32_t h = hash->hash[7];
 
     for (size_t i = 0; i < 64; i++) {
         uint32_t sum0 = cfRotr32(a, 2) ^ cfRotr32(a, 13) ^ cfRotr32(a, 22);
@@ -102,81 +102,21 @@ static void cfHashStep( CfHashContext *const ctx, const uint32_t *const batch ) 
         a = temp1 + temp2;
     }
 
-    ctx->h0 += a;
-    ctx->h1 += b;
-    ctx->h2 += c;
-    ctx->h3 += d;
-    ctx->h4 += e;
-    ctx->h5 += f;
-    ctx->h6 += g;
-    ctx->h7 += h;
+    hash->hash[0] += a;
+    hash->hash[1] += b;
+    hash->hash[2] += c;
+    hash->hash[3] += d;
+    hash->hash[4] += e;
+    hash->hash[5] += f;
+    hash->hash[6] += g;
+    hash->hash[7] += h;
 } // cfHashStep function end
 
-CfHash cfHash( const void *data, const size_t size ) {
-    assert(data != NULL);
-
-    union {
-        CfHash        result;  // result
-        CfHashContext context; // calculation context
-    } hash = {
-        .context = {
-            0x6A09E667,
-            0xBB67AE85,
-            0x3C6EF372,
-            0xA54FF53A,
-            0x510E527F,
-            0x9B05688C,
-            0x1F83D9AB,
-            0x5BE0CD19,
-        }
-    };
-
-    const size_t lastPackByteCount = size % 64;
-    const size_t packCount = size / 64;
-    for (size_t packIndex = 0; packIndex < packCount; packIndex++)
-        cfHashStep(&hash.context, (uint32_t *)data + packIndex * 16);
-
-    // build last batch
-    uint8_t lastBatch[64] = {0};
-
-    // copy last bytes
-    memcpy(lastBatch, (uint32_t *)data + packCount * 16, lastPackByteCount);
-
-    // add one
-    lastBatch[lastPackByteCount] = 128;
-
-    // check for case where size isn't fitting in last batch
-    if (64 - lastPackByteCount < 9) {
-        // handle 1st batch
-        cfHashStep(&hash.context, (const uint32_t *)&lastBatch);
-
-        // start 2nd batch
-        memset(lastBatch, 0, 56);
-    }
-
-    // write finlal block
-
-    uint64_t lastBatchRev = size * 8;
-
-    lastBatchRev = ((lastBatchRev >> 32) & 0x00000000FFFFFFFF) | ((lastBatchRev << 32) & 0xFFFFFFFF00000000);
-    lastBatchRev = ((lastBatchRev >> 16) & 0x0000FFFF0000FFFF) | ((lastBatchRev << 16) & 0xFFFF0000FFFF0000);
-    lastBatchRev = ((lastBatchRev >>  8) & 0x00FF00FF00FF00FF) | ((lastBatchRev <<  8) & 0xFF00FF00FF00FF00);
-
-    ((uint64_t *)lastBatch)[7] = lastBatchRev;
-    cfHashStep(&hash.context, (const uint32_t *)&lastBatch);
-
-    return hash.result;
-} // stkHash function end
-
-bool cfHashCompare( const CfHash *lhs, const CfHash *rhs ) {
-    return 0 == memcmp(lhs, rhs, sizeof(CfHash));
-} // stkHashCompare function end
-
-void cfIterativeHasherInitialize( CfIterativeHasher *const hasher ) {
+void cfHasherInitialize( CfHasher *const hasher ) {
     assert(hasher != NULL);
 
     // setup hashing context
-    hasher->context = (CfHashContext){
+    hasher->hash = (CfHash){{
         0x6A09E667,
         0xBB67AE85,
         0x3C6EF372,
@@ -185,20 +125,23 @@ void cfIterativeHasherInitialize( CfIterativeHasher *const hasher ) {
         0x9B05688C,
         0x1F83D9AB,
         0x5BE0CD19,
-    };
+    }};
 
     hasher->batchSize = 0;
     hasher->totalSize = 0;
-} // cfIterativeHasherInitialize
 
-CfHash cfIterativeHasherTerminate( CfIterativeHasher *const hasher ) {
+    // fill hash batch
+    memset(hasher->batch, 0, 64);
+} // cfHasherInitialize
+
+CfHash cfHasherTerminate( CfHasher *const hasher ) {
     // batch size is always < 64, so it's ok.
     hasher->batch[hasher->batchSize] = 128;
 
     // check for case where size isn't fitting in last batch
     if (64 - hasher->batchSize < 9) {
         // handle 1st batch
-        cfHashStep(&hasher->context, (const uint32_t *)&hasher->batch);
+        cfHashStep(&hasher->hash, (const uint32_t *)&hasher->batch);
 
         // start 2nd batch
         memset(hasher->batch, 0, 56);
@@ -213,13 +156,13 @@ CfHash cfIterativeHasherTerminate( CfIterativeHasher *const hasher ) {
     lastBatchRev = ((lastBatchRev >>  8) & 0x00FF00FF00FF00FF) | ((lastBatchRev <<  8) & 0xFF00FF00FF00FF00);
 
     ((uint64_t *)hasher->batch)[7] = lastBatchRev;
-    cfHashStep(&hasher->context, (const uint32_t *)&hasher->batch);
+    cfHashStep(&hasher->hash, (const uint32_t *)&hasher->batch);
 
-    return *(CfHash *)&hasher->context;
-} // cfIterativeHasherTerminate
+    return hasher->hash;
+} // cfHasherTerminate
 
-void cfIterativeHasherStep(
-    CfIterativeHasher *const hasher,
+void cfHasherStep(
+    CfHasher *const hasher,
     const void        *const data,
     const size_t             size
 ) {
@@ -228,6 +171,9 @@ void cfIterativeHasherStep(
 
     size_t sizeRest = size;
     uint8_t *dataRest = (uint8_t *)data;
+
+    // increment total hashed data sizeo
+    hasher->totalSize += size;
 
     do {
         // count of bytes to write to batch
@@ -245,13 +191,29 @@ void cfIterativeHasherStep(
         dataRest += writeCount;
         sizeRest -= writeCount;
 
+        // increment batch size
+        hasher->batchSize += writeCount;
+
         // append to hash if hasher batch is full
         if (hasher->batchSize == 64) {
-            cfHashStep(&hasher->context, (const uint32_t *)hasher->batch);
+            cfHashStep(&hasher->hash, (const uint32_t *)hasher->batch);
             memset(hasher->batch, 0, 64);
             hasher->batchSize = 0;
         }
     } while (sizeRest > 0);
-} // cfIterativeHasherStep
+} // cfHasherStep
+
+CfHash cfHash( const void *data, const size_t size ) {
+    CfHasher hasher = {0};
+
+    cfHasherInitialize(&hasher);
+    cfHasherStep(&hasher, data, size);
+
+    return cfHasherTerminate(&hasher);
+} // cfHash
+
+bool cfHashCompare( const CfHash *lhs, const CfHash *rhs ) {
+    return 0 == memcmp(lhs, rhs, sizeof(CfHash));
+} // cfHashCompare
 
 // stk_hash.cpp file end
