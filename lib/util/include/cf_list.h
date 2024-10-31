@@ -10,6 +10,10 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// @brief bidirectoinal list handle
 typedef struct __CfListImpl * CfList;
 
@@ -146,6 +150,10 @@ void cfListDump( FILE *out, CfList list, CfElementDumpFn dumpElement );
  * @return true if ok, false if not
  */
 bool cfListDbgCheckPrevNext( CfList list );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // !defined(CF_LIST_H_)
 

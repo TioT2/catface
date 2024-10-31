@@ -8,7 +8,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 endif()
 
 # set compiler language
-set(CF_LANGUAGE C)
+set(CF_LANGUAGE CXX)
 
 # set preferred C++ standard
 set(CMAKE_CXX_STANDARD 20)
