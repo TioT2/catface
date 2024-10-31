@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <cf_hash.h>
+
 #include "cf_object.h"
 
 /// @brief object file magic
@@ -12,8 +14,9 @@ typedef struct __CfObjectFileHeader {
     uint64_t magic;            ///< magic value
     uint32_t sourceNameLength; ///< length of object source file path
     uint32_t codeLength;       ///< code section length
-    uint32_t labelCount;       ///< label section lenght
     uint32_t linkCount;        ///< link section length
+    uint32_t labelCount;       ///< label section lenght
+    CfHash   dataHash;         ///< sourceName - code - link - label hash
 } CfObjectFileHeader;
 
 CfObjectReadStatus cfObjectRead( FILE *file, CfObject *dst ) {
@@ -34,6 +37,9 @@ CfObjectReadStatus cfObjectRead( FILE *file, CfObject *dst ) {
     CfLabel *labels = (CfLabel *)calloc(header.labelCount, sizeof(CfLabel));
     CfObjectReadStatus status = CF_OBJECT_READ_STATUS_OK;
 
+    CfHasher hasher = {0};
+    CfHash dataHash = {0};
+
     if (sourceName == NULL || code == NULL || links == NULL || labels == NULL) {
         status = CF_OBJECT_READ_STATUS_INTERNAL_ERROR;
         goto cfObjectRead__error;
@@ -47,6 +53,20 @@ CfObjectReadStatus cfObjectRead( FILE *file, CfObject *dst ) {
         || header.labelCount       != fread(labels,         sizeof(CfLabel), header.labelCount,       file)
     ) {
         status = CF_OBJECT_READ_STATUS_UNEXPECTED_FILE_END;
+        goto cfObjectRead__error;
+    }
+
+    // calculate hash for object data
+    cfHasherInitialize(&hasher);
+    cfHasherStep(&hasher, sourceName, header.sourceNameLength);
+    cfHasherStep(&hasher, code,       header.codeLength);
+    cfHasherStep(&hasher, links,      header.linkCount * sizeof(CfLink));
+    cfHasherStep(&hasher, labels,     header.labelCount * sizeof(CfLabel));
+    dataHash = cfHasherTerminate(&hasher);
+
+    // compare hashes
+    if (!cfHashCompare(&dataHash, &header.dataHash)) {
+        status = CF_OBJECT_READ_STATUS_INVALID_HASH;
         goto cfObjectRead__error;
     }
 
@@ -71,13 +91,23 @@ bool cfObjectWrite( FILE *file, const CfObject *src ) {
     assert(file != NULL);
     assert(src != NULL);
 
-    const CfObjectFileHeader header = {
+    CfObjectFileHeader header = {
         .magic = CF_OBJECT_MAGIC,
         .sourceNameLength = (uint32_t)strlen(src->sourceName),
         .codeLength = (uint32_t)src->codeLength,
-        .labelCount = (uint32_t)src->labelCount,
         .linkCount = (uint32_t)src->linkCount,
+        .labelCount = (uint32_t)src->labelCount,
     };
+
+    // calculate header hash
+
+    CfHasher hasher = {0};
+    cfHasherInitialize(&hasher);
+    cfHasherStep(&hasher, src->sourceName, header.sourceNameLength);
+    cfHasherStep(&hasher, src->code,       header.codeLength);
+    cfHasherStep(&hasher, src->links,      header.linkCount * sizeof(CfLink));
+    cfHasherStep(&hasher, src->labels,     header.labelCount * sizeof(CfLabel));
+    header.dataHash = cfHasherTerminate(&hasher);
 
     // yeah functional style
     return true
@@ -106,6 +136,7 @@ const char * cfObjectReadStatusStr( CfObjectReadStatus status ) {
     case CF_OBJECT_READ_STATUS_INTERNAL_ERROR       : return "internal error";
     case CF_OBJECT_READ_STATUS_UNEXPECTED_FILE_END  : return "unexpected file end";
     case CF_OBJECT_READ_STATUS_INVALID_OBJECT_MAGIC : return "invalid object magic";
+    case CF_OBJECT_READ_STATUS_INVALID_HASH         : return "invalid hash";
     }
 
     return "<invalid>";

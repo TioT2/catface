@@ -40,6 +40,7 @@ typedef enum __CfObjectReadStatus {
     CF_OBJECT_READ_STATUS_INTERNAL_ERROR,       ///< internal error occured
     CF_OBJECT_READ_STATUS_UNEXPECTED_FILE_END,  ///< reading from file failed
     CF_OBJECT_READ_STATUS_INVALID_OBJECT_MAGIC, ///< invalid object magic
+    CF_OBJECT_READ_STATUS_INVALID_HASH,         ///< object file hash
 } CfObjectReadStatus;
 
 /**
