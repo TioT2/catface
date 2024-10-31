@@ -23,8 +23,8 @@ int main( void ) {
     for (size_t i = 0; i < 32768; i++) {
         uint32_t operation = rand() % 4;
 
-        if (i % 5 == 0)
-            volatile int qq = 42;
+        // if (i % 10 == 0)
+        //     volatile int qq = 47;
 
         switch (operation) {
         case 0: {
@@ -134,14 +134,12 @@ int main( void ) {
         }
         }
 
-        cfListPrint(stdout, list, dumpUint64);
+        // cfListPrint(stdout, list, dumpUint64);
 
         if (!cfListDbgCheckPrevNext(list)) {
             printf("ERROR: PN Check failed.\n");
             return 1;
         }
-
-        printf("\n");
 
         // compare lists
         CfListIterator iter = cfListIter(list);
@@ -170,6 +168,8 @@ int main( void ) {
             return 1;
         }
     }
+
+    printf("SUCCEEDED!\n");
 
     return 0;
 } // main

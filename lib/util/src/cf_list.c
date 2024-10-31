@@ -8,9 +8,6 @@
 
 #include "cf_list.h"
 
-/// invalid list index
-#define CF_LIST_INVALID_INDEX ((uint32_t)(~0U))
-
 /// @brief list element links conatainer
 typedef struct __CfListLinks {
     uint32_t prev; ///< previous element index
@@ -19,26 +16,39 @@ typedef struct __CfListLinks {
 
 /// @brief list internal representation structure
 typedef struct __CfListImpl {
-    size_t   elementSize;    ///< list element size
-    size_t   capacity;       ///< current list capacity
+    size_t      elementSize;    ///< list element size
+    size_t      capacity;       ///< current list capacity
 
-    uint32_t usedStartIndex; ///< used RING start index
-    uint32_t freeStartIndex; ///< free STACK start index
+    uint32_t    freeStartIndex; ///< free STACK start index
 
-
-    CfListLinks links[1];    ///< START of link array
+    CfListLinks links[1];       ///< START of link array
 } CfListImpl;
 
 /**
  * @brief list data getting function
  * 
- * @param[in] list list to get data of
+ * @param[in] list list to get data of (non-null)
  * 
  * @return list data array pointer
  */
 static void * cfListGetData( CfList list ) {
     return (CfListLinks *)(list + 1) + list->capacity;
 } // cfListGetData
+
+/**
+ * @brief list data array accessing function
+ * 
+ * @param[in] list  list to access data array of (non-null)
+ * @param[in] index index to access data array by ( > 0)
+ * 
+ * @return element pointer
+ */
+static void * cfListDataArrayAccess( CfList list, uint32_t index ) {
+    assert(list != NULL);
+    assert(index > 0);
+
+    return (uint8_t *)cfListGetData(list) + list->elementSize * (index - 1);
+} // cfListDataArrayAccess
 
 /**
  * @brief free index array region setting up funciton
@@ -54,7 +64,7 @@ static void cfListSetupFreeIndices(
 ) {
     for (size_t i = 0; i < count; i++)
         free[startIndex + i].next = startIndex + i + 1;
-    free[startIndex + count - 1].next = CF_LIST_INVALID_INDEX;
+    free[startIndex + count - 1].next = 0;
 } // cfListSetupFreeIndices
 
 /**
@@ -85,16 +95,15 @@ static CfList cfListAlloc( const size_t elementSize, const size_t capacity ) {
  * @brief list resize function
  * 
  * @param[in,out] list        list to resize pointer
- * @param[in]     newCapacity new list capacity
+ * @param[in]     newCapacity new list capacity ( > current list capacity)
  * 
  * @return true if resized successfully, false otherwise
  */
 static bool cfListResize( CfList *list, const size_t newCapacity ) {
     assert(list != NULL);
-
     CfListImpl *impl = *list;
-
     assert(impl != NULL);
+    assert(newCapacity > impl->capacity);
 
     CfListImpl *newImpl = cfListAlloc(impl->elementSize, newCapacity);
 
@@ -105,7 +114,7 @@ static bool cfListResize( CfList *list, const size_t newCapacity ) {
     memcpy(
         newImpl->links,
         impl->links,
-        impl->capacity * sizeof(CfListLinks)
+        (impl->capacity + 1) * sizeof(CfListLinks)
     );
 
     // copy data
@@ -118,15 +127,13 @@ static bool cfListResize( CfList *list, const size_t newCapacity ) {
     // setup new indices
     cfListSetupFreeIndices(
         newImpl->links,
-        impl->capacity,
+        impl->capacity + 1,
         newImpl->capacity - impl->capacity
     );
 
     // chain new elements to free stack
-    newImpl->links[newImpl->capacity - 1].next = impl->freeStartIndex;
-    newImpl->freeStartIndex = impl->capacity;
-
-    newImpl->usedStartIndex = impl->usedStartIndex;
+    newImpl->links[newImpl->capacity].next = impl->freeStartIndex;
+    newImpl->freeStartIndex = impl->capacity + 1;
 
     free(impl);
     *list = newImpl;
@@ -139,15 +146,23 @@ static bool cfListResize( CfList *list, const size_t newCapacity ) {
  * 
  * @param[in,out] impl list to pop element from
  * 
- * @return free element index. In case if there is no such element, returns CF_LIST_INVALID_INDEX.
+ * @return free element index. In case if there is no such element, returns 0.
  * 
  * @note .next and .prev of link by resulting index contain trash values
+ * @note the only reason this function may fail is internal list error.
  */
-static uint32_t cfListPopFree( CfListImpl *const impl ) {
+static uint32_t cfListPopFree( CfList *const list ) {
+    assert(list != NULL);
+    CfListImpl *impl = *list;
     assert(impl != NULL);
 
-    if (impl->freeStartIndex == CF_LIST_INVALID_INDEX)
-        return CF_LIST_INVALID_INDEX;
+    if (impl->freeStartIndex == 0) {
+        const size_t newCapacity = impl->capacity == 0 ? 1 : impl->capacity * 2;
+
+        if (!cfListResize(list, newCapacity))
+            return 0;
+        impl = *list;
+    }
 
     const uint32_t result = impl->freeStartIndex;
     impl->freeStartIndex = impl->links[impl->freeStartIndex].next;
@@ -174,10 +189,10 @@ CfList cfListCtor( const size_t elementSize, size_t initialCapacity ) {
     if (list == NULL)
         return NULL;
 
-    list->usedStartIndex = CF_LIST_INVALID_INDEX;
-    list->freeStartIndex = 0;
-
-    cfListSetupFreeIndices(list->links, 0, initialCapacity);
+    if (initialCapacity > 0) {
+        cfListSetupFreeIndices(list->links, 1, initialCapacity - 1);
+        list->freeStartIndex = 1;
+    }
 
     return list;
 } // cfListCtor
@@ -186,60 +201,24 @@ void cfListDtor( CfList list ) {
     free(list);
 } //cfListDtor
 
-void * cfListGetElement( const CfList list, uint32_t elementIndex ) {
-    assert(list != NULL);
-
-    if (elementIndex >= list->capacity)
-        return NULL;
-    
-    uint32_t index = list->usedStartIndex;
-    for (uint32_t i = 0; i < elementIndex; i++)
-        index = list->links[list->usedStartIndex].next;
-
-    return (uint8_t *)cfListGetData(list) + index * list->elementSize;
-} // cfListGetElement
-
 CfListStatus cfListPushBack( CfList *list, const void *data ) {
     assert(data != NULL);
 
-    assert(list != NULL);
+    uint32_t dstIndex = cfListPopFree(list);
+    if (dstIndex == 0)
+        return CF_LIST_STATUS_INTERNAL_ERROR; // see popFree doc
+
     CfListImpl *impl = *list;
-    assert(impl != NULL);
-
-    uint32_t dstIndex = cfListPopFree(impl);
-    if (dstIndex == CF_LIST_INVALID_INDEX) {
-        const size_t newCapacity = impl->capacity == 0 ? 1 : impl->capacity * 2;
-
-        if (!cfListResize(list, newCapacity))
-            return CF_LIST_STATUS_INTERNAL_ERROR;
-        impl = *list;
-        dstIndex = cfListPopFree(impl); // this function should not return CF_INVALID_INDEX in this case.
-    }
 
     // copy data
-    memcpy(
-        (uint8_t *)cfListGetData(impl) + dstIndex * impl->elementSize,
-        data,
-        impl->elementSize
-    );
+    memcpy(cfListDataArrayAccess(impl, dstIndex), data, impl->elementSize);
 
-    CfListLinks *links = impl->links;
+    // link last element with dst
+    impl->links[dstIndex].prev = impl->links[0].prev;
+    impl->links[dstIndex].next = 0;
 
-    if (impl->usedStartIndex == CF_LIST_INVALID_INDEX) {
-        // create unitary loop
-        links[dstIndex].next = dstIndex;
-        links[dstIndex].prev = dstIndex;
-
-        impl->usedStartIndex = dstIndex;
-    } else {
-        // link last element with dst
-        links[links[impl->usedStartIndex].prev].next = dstIndex;
-        links[dstIndex].prev = links[impl->usedStartIndex].prev;
-
-        // link first element with dst
-        links[dstIndex].next = impl->usedStartIndex;
-        links[impl->usedStartIndex].prev = dstIndex;
-    }
+    impl->links[impl->links[0].prev].next = dstIndex;
+    impl->links[0].prev = dstIndex;
 
     return CF_LIST_STATUS_OK;
 } // cfListPushBack
@@ -249,63 +228,63 @@ CfListStatus cfListPopBack( CfList *list, void *data ) {
     CfListImpl *impl = *list;
     assert(impl != NULL);
 
-    if (impl->usedStartIndex == CF_LIST_INVALID_INDEX)
+    const uint32_t elem = impl->links[0].prev;
+
+    if (elem == 0)
         return CF_LIST_STATUS_NO_ELEMENTS;
 
-    // CfListLinks *links = cfListGetLinks(impl);
-    // uint64_t *listData = (uint64_t *)cfListGetData(impl);
-    impl->usedStartIndex = impl->links[impl->usedStartIndex].prev;
+    impl->links[impl->links[elem].prev].next = 0;
+    impl->links[0].prev = impl->links[elem].prev;
 
-    // quite bad implementation, actually
-    return cfListPopFront(list, data);
+    if (data != NULL) // ?
+        memcpy(data, cfListDataArrayAccess(impl, elem), impl->elementSize);
+
+    impl->links[elem].next = impl->freeStartIndex;
+    impl->freeStartIndex = elem;
+
+    return CF_LIST_STATUS_OK;
 } // cfListPopBack
 
 CfListStatus cfListPushFront( CfList *list, const void *data ) {
-    CfListStatus status = cfListPushBack(list, data);
+    assert(data != NULL);
 
-    if (status == CF_LIST_STATUS_OK) {
-        CfListImpl *impl = *list;
+    uint32_t dstIndex = cfListPopFree(list);
+    if (dstIndex == 0)
+        return CF_LIST_STATUS_INTERNAL_ERROR; // the only reason why popFree may fail, actually
 
-        impl->usedStartIndex = impl->links[impl->usedStartIndex].prev;
-    }
+    CfListImpl *impl = *list;
 
-    return status;
+    // copy data
+    memcpy(cfListDataArrayAccess(impl, dstIndex), data, impl->elementSize);
+
+    // link last element with dst
+    impl->links[dstIndex].next = impl->links[0].next;
+    impl->links[dstIndex].prev = 0;
+
+    impl->links[impl->links[0].next].prev = dstIndex;
+    impl->links[0].next = dstIndex;
+
+    return CF_LIST_STATUS_OK;
 } // cfListPushFront
 
 CfListStatus cfListPopFront( CfList *list, void *data ) {
     assert(list != NULL);
-    CfListImpl *const impl = *list;
+    CfListImpl *impl = *list;
     assert(impl != NULL);
 
-    if (impl->usedStartIndex == CF_LIST_INVALID_INDEX)
+    const uint32_t elem = impl->links[0].next;
+
+    if (elem == 0)
         return CF_LIST_STATUS_NO_ELEMENTS;
 
-    CfListLinks *const links = impl->links;
+    impl->links[impl->links[elem].next].prev = 0;
+    impl->links[0].next = impl->links[elem].next;
 
-    const uint32_t currIndex = impl->usedStartIndex;
-    CfListLinks *const curr = links + impl->usedStartIndex;
+    if (data != NULL) // ?
+        memcpy(data, cfListDataArrayAccess(impl, elem), impl->elementSize);
 
-    // detach current from used list
-    if (curr->next != impl->usedStartIndex) {
-        CfListLinks *const prev = links + curr->prev;
-        CfListLinks *const next = links + curr->next;
-
-        prev->next = curr->next;
-        next->prev = curr->prev;
-
-        impl->usedStartIndex = curr->next;
-    } else {
-        impl->usedStartIndex = CF_LIST_INVALID_INDEX;
-    }
-
-    // copy data
-    memcpy(
-        data,
-        (uint8_t *)cfListGetData(impl) + currIndex * impl->elementSize,
-        impl->elementSize
-    );
-
-    cfListPushFree(impl, currIndex);
+    impl->links[elem].next = impl->freeStartIndex;
+    impl->freeStartIndex = elem;
 
     return CF_LIST_STATUS_OK;
 } // cfListPopFront
@@ -313,13 +292,13 @@ CfListStatus cfListPopFront( CfList *list, void *data ) {
 CfListIterator cfListIter( CfList list ) {
     assert(list != NULL);
 
-    CfListIterator result = {
-        .list = list,
-        .index = list->usedStartIndex,
-        .finished = list->usedStartIndex == CF_LIST_INVALID_INDEX,
-    };
+    const uint32_t index = list->links[0].next;
 
-    return result;
+    return (CfListIterator){
+        .list = list,
+        .index = index,
+        .finished = index == 0,
+    };
 } // cfListIter
 
 void * cfListIterNext( CfListIterator *const iter ) {
@@ -329,11 +308,11 @@ void * cfListIterNext( CfListIterator *const iter ) {
     if (iter->finished)
         return NULL;
 
-    void *const data = (uint8_t *)cfListGetData(iter->list) + iter->list->elementSize * iter->index;
+    void *const data = cfListDataArrayAccess(iter->list, iter->index);
     const uint32_t nextIndex = iter->list->links[iter->index].next;
 
     // update finish flag
-    iter->finished = (nextIndex == iter->list->usedStartIndex);
+    iter->finished = (nextIndex == 0);
 
     // update index
     iter->index = nextIndex;
@@ -342,43 +321,43 @@ void * cfListIterNext( CfListIterator *const iter ) {
 } // cfListIterNext
 
 void cfListPrint( FILE *const out, CfList list, CfListElementDumpFn dumpElement ) {
-    uint32_t listIndex = list->usedStartIndex;
-    uint32_t index = 0;
-    uint8_t *data = (uint8_t *)cfListGetData(list);
+    assert(list != NULL);
 
-    if (listIndex == CF_LIST_INVALID_INDEX) {
-        fprintf(out, "<empty>\n");
-        return;
-    }
+    uint32_t index = 0;
+    uint32_t elementIndex = 0;
 
     for (;;) {
-        fprintf(out, "%5d: ", index++);
-        dumpElement(out, data + listIndex * list->elementSize);
+        const uint32_t nextIndex = list->links[index].next;
+
+        if (nextIndex == 0)
+            return;
+
+        void *const data = cfListDataArrayAccess(list, nextIndex);
+
+        fprintf(out, "%5d: ", elementIndex++);
+        dumpElement(out, data);
         fprintf(out, "\n");
 
-        uint32_t next = list->links[listIndex].next;
-        if (next == list->usedStartIndex)
-            return;
-        listIndex = next;
+        index = nextIndex;
     }
 } // cfListPrint
 
 bool cfListDbgCheckPrevNext( CfList list ) {
-    uint32_t index = list->usedStartIndex;
+    assert(list != NULL);
 
-    if (index == CF_LIST_INVALID_INDEX)
-        return true; // nothing to check, actually
+    uint32_t index = 0;
 
     for (;;) {
-        uint32_t next = list->links[index].next;
-        uint32_t nextPrev = list->links[next].prev;
+        const uint32_t nextIndex = list->links[index].next;
+        const uint32_t nextPrevIndex = list->links[nextIndex].prev;
 
-        if (nextPrev != index)
+        if (index != nextPrevIndex)
             return false;
 
-        if (next == list->usedStartIndex)
+        if (nextIndex == 0)
             return true;
-        index = next;
+
+        index = nextIndex;
     }
 } // cfListDbgCheckPrevNext
 

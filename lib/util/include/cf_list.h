@@ -37,19 +37,9 @@ CfList cfListCtor( size_t elementSize, size_t initialCapacity );
 /**
  * @brief list destructor
  * 
- * @param[in] list pointer (may be null)
+ * @param[in] list pointer (nullable)
  */
 void cfListDtor( CfList list );
-
-/**
- * @brief list element getting function
- * 
- * @param[in] list         list to get element from (non-null)
- * @param[in] elementIndex index of element
- * 
- * @return pointer of list element. if such elementIndex is more than list capacity, NULL returned.
- */
-void * cfListGetElement( CfList list, uint32_t elementIndex );
 
 /**
  * @brief value to list end pushing function
@@ -65,7 +55,7 @@ CfListStatus cfListPushBack( CfList *list, const void *data );
  * @brief value from list end popping function
  * 
  * @param[in,out] list list to pop value from pointer (non-null)
- * @param[in]     data data popping destination (should have at least elementSize bytes writable)
+ * @param[in]     data data popping destination (nullable, should have at least elementSize bytes writable if not null)
  * 
  * @return operation status
  */
@@ -85,7 +75,7 @@ CfListStatus cfListPushFront( CfList *list, const void *data );
  * @brief value from list start popping function
  * 
  * @param[in,out] list list to pop value from pointer (non-null)
- * @param[in]     data data popping destination (should have at least elementSize bytes writable)
+ * @param[in]     data data popping destination (nullable, should have at least elementSize bytes writable if not null)
  * 
  * @return operation status
  */
