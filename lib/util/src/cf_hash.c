@@ -45,18 +45,6 @@ static inline uint16_t cfRotr32( const uint16_t n, const uint16_t at ) {
     return (n >> at) | (n << (32 - at));
 } // cfRotr32 function end
 
-/// @brief hashing context
-typedef struct __CfHashContext {
-    uint32_t h0; ///< value #0
-    uint32_t h1; ///< value #1
-    uint32_t h2; ///< value #2
-    uint32_t h3; ///< value #3
-    uint32_t h4; ///< value #4
-    uint32_t h5; ///< value #5
-    uint32_t h6; ///< value #6
-    uint32_t h7; ///< value #7
-} CfHashContext;
-
 /**
  * @brief hash step performing function
  * 
@@ -183,5 +171,87 @@ CfHash cfHash( const void *data, const size_t size ) {
 bool cfHashCompare( const CfHash *lhs, const CfHash *rhs ) {
     return 0 == memcmp(lhs, rhs, sizeof(CfHash));
 } // stkHashCompare function end
+
+void cfIterativeHasherInitialize( CfIterativeHasher *const hasher ) {
+    assert(hasher != NULL);
+
+    // setup hashing context
+    hasher->context = (CfHashContext){
+        0x6A09E667,
+        0xBB67AE85,
+        0x3C6EF372,
+        0xA54FF53A,
+        0x510E527F,
+        0x9B05688C,
+        0x1F83D9AB,
+        0x5BE0CD19,
+    };
+
+    hasher->batchSize = 0;
+    hasher->totalSize = 0;
+} // cfIterativeHasherInitialize
+
+CfHash cfIterativeHasherTerminate( CfIterativeHasher *const hasher ) {
+    // batch size is always < 64, so it's ok.
+    hasher->batch[hasher->batchSize] = 128;
+
+    // check for case where size isn't fitting in last batch
+    if (64 - hasher->batchSize < 9) {
+        // handle 1st batch
+        cfHashStep(&hasher->context, (const uint32_t *)&hasher->batch);
+
+        // start 2nd batch
+        memset(hasher->batch, 0, 56);
+    }
+
+    // write finlal block
+
+    uint64_t lastBatchRev = hasher->totalSize * 8;
+
+    lastBatchRev = ((lastBatchRev >> 32) & 0x00000000FFFFFFFF) | ((lastBatchRev << 32) & 0xFFFFFFFF00000000);
+    lastBatchRev = ((lastBatchRev >> 16) & 0x0000FFFF0000FFFF) | ((lastBatchRev << 16) & 0xFFFF0000FFFF0000);
+    lastBatchRev = ((lastBatchRev >>  8) & 0x00FF00FF00FF00FF) | ((lastBatchRev <<  8) & 0xFF00FF00FF00FF00);
+
+    ((uint64_t *)hasher->batch)[7] = lastBatchRev;
+    cfHashStep(&hasher->context, (const uint32_t *)&hasher->batch);
+
+    return *(CfHash *)&hasher->context;
+} // cfIterativeHasherTerminate
+
+void cfIterativeHasherStep(
+    CfIterativeHasher *const hasher,
+    const void        *const data,
+    const size_t             size
+) {
+    assert(hasher != NULL);
+    assert(data != NULL);
+
+    size_t sizeRest = size;
+    uint8_t *dataRest = (uint8_t *)data;
+
+    do {
+        // count of bytes to write to batch
+        size_t writeCount = sizeRest < 64 - hasher->batchSize
+            ? sizeRest
+            : 64 - hasher->batchSize;
+
+        // write data to batch
+        memcpy(
+            hasher->batch,
+            dataRest,
+            writeCount
+        );
+
+        dataRest += writeCount;
+        sizeRest -= writeCount;
+
+        // append to hash if hasher batch is full
+        if (hasher->batchSize == 64) {
+            cfHashStep(&hasher->context, (const uint32_t *)hasher->batch);
+            memset(hasher->batch, 0, 64);
+            hasher->batchSize = 0;
+        }
+    } while (sizeRest > 0);
+} // cfIterativeHasherStep
 
 // stk_hash.cpp file end
