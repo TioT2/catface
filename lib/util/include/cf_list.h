@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdio.h>
+#include <stdbool.h>
 
 /// @brief bidirectoinal list handle
 typedef struct __CfListImpl * CfList;
@@ -44,8 +46,6 @@ void cfListDtor( CfList list );
  * @return pointer of list element. if such elementIndex is more than list capacity, NULL returned.
  */
 void * cfListGetElement( CfList list, uint32_t elementIndex );
-
-
 
 /**
  * @brief value to list end pushing function
@@ -114,6 +114,38 @@ CfListIterator cfListIter( CfList list );
  * @return pointer to element if it exists, NULL if not (a.k.a. iteration finished)
  */
 void * cfListIterNext( CfListIterator *iter );
+
+/**
+ * @brief element dumping function pointer
+ * 
+ * @param[in,out] file    file to dump element to
+ * @param[in]     element element to dump
+ */
+typedef void (* CfElementDumpFn)( FILE *out, void *element );
+
+/**
+ * @brief list dumping function
+ * 
+ * @param[in] out  file to dump list to
+ * @param[in] list list to dump (non-null)
+ * @param[in] dump element dumping function (nullable)
+ */
+void cfListDump( FILE *out, CfList list, CfElementDumpFn dumpElement );
+
+
+/***
+ * Debugging-related functions. Actually, may be removed.
+ ***/
+
+
+/**
+ * @brief prev-next match checking function
+ * 
+ * @param[in] list list to perform check in
+ * 
+ * @return true if ok, false if not
+ */
+bool cfListDbgCheckPrevNext( CfList list );
 
 #endif // !defined(CF_LIST_H_)
 

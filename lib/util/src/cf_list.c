@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-#include <stdbool.h>
 
 #include "cf_list.h"
 
@@ -67,7 +66,7 @@ static void cfListSetupFreeIndices(
     const size_t        count
 ) {
     for (size_t i = 0; i < count; i++)
-        free[startIndex + i].next = startIndex + 1;
+        free[startIndex + i].next = startIndex + i + 1;
     free[startIndex + count - 1].next = CF_LIST_INVALID_INDEX;
 } // cfListSetupFreeIndices
 
@@ -142,6 +141,9 @@ static bool cfListResize( CfList *list, const size_t newCapacity ) {
 
     newImpl->usedStartIndex = impl->usedStartIndex;
 
+    free(impl);
+    *list = newImpl;
+
     return true;
 } // cfListResize
 
@@ -167,6 +169,19 @@ static uint32_t cfListPopFree( CfListImpl *const impl ) {
 
     return result;
 } // cfListPopFree
+
+/**
+ * @brief list pushing function
+ * 
+ * @param[in,out] list  list to push free in
+ * @param[in]     index index
+ */
+static void cfListPushFree( CfListImpl *const impl, const uint32_t index ) {
+    assert(impl != NULL);
+
+    cfListGetLinks(impl)[index].next = impl->freeStartIndex;
+    impl->freeStartIndex = index;
+} // cfListPushFree
 
 CfList cfListCtor( const size_t elementSize, size_t initialCapacity ) {
     CfListImpl *list = cfListAlloc(elementSize, initialCapacity);
@@ -218,12 +233,21 @@ CfListStatus cfListPushBack( CfList *list, const void *data ) {
         dstIndex = cfListPopFree(impl); // this function should not return CF_INVALID_INDEX in this case.
     }
 
+    // copy data
+    memcpy(
+        (uint8_t *)cfListGetData(impl) + dstIndex * impl->elementSize,
+        data,
+        impl->elementSize
+    );
+
     CfListLinks *links = cfListGetLinks(impl);
 
     if (impl->usedStartIndex == CF_LIST_INVALID_INDEX) {
         // create unitary loop
         links[dstIndex].next = dstIndex;
         links[dstIndex].prev = dstIndex;
+
+        impl->usedStartIndex = dstIndex;
     } else {
         // link last element with dst
         links[links[impl->usedStartIndex].prev].next = dstIndex;
@@ -245,6 +269,8 @@ CfListStatus cfListPopBack( CfList *list, void *data ) {
     if (impl->usedStartIndex == CF_LIST_INVALID_INDEX)
         return CF_LIST_STATUS_NO_ELEMENTS;
 
+    // CfListLinks *links = cfListGetLinks(impl);
+    // uint64_t *listData = (uint64_t *)cfListGetData(impl);
     impl->usedStartIndex = cfListGetLinks(impl)[impl->usedStartIndex].prev;
 
     // quite bad implementation, actually
@@ -292,13 +318,11 @@ CfListStatus cfListPopFront( CfList *list, void *data ) {
     // copy data
     memcpy(
         data,
-        cfListGetData(impl) + currIndex * impl->elementSize,
+        (uint8_t *)cfListGetData(impl) + currIndex * impl->elementSize,
         impl->elementSize
     );
 
-    // attach to free list
-    curr->next = impl->freeStartIndex;
-    impl->freeStartIndex = currIndex;
+    cfListPushFree(impl, currIndex);
 
     return CF_LIST_STATUS_OK;
 } // cfListPopFront
@@ -333,5 +357,48 @@ void * cfListIterNext( CfListIterator *const iter ) {
 
     return data;
 } // cfListIterNext
+
+void cfListDump( FILE *const out, CfList list, CfElementDumpFn dumpElement ) {
+    uint32_t listIndex = list->usedStartIndex;
+    uint32_t index = 0;
+    uint8_t *data = (uint8_t *)cfListGetData(list);
+    CfListLinks *links = cfListGetLinks(list);
+
+    if (listIndex == CF_LIST_INVALID_INDEX) {
+        fprintf(out, "<empty>\n");
+        return;
+    }
+
+    for (;;) {
+        fprintf(out, "%5d: ", index++);
+        dumpElement(out, data + listIndex * list->elementSize);
+        fprintf(out, "\n");
+
+        uint32_t next = links[listIndex].next;
+        if (next == list->usedStartIndex)
+            return;
+        listIndex = next;
+    }
+} // cfListDump
+
+bool cfListDbgCheckPrevNext( CfList list ) {
+    uint32_t index = list->usedStartIndex;
+    CfListLinks *links = cfListGetLinks(list);
+
+    if (index == CF_LIST_INVALID_INDEX)
+        return true; // nothing to check, actually
+
+    for (;;) {
+        uint32_t next = links[index].next;
+        uint32_t nextPrev = links[next].prev;
+
+        if (nextPrev != index)
+            return false;
+
+        if (next == list->usedStartIndex)
+            return true;
+        index = next;
+    }
+} // cfListDbgCheckPrevNext
 
 // cf_list.c

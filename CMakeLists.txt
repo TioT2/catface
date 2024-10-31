@@ -8,7 +8,10 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 endif()
 
 # set compiler language
-set(CF_LANGUAGE CXX)
+set(CF_LANGUAGE C)
+
+# set preferred C++ standard
+set(CMAKE_CXX_STANDARD 20)
 
 # compile libraries
 add_subdirectory(lib/util)
@@ -27,3 +30,8 @@ add_subdirectory(app/executor)
 add_subdirectory(app/assembler)
 add_subdirectory(app/disassembler)
 add_subdirectory(app/linker)
+
+# compile tests (debug-only)
+if (CMAKE_BUILD_TYPE MATCHES DEBUG)
+    add_subdirectory(test/list)
+endif()
