@@ -10,11 +10,11 @@ uint64_t rand64( void ) {
         | ((uint64_t)rand() << 16)
         | ((uint64_t)rand() <<  0)
     ;
-}
+} // rand64
 
 void dumpUint64( FILE *out, void *u64 ) {
     fprintf(out, "%lu", *(uint64_t *)u64);
-}
+} // dumpUint64
 
 int main( void ) {
     CfList list = cfListCtor(sizeof(uint64_t), 0);
@@ -134,7 +134,7 @@ int main( void ) {
         }
         }
 
-        cfListDump(stdout, list, dumpUint64);
+        cfListPrint(stdout, list, dumpUint64);
 
         if (!cfListDbgCheckPrevNext(list)) {
             printf("ERROR: PN Check failed.\n");
@@ -172,5 +172,6 @@ int main( void ) {
     }
 
     return 0;
-} // gremlinTest
+} // main
 
+// main.cpp
