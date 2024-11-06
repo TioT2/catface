@@ -53,7 +53,15 @@ int main( const int _argc, const char **_argv ) {
     CfSandbox sandbox = {0};
     sandboxConfigure(&sandbox, &context);
 
-    cfExecute(&executable, &sandbox);
+    const CfExecuteInfo execInfo = {
+        .executable = &executable,
+        .sandbox    = &sandbox,
+        .ramSize    = (1 << 24),   // 16MB
+    };
+
+    if (!cfExecute(&execInfo))
+        printf("sandbox error occured.\n");
+
     cfExecutableDtor(&executable);
 
     return 0;

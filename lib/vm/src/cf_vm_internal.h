@@ -16,11 +16,11 @@ extern "C" {
 
 /// @brief VM context representation structure
 typedef struct __CfVm {
-    uint8_t *         memory;                  ///< operative memory
-    size_t            memorySize;              ///< current memory size (1 MB, actually)
+    uint8_t *         ram;                     ///< RAM bytes
+    size_t            ramSize;                 ///< RAM size
 
     const CfExecutable * executable;           ///< executed executable
-    const CfSandbox * sandbox;                 ///< execution environment (sandbox, actually)
+    const CfSandbox    * sandbox;              ///< execution environment (sandbox, actually)
 
     // registers
     CfRegisters       registers;               ///< user visible register

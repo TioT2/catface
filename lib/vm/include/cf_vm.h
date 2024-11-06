@@ -142,15 +142,21 @@ typedef struct __CfSandbox {
     void (*writeFloat64)( void *userContext, double number );
 } CfSandbox;
 
+/// @brief execution info
+typedef struct __CfExecuteInfo {
+    const CfExecutable * executable; ///< executable
+    const CfSandbox    * sandbox;    ///< sandbox pointer
+    size_t               ramSize;    ///< required RAM size
+} CfExecuteInfo;
+
 /**
  * @brief executable execution function
  * 
- * @param[in] executable  executable to execute (non-null, assumed to be valid ASM)
- * @param[in] sandbox connection of VM with environment (non-null)
+ * @param[in] execInfo info about execution process
  * 
- * @return true if execution even started, false if not
+ * @return true if execution started, false if not
  */
-bool cfExecute( const CfExecutable *executable, const CfSandbox *sandbox );
+bool cfExecute( const CfExecuteInfo *execInfo );
 
 #ifdef __cplusplus
 }

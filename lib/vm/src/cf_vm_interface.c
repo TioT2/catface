@@ -30,26 +30,19 @@ static bool cfSandboxIsValid( const CfSandbox *sandbox ) {
     ;
 } // cfSandboxIsValid
 
-/**
- * @brief executable execution function
- * 
- * @param[in] executable  executable to execute
- * @param[in] sandbox execution environment
- * 
- * @return true if execution started, false if not
- */
-bool cfExecute( const CfExecutable *executable, const CfSandbox *sandbox ) {
-    assert(executable != NULL);
-    assert(sandbox != NULL);
+bool cfExecute( const CfExecuteInfo *execInfo ) {
+    assert(execInfo != NULL);
 
-    assert(cfSandboxIsValid(sandbox));
+    assert(execInfo->executable != NULL);
+    assert(execInfo->sandbox != NULL);
+    assert(cfSandboxIsValid(execInfo->sandbox));
 
     // TODO: validate sandbox
 
     // perform minimal context setup
     CfVm vm = {
-        .executable = executable,
-        .sandbox = sandbox,
+        .executable = execInfo->executable,
+        .sandbox = execInfo->sandbox,
     };
     bool isOk = true;
 
@@ -57,19 +50,19 @@ bool cfExecute( const CfExecutable *executable, const CfSandbox *sandbox ) {
     // note: after jumpBuffer setup it's ok to do cleanup and call panic.
     int jmp = setjmp(vm.panicJumpBuffer);
     if (jmp) {
-        sandbox->terminate(sandbox->userContext, &vm.termInfo);
+        execInfo->sandbox->terminate(execInfo->sandbox->userContext, &vm.termInfo);
         // then go to cleanup
         goto cfExecute__cleanup;
     }
 
     // allocate memory
-    vm.memorySize = 1 << 20;
-    vm.memory = (uint8_t *)calloc(vm.memorySize, 1);
+    vm.ramSize = execInfo->ramSize;
+    vm.ram = (uint8_t *)calloc(vm.ramSize, 1);
     vm.callStack = cfDarrCtor(sizeof(uint8_t *));
     vm.operandStack = cfDarrCtor(sizeof(uint32_t));
 
     // here VM is not even initialized
-    if (vm.memory == NULL || vm.callStack == NULL || vm.operandStack == NULL) {
+    if (vm.ram == NULL || vm.callStack == NULL || vm.operandStack == NULL) {
         isOk = false;
         goto cfExecute__cleanup;
     }
@@ -82,14 +75,14 @@ bool cfExecute( const CfExecutable *executable, const CfSandbox *sandbox ) {
     // try to initialize sandbox
     {
         CfExecContext execContext = {
-            .memory = vm.memory,
-            .memorySize = vm.memorySize,
+            .memory = vm.ram,
+            .memorySize = vm.ramSize,
         };
 
         // finish if initialization failed
         // standard termination mechanism is not used, because (by specification?)
         // ANY sandbox function (terminate() too) MUST NOT be called if sandbox initialization failed.
-        if (!sandbox->initialize(sandbox->userContext, &execContext)) {
+        if (!execInfo->sandbox->initialize(execInfo->sandbox->userContext, &execContext)) {
             isOk = false;
             goto cfExecute__cleanup;
         }
@@ -102,7 +95,7 @@ bool cfExecute( const CfExecutable *executable, const CfSandbox *sandbox ) {
 
     // perform cleanup
 cfExecute__cleanup:
-    free(vm.memory);
+    free(vm.ram);
     cfDarrDtor(vm.callStack);
     cfDarrDtor(vm.operandStack);
     return isOk;
