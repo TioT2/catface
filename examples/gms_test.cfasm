@@ -1,6 +1,0 @@
-; GMS (Get Memory Size) instruction test file
-
-gms
-itof
-syscall 1
-halt

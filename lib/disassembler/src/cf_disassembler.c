@@ -207,8 +207,16 @@ CfDisassemblyStatus cfDisassemble( const CfExecutable *exec, char **dest, CfDisa
             strcpy(line, "time");
             break;
         }
-        case CF_OPCODE_GMS: {
-            strcpy(line, "gms");
+        case CF_OPCODE_MGS: {
+            strcpy(line, "mgs");
+            break;
+        }
+        case CF_OPCODE_IGKS: {
+            strcpy(line, "igks");
+            break;
+        }
+        case CF_OPCODE_IWKD: {
+            strcpy(line, "iwkd");
             break;
         }
 

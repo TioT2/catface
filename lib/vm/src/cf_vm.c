@@ -415,8 +415,15 @@ void cfVmRun( CfVm *const self ) {
             break;
         }
 
-        case CF_OPCODE_GMS: {
+        case CF_OPCODE_MGS: {
             cfVmPushOperand(self, &self->ramSize);
+            break;
+        }
+
+        // TODO: implement IGKS and IWKD instructions
+        case CF_OPCODE_IGKS:
+        case CF_OPCODE_IWKD: {
+            cfVmTerminate(self, CF_TERM_REASON_INTERNAL_ERROR);
             break;
         }
 

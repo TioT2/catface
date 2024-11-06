@@ -94,6 +94,74 @@ typedef struct __CfInstructionPushPop {
     uint8_t useImm         : 1; ///< add 4-byte immediate after number
 } CfInstructionPushPop;
 
+/// @brief keycode representatiton enumeration
+typedef enum __CfKey {
+    // keys that can be represented as ASCII characters.
+
+    CF_KEY_A = 'A',
+    CF_KEY_B = 'B',
+    CF_KEY_C = 'C',
+    CF_KEY_D = 'D',
+    CF_KEY_E = 'E',
+    CF_KEY_F = 'F',
+    CF_KEY_G = 'G',
+    CF_KEY_H = 'H',
+    CF_KEY_I = 'I',
+    CF_KEY_J = 'J',
+    CF_KEY_K = 'K',
+    CF_KEY_L = 'L',
+    CF_KEY_M = 'M',
+    CF_KEY_N = 'N',
+    CF_KEY_O = 'O',
+    CF_KEY_P = 'P',
+    CF_KEY_Q = 'Q',
+    CF_KEY_R = 'R',
+    CF_KEY_S = 'S',
+    CF_KEY_T = 'T',
+    CF_KEY_U = 'U',
+    CF_KEY_V = 'V',
+    CF_KEY_W = 'W',
+    CF_KEY_X = 'X',
+    CF_KEY_Y = 'Y',
+    CF_KEY_Z = 'Z',
+
+    CF_KEY_0 = '0',
+    CF_KEY_1 = '1',
+    CF_KEY_2 = '2',
+    CF_KEY_3 = '3',
+    CF_KEY_4 = '4',
+    CF_KEY_5 = '5',
+    CF_KEY_6 = '6',
+    CF_KEY_7 = '7',
+    CF_KEY_8 = '8',
+    CF_KEY_9 = '9',
+
+    CF_KEY_ENTER = '\n',
+    CF_KEY_BACKSPACE = '\b',
+    CF_KEY_SLASH = '/',
+    CF_KEY_MINUS = '-',
+    CF_KEY_EQUAL = '=',
+    CF_KEY_DOT = '.',
+    CF_KEY_COMMA = ',',
+    CF_KEY_BACKSLASH = '\\',
+    CF_KEY_QUOTE = '\'',
+    CF_KEY_BACKQUOTE = '`',
+    CF_KEY_TAB = '\t',
+
+    /// @brief keycode that separates ASCII and non-ASCII keys
+    _CF_KEY_ASCII_SEPARATOR = 0x80,
+
+    CF_KEY_UP,     ///< up arrow
+    CF_KEY_DOWN,   ///< down arrow
+    CF_KEY_LEFT,   ///< left arrow
+    CF_KEY_RIGHT,  ///< right arrow
+
+    CF_KEY_SHIFT,  ///< any shift key
+    CF_KEY_ALT,    ///< any alt key
+    CF_KEY_CTRL,   ///< any control key
+    CF_KEY_ESCAPE, ///< escape key
+} CfKey;
+
 /// @brief instruction header representation enumeration
 typedef enum __CfOpcode {
     // system instructions
@@ -162,7 +230,10 @@ typedef enum __CfOpcode {
 
     CF_OPCODE_TIME, ///< current time getting opcode
 
-    CF_OPCODE_GMS,  ///< (Get Memory Size) current memory size getting opcode. pushes RAM size into operand stack.
+    CF_OPCODE_MGS,  ///< (Memory Get Size) current memory size getting opcode. pushes RAM size into operand stack.
+
+    CF_OPCODE_IWKD, ///< (Input Wait Key Down) waits any key press, returns pressed key opcode.
+    CF_OPCODE_IGKS, ///< (Input Get Key State) pushes current key state (1 if pressed 0 if not)
 } CfOpcode;
 
 /// @brief colored character representation structure (used in coloredText video mode)

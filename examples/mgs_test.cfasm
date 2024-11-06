@@ -1,0 +1,6 @@
+; MGS (Memory Get Size) instruction test file
+
+mgs
+itof
+syscall 1
+halt
