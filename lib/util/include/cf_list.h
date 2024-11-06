@@ -130,10 +130,18 @@ typedef void (* CfListElementDumpFn)( FILE *out, void *element );
  */
 void cfListPrint( FILE *out, CfList list, CfListElementDumpFn print );
 
+/**
+ * @brief list length getting function
+ * 
+ * @param[in] list list handle (non-null)
+ * 
+ * @return current list length
+ */
+size_t cfListLength( CfList list );
+
 /***
  * Debugging-related functions. Actually, may be removed.
  ***/
-
 
 /**
  * @brief prev-next match checking function

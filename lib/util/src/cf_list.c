@@ -18,6 +18,7 @@ typedef struct __CfListLinks {
 typedef struct __CfListImpl {
     size_t      elementSize;    ///< list element size
     size_t      capacity;       ///< current list capacity
+    size_t      length;         ///< list length
 
     uint32_t    freeStartIndex; ///< free STACK start index
 
@@ -220,6 +221,8 @@ CfListStatus cfListPushBack( CfList *list, const void *data ) {
     impl->links[impl->links[0].prev].next = dstIndex;
     impl->links[0].prev = dstIndex;
 
+    impl->length++;
+
     return CF_LIST_STATUS_OK;
 } // cfListPushBack
 
@@ -241,6 +244,8 @@ CfListStatus cfListPopBack( CfList *list, void *data ) {
 
     impl->links[elem].next = impl->freeStartIndex;
     impl->freeStartIndex = elem;
+
+    impl->length--;
 
     return CF_LIST_STATUS_OK;
 } // cfListPopBack
@@ -264,6 +269,8 @@ CfListStatus cfListPushFront( CfList *list, const void *data ) {
     impl->links[impl->links[0].next].prev = dstIndex;
     impl->links[0].next = dstIndex;
 
+    impl->length++;
+
     return CF_LIST_STATUS_OK;
 } // cfListPushFront
 
@@ -285,6 +292,8 @@ CfListStatus cfListPopFront( CfList *list, void *data ) {
 
     impl->links[elem].next = impl->freeStartIndex;
     impl->freeStartIndex = elem;
+
+    impl->length--;
 
     return CF_LIST_STATUS_OK;
 } // cfListPopFront
@@ -341,6 +350,12 @@ void cfListPrint( FILE *const out, CfList list, CfListElementDumpFn dumpElement 
         index = nextIndex;
     }
 } // cfListPrint
+
+size_t cfListLength( CfList list ) {
+    assert(list != NULL);
+
+    return list->length;
+} // cfListLength
 
 bool cfListDbgCheckPrevNext( CfList list ) {
     assert(list != NULL);
