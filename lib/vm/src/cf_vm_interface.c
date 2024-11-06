@@ -98,6 +98,8 @@ bool cfExecute( const CfExecutable *executable, const CfSandbox *sandbox ) {
     // start execution
     cfVmRun(&vm);
 
+    assert(false && "vm fatal internal error occured");
+
     // perform cleanup
 cfExecute__cleanup:
     free(vm.memory);

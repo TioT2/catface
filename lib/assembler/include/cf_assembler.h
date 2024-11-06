@@ -21,22 +21,25 @@ typedef enum __CfAssemblyStatus {
     CF_ASSEMBLY_STATUS_UNEXPECTED_TEXT_END,      ///< unexpected text end (missing something)
     CF_ASSEMBLY_STATUS_UNKNOWN_REGISTER,         ///< unknown register
     CF_ASSEMBLY_STATUS_INVALID_PUSHPOP_ARGUMENT, ///< invalid argument of push/pop instructions
-    CF_ASSEMBLY_STATUS_TOO_LONG_LABEL,           ///< label is longer than CF_LABEL_MAX
     CF_ASSEMBLY_STATUS_UNKNOWN_OPCODE,           ///< unknown opcode
     CF_ASSEMBLY_STATUS_UNKNOWN_TOKEN,            ///< unknown token
+
+    CF_ASSEMBLY_STATUS_INVALID_SYSCALL_ARGUMENT, ///< invalid argument of 'systemcall' instruction
+    CF_ASSEMBLY_STATUS_SYSCALL_ARGUMENT_MISSING, ///< systemcall parameter missing.
+
+    CF_ASSEMBLY_STATUS_INVALID_JUMP_ARGUMENT,    ///< invalid jump-family instructino argument
+    CF_ASSEMBLY_STATUS_JUMP_ARGUMENT_MISSING,    ///< jump-family instruction argument missing
+
+    CF_ASSEMBLY_STATUS_EMPTY_LABEL,              ///< label must not be empty
+    CF_ASSEMBLY_STATUS_TOO_LONG_LABEL,           ///< label is longer than CF_LABEL_MAX
+
+    CF_ASSEMBLY_STATUS_UNEXPECTED_CHARACTERS,    ///< unexpected (a.k.a. unrelated to instruction) characters occured.
 } CfAssemblyStatus;
 
 /// @brief detailed info about assembling process
 typedef struct __CfAssemblyDetails {
-    size_t line; ///< index of line during parsing of error occured
-
-    union {
-        CfStr unknownRegister;        ///< unknown register
-        CfStr tooLongLabel;           ///< label is too long
-        CfStr unknownInstruction;     ///< unknown instruction
-        CfStr invalidPushPopArgument; ///< invalid push or pop instruction argument
-        CfStr unknownToken;           ///< unknown token
-    };
+    size_t line;     ///< index of line during parsing of error occured
+    CfStr  contents; ///< line error occured at contents
 } CfAssemblyDetails;
 
 /**

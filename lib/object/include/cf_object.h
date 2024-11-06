@@ -18,20 +18,20 @@ extern "C" {
 
 /// @brief label and link (references to certain code point with different semantics)
 typedef struct __CfLabelAndLink {
-    uint32_t sourceLine;     ///< line label declared at
-    uint32_t codeOffset;     ///< offset link encodes
-    char     label     [64]; ///< label
+    uint32_t sourceLine;               ///< line label declared at
+    uint32_t codeOffset;               ///< offset link encodes
+    char     label     [CF_LABEL_MAX]; ///< label
 } CfLabel, CfLink;
 
 /// @brief object (single .cfasm compilation result) represetnation structure
 typedef struct __CfObject {
     const char * sourceName; ///< name of object source name
-    size_t       codeLength;     ///< length of bytecode
-    uint8_t    * code;           ///< bytecode itself
-    size_t       linkCount;      ///< count of links in bytecode
-    CfLink     * links;          ///< links itself
-    size_t       labelCount;     ///< count of labels in bytecode
-    CfLabel    * labels;         ///< labels itself
+    size_t       codeLength; ///< length of bytecode
+    uint8_t    * code;       ///< bytecode itself
+    size_t       linkCount;  ///< count of links in bytecode
+    CfLink     * links;      ///< links itself
+    size_t       labelCount; ///< count of labels in bytecode
+    CfLabel    * labels;     ///< labels itself
 } CfObject;
 
 /// @brief object from file reading status representation enumeration

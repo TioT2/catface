@@ -6,8 +6,12 @@
 
 #include "cf_string.h"
 
+size_t cfStrLength( CfStr str ) {
+    return str.end - str.begin;
+} // cfStrLength
+
 int cfStrWrite( FILE *file, CfStr slice ) {
-    return fprintf(file, "%*s", (int)(slice.end - slice.begin), slice.begin);
+    return fprintf(file, "%.*s", (int)(slice.end - slice.begin), slice.begin);
 } // cfStrWrite
 
 bool cfStrStartsWith( CfStr slice, const char *start ) {

@@ -23,6 +23,15 @@ typedef struct __CfStr {
 #define CF_STR(literal) ((CfStr){ (literal), (literal) + strlen((literal)) })
 
 /**
+ * @brief string slice length getting function
+ * 
+ * @param[in] str string slice to get length of
+ * 
+ * @return string slice length
+ */
+size_t cfStrLength( CfStr str );
+
+/**
  * @brief string slice printing function
  * 
  * @param[in] file  file to print slice to
