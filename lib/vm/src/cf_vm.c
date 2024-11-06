@@ -408,8 +408,15 @@ void cfVmRun( CfVm *const self ) {
         case CF_OPCODE_MEOW: {
             uint32_t meowCount;
             cfVmPopOperand(self, &meowCount);
-            for (uint32_t i = 0; i < meowCount; i++)
-                printf("MEOW!\n");
+
+            // // instruction deprecated
+            // for (uint32_t i = 0; i < meowCount; i++)
+            //     printf("MEOW!\n");
+            break;
+        }
+
+        case CF_OPCODE_GMS: {
+            cfVmPushOperand(self, &self->ramSize);
             break;
         }
 

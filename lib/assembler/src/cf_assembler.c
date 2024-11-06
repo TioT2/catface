@@ -308,6 +308,7 @@ static bool cfAssemblerParseOpcode( CfAssembler *const self, CfStr ident, CfOpco
         {OPCODE_HASH("vrs"         ), CF_OPCODE_VRS         },
         {OPCODE_HASH("meow"        ), CF_OPCODE_MEOW        },
         {OPCODE_HASH("time"        ), CF_OPCODE_TIME        },
+        {OPCODE_HASH("gms"         ), CF_OPCODE_GMS         },
     };
     static const size_t opcodeHashTableSize = sizeof(opcodeHashTable) / sizeof(opcodeHashTable[0]);
 
@@ -650,7 +651,8 @@ void cfAssemblerRun( CfAssembler *const self ) {
             case CF_OPCODE_VSM:
             case CF_OPCODE_VRS:
             case CF_OPCODE_MEOW:
-            case CF_OPCODE_TIME: {
+            case CF_OPCODE_TIME:
+            case CF_OPCODE_GMS: {
                 instructionSize = 1;
                 instructionData[0] = opcode;
                 break;

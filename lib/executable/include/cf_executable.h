@@ -154,17 +154,15 @@ typedef enum __CfOpcode {
     CF_OPCODE_CALL, ///< calling instruction
     CF_OPCODE_RET,  ///< returning instruction
 
-    // // key state getting function
-    // CF_OPCODE_KCHK, ///< Key CHecKing function. Stack value is used as scancode, 1 pushed if key is pressed, 0 otherwise.
-
     // update video mode
     CF_OPCODE_VSM,  ///< Video Set Mode
     CF_OPCODE_VRS,  ///< Video Refresh Screen
 
-    CF_OPCODE_MEOW, ///< The MEOW instruction
+    CF_OPCODE_MEOW, ///< the MEOW instruction (deprecated)
 
-    // get current time
     CF_OPCODE_TIME, ///< current time getting opcode
+
+    CF_OPCODE_GMS,  ///< (Get Memory Size) current memory size getting opcode. pushes RAM size into operand stack.
 } CfOpcode;
 
 /// @brief colored character representation structure (used in coloredText video mode)
