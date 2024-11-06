@@ -1,0 +1,13 @@
+#!/bin/python3
+
+import sys
+import os
+
+test_name = sys.argv[1]
+cf_dir = "./cf"
+
+# make
+os.system(f"{cf_dir}/cf_assembler -o out/{test_name}.cfexe -l {test_name}.cfasm")
+
+# run
+os.system(f"{cf_dir}/cf_executor out/{test_name}.cfexe")

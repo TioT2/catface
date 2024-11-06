@@ -49,7 +49,7 @@ _start:
     push 0
     cmp
 
-    jne _start__begin:
+    jne _start__begin
 
     ; refresh screen
     vrs

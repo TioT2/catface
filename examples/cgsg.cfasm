@@ -42,7 +42,7 @@ _start:
                 and
                 push 1
                 cmp
-                jne _start__xloop_inc:
+                jne _start__xloop_inc
 
                 push bx
                 push cx
@@ -57,7 +57,7 @@ _start:
                 push bx
                 push 40
                 cmp
-                jne _start__xloop_start:
+                jne _start__xloop_start
             _start__xloop_end:
 
             push cx
@@ -68,7 +68,7 @@ _start:
             push cx
             push 25
             cmp
-            jne _start__yloop_start:
+            jne _start__yloop_start
         _start__yloop_end:
 
         ; refresh screen
