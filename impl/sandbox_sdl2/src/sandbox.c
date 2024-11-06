@@ -221,6 +221,31 @@ static bool sandboxGetExecutionTime( void *userContext, float *dst ) {
 } // sandboxGetExecutionTime
 
 /**
+ * @brief key state getting function
+ * 
+ * @param[in,out] userContext user-provided context
+ * @param[in]     key         key to get state of
+ * @param[out]    dst         state destination (non-null) (true if pressed, false if not)
+ * 
+ * @return true if succeeded, false if something went wrong.
+ */
+bool sandboxGetKeyState( void *userContext, CfKey key, bool *dst ) {
+    return false; // unimplemented yet
+} // sandboxGetKeyState
+
+/**
+ * @brief any key press waiting function
+ * 
+ * @param[in,out] userContext user-provided context
+ * @param[out]    dst         key id destination (non-null)
+ * 
+ * @return true if succeeded, false if something went wrong.
+ */
+bool sandboxWaitKeyDown( void *userContext, CfKey *dst ) {
+    return false; // unimplemented yet
+} // sandboxWaitKeyDown
+
+/**
  * @brief sandbox initialization function
  * 
  * @param[in] context     user context
@@ -451,6 +476,9 @@ void sandboxConfigure( CfSandbox *vmSandbox, SandboxContext *context ) {
     vmSandbox->setVideoMode = sandboxSetVideoMode;
     vmSandbox->refreshScreen = sandboxRefreshScreen;
     vmSandbox->getExecutionTime = sandboxGetExecutionTime;
+
+    vmSandbox->getKeyState = sandboxGetKeyState;
+    vmSandbox->waitKeyDown = sandboxWaitKeyDown;
 
     vmSandbox->readFloat64 = readFloat64;
     vmSandbox->writeFloat64 = writeFloat64;

@@ -125,6 +125,27 @@ typedef struct __CfSandbox {
     bool (*getExecutionTime)( void *userContext, float *dst );
 
     /**
+     * @brief key state getting function
+     * 
+     * @param[in,out] userContext user-provided context
+     * @param[in]     key         key to get state of
+     * @param[out]    dst         state destination (non-null) (true if pressed, false if not)
+     * 
+     * @return true if succeeded, false if something went wrong.
+     */
+    bool (*getKeyState)( void *userContext, CfKey key, bool *dst );
+
+    /**
+     * @brief any key press waiting function
+     * 
+     * @param[in,out] userContext user-provided context
+     * @param[out]    dst         key id destination (non-null)
+     * 
+     * @return true if succeeded, false if something went wrong.
+     */
+    bool (*waitKeyDown)( void *userContext, CfKey *dst );
+
+    /**
      * @brief 64-bit integer reading function pointer
      * 
      * @param userContext pointer to some user context
