@@ -53,9 +53,7 @@ _start:
         call _set_char
 
         ; x += cx
-        push cx
-        push 1
-        add
+        push cx+1
         pop cx
 
         push cx
@@ -74,9 +72,7 @@ _start:
         call _set_char
 
         ; x += cx
-        push cx
-        push 1
-        add
+        push cx+1
         pop cx
 
         push cx
@@ -199,9 +195,4 @@ _start:
         vrs
         jmp _start__inf_loop
     ret
- 
- 
- 
- 
- 
  

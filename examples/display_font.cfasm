@@ -51,9 +51,7 @@ _start:
         call _set_char
 
         ; x += cx
-        push cx
-        push 1
-        add
+        push cx+1
         pop cx
 
         push cx
@@ -72,9 +70,7 @@ _start:
         call _set_char
 
         ; x += cx
-        push cx
-        push 1
-        add
+        push cx+1
         pop cx
 
         push cx
@@ -105,9 +101,7 @@ _start:
         call _set_char
 
         ; x += dx
-        push dx
-        push 1
-        add
+        push dx+1
         pop dx
 
         push dx
@@ -126,9 +120,7 @@ _start:
         call _set_char
 
         ; x += dx
-        push dx
-        push 1
-        add
+        push dx+1
         pop dx
 
         push dx
@@ -162,9 +154,7 @@ _start:
             pop bx
  
             ; x += 1
-            push cx
-            push 1
-            add
+            push cx+1
             pop cx
  
             push cx
@@ -173,9 +163,7 @@ _start:
             jl _start__main_x
  
         ; y += 1
-        push dx
-        push 1
-        add
+        push dx+1
         pop dx
  
         push dx

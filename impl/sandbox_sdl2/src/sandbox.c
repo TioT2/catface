@@ -183,7 +183,7 @@ static int SDLCALL sandboxThreadFn( void *userContext ) {
                 const CfKey key = sandboxKeyFromSdlScancode(scancode);
 
                 if (key != CF_KEY_NULL)
-                    SDL_AtomicSet(&context->keyStates[(size_t)key], false);
+                    SDL_AtomicAdd(&context->keyStates[(size_t)key], -1);
                 break;
             }
 
@@ -192,7 +192,7 @@ static int SDLCALL sandboxThreadFn( void *userContext ) {
                 const CfKey key = sandboxKeyFromSdlScancode(scancode);
 
                 if (key != CF_KEY_NULL) {
-                    SDL_AtomicSet(&context->keyStates[(size_t)key], true);
+                    SDL_AtomicAdd(&context->keyStates[(size_t)key], 1);
 
                     if (SDL_AtomicGet(&context->waitKeyRequired))
                         SDL_AtomicSet(&context->waitKeyValue, key);
@@ -344,7 +344,7 @@ bool sandboxGetKeyState( void *userContext, CfKey key, bool *dst ) {
     if ((uint32_t)key >= (uint32_t)_CF_KEY_MAX) // check array bounds
         return false;
 
-    *dst = SDL_AtomicGet(&context->keyStates[(size_t)key]);
+    *dst = SDL_AtomicGet(&context->keyStates[(size_t)key]) > 0;
 
     return true; // unimplemented yet
 } // sandboxGetKeyState
