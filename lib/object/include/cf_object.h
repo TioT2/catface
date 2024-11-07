@@ -16,12 +16,19 @@ extern "C" {
 /// @brief maximal length of jump label supported
 #define CF_LABEL_MAX 64
 
+typedef struct __CfLabel {
+    uint32_t sourceLine;               ///< source file line label declared at
+    uint32_t value;                    ///< label underlying value
+    uint32_t isRelative;               ///< should value be corrected during linking process (e.g. is it code offset or not)
+    char     label     [CF_LABEL_MAX]; ///< label string
+} CfLabel;
+
 /// @brief label and link (references to certain code point with different semantics)
-typedef struct __CfLabelAndLink {
+typedef struct __CfLink {
     uint32_t sourceLine;               ///< line label declared at
     uint32_t codeOffset;               ///< offset link encodes
     char     label     [CF_LABEL_MAX]; ///< label
-} CfLabel, CfLink;
+} CfLink;
 
 /// @brief object (single .cfasm compilation result) represetnation structure
 typedef struct __CfObject {

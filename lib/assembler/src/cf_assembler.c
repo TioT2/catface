@@ -34,6 +34,7 @@ typedef enum __CfAssemblerTokenType {
     CF_ASSEMBLER_TOKEN_TYPE_RIGHT_SQUARE_BRACKET, ///< ']'
     CF_ASSEMBLER_TOKEN_TYPE_PLUS,                 ///< '+'
     CF_ASSEMBLER_TOKEN_TYPE_COLON,                ///< ':'
+    CF_ASSEMBLER_TOKEN_TYPE_EQUAL,                ///< '='
     CF_ASSEMBLER_TOKEN_TYPE_IDENT,                ///< ident
     CF_ASSEMBLER_TOKEN_TYPE_FLOATING,             ///< floating point number
     CF_ASSEMBLER_TOKEN_TYPE_INTEGER,              ///< integer number
@@ -170,6 +171,7 @@ bool cfAssemblerNextToken( CfAssembler *const self, CfAssemblerToken *const dst 
         case ']': tokenType = CF_ASSEMBLER_TOKEN_TYPE_RIGHT_SQUARE_BRACKET; break;
         case ':': tokenType = CF_ASSEMBLER_TOKEN_TYPE_COLON;                break;
         case '+': tokenType = CF_ASSEMBLER_TOKEN_TYPE_PLUS;                 break;
+        case '=': tokenType = CF_ASSEMBLER_TOKEN_TYPE_EQUAL;                break;
         default:
             parsed = false;
         }
@@ -243,14 +245,12 @@ bool cfAssemblerNextToken( CfAssembler *const self, CfAssemblerToken *const dst 
 /**
  * @brief assembler opcode getting function
  * 
- * @param[in,out] self  assembler pointer
  * @param[in]     ident ident to parse opcode from
  * @param[out]    dst   opcode parsing destination (non-null)
  * 
  * @return true if parsed, false if not
  */
-static bool cfAssemblerParseOpcode( CfAssembler *const self, CfStr ident, CfOpcode *dst ) {
-    assert(self != NULL);
+static bool cfAssemblerParseOpcode( CfStr ident, CfOpcode *dst ) {
     assert(dst != NULL);
 
 #define OPCODE_HASH(name) (0        \
@@ -359,19 +359,20 @@ static bool cfAssemblerParseRegister( CfAssembler *const self, CfStr ident, uint
         return false;
 
     const uint16_t regHash = *(const uint16_t *)ident.begin;
-#define REG_CASE(name, value) \
+
+#define _REG_CASE(name, value) \
     do { if (regHash == *(const uint16_t *)(name)) { *regDst = (value); return true; } } while (false)
 
-    REG_CASE("cz", 0);
-    REG_CASE("fl", 1);
-    REG_CASE("ax", 2);
-    REG_CASE("bx", 3);
-    REG_CASE("cx", 4);
-    REG_CASE("dx", 5);
-    REG_CASE("ex", 6);
-    REG_CASE("fx", 7);
+    _REG_CASE("cz", 0);
+    _REG_CASE("fl", 1);
+    _REG_CASE("ax", 2);
+    _REG_CASE("bx", 3);
+    _REG_CASE("cx", 4);
+    _REG_CASE("dx", 5);
+    _REG_CASE("ex", 6);
+    _REG_CASE("fx", 7);
 
-#undef REG_CASE
+#undef _REG_CASE
 
     return false;
 } // cfAssemblerParseRegister
@@ -526,6 +527,57 @@ static void cfAssemblerParsePushPopInfo(
     cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_INVALID_PUSHPOP_ARGUMENT);
 } // cfAssemblerParsePushPopInfo
 
+/// @brief object-level immediate representation type
+typedef enum __CfAssemblerImmType {
+    CF_ASSEMBLER_IMM_TYPE_VALUE, ///< 32-bit constant
+    CF_ASSEMBLER_IMM_TYPE_LINK,  ///< link to some named value
+} CfAssemblerImmType;
+
+/// @brief object-level immediate representation
+typedef struct __CfAssemblerImm {
+    CfAssemblerImmType type; ///< immediate type
+
+    union {
+        uint32_t value; ///< constant value
+        CfStr    link;  ///< reference to some external value
+    };
+} CfAssemblerImm;
+
+/**
+ * @brief immediate parsing function
+ * 
+ * @param[in]  token token to parse imm from
+ * @param[out] dst   parsing destination
+ * 
+ * @return true if parsed, false if not
+ */
+bool cfAssemblerParseImm( const CfAssemblerToken *const token, CfAssemblerImm *const dst ) {
+    switch (token->type) {
+    case CF_ASSEMBLER_TOKEN_TYPE_FLOATING: {
+        dst->type = CF_ASSEMBLER_IMM_TYPE_VALUE;
+        *(float *)&dst->value = token->floating;
+        return true;
+    }
+
+    case CF_ASSEMBLER_TOKEN_TYPE_INTEGER: {
+        dst->type = CF_ASSEMBLER_IMM_TYPE_VALUE;
+        dst->value = token->integer;
+        return true;
+    }
+
+    case CF_ASSEMBLER_TOKEN_TYPE_IDENT: {
+        dst->type = CF_ASSEMBLER_IMM_TYPE_LINK;
+        dst->link = token->ident;
+        return true;
+    }
+
+    default:
+        return false;
+    }
+
+    return false;
+} // cfAssemblerParseImm
+
 /**
  * @brief assembling starting function
  * 
@@ -545,7 +597,7 @@ void cfAssemblerRun( CfAssembler *const self ) {
 
         CfOpcode opcode = CF_OPCODE_UNREACHABLE;
 
-        if (cfAssemblerParseOpcode(self, opcodeToken.ident, &opcode)) {
+        if (cfAssemblerParseOpcode(opcodeToken.ident, &opcode)) {
             uint8_t instructionData[32] = {0};
             uint32_t instructionSize = 0;
 
@@ -570,6 +622,54 @@ void cfAssemblerRun( CfAssembler *const self ) {
             case CF_OPCODE_POP: {
                 CfPushPopInfo pushPopInfo = {0};
                 uint32_t imm = 0;
+
+//                CfAssemblerToken tokens[5] = {{}};
+//                uint32_t tokenCount = 0;
+//
+//                // switch tokenCount
+//                while (cfAssemblerNextToken(self, &tokens[tokenCount]))
+//                    tokenCount++;
+//
+//                switch (tokenCount) {
+//                case 5: { // [reg+imm]
+//                    CfAssemblerImm assemblerImm = {};
+//
+//                    if (false
+//                        || tokens[0].type != CF_ASSEMBLER_TOKEN_TYPE_LEFT_SQUARE_BRACKET
+//                        || tokens[1].type != CF_ASSEMBLER_TOKEN_TYPE_IDENT
+//                        || tokens[2].type != CF_ASSEMBLER_TOKEN_TYPE_PLUS
+//                        || !cfAssemblerParseImm(&tokens[3], &assemblerImm)
+//                        || tokens[4].type != CF_ASSEMBLER_TOKEN_TYPE_RIGHT_SQUARE_BRACKET
+//                    )
+//                        cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_INVALID_PUSHPOP_ARGUMENT);
+//
+//                    switch (assemblerImm.type) {
+//                    case CF_ASSEMBLER_IMM_TYPE_LINK: {
+//                        break;
+//                    }
+//                    }
+//
+//                    pushPopInfo.doReadImmediate = true;
+//                    pushPopInfo.isMemoryAccess = true;
+//                    break;
+//                }
+//
+//                case 3: { // reg+imm | [reg] | [imm]
+//                    break;
+//                }
+//
+//                case 1: { // reg | imm
+//                    break;
+//                }
+//
+//
+//                default:
+//                    cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_INVALID_PUSHPOP_ARGUMENT);
+//                }
+//
+//                cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_INVALID_PUSHPOP_ARGUMENT);
+//
+//                _cfAssemblerRun__parse_pushpop_info_ok:
 
                 cfAssemblerParsePushPopInfo(self, &pushPopInfo, &imm);
 
@@ -665,27 +765,73 @@ void cfAssemblerRun( CfAssembler *const self ) {
 
             // write instruction to instruction stream
             cfAssemblerWriteOutput(self, instructionData, instructionSize);
-        } else { // try to handle label
+        } else {
+
             CfAssemblerToken colonToken = {};
 
-            if (!cfAssemblerNextToken(self, &colonToken))
-                cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_EMPTY_LABEL);
-
             // TODO uuugh
-            if (colonToken.type != CF_ASSEMBLER_TOKEN_TYPE_COLON)
+            if (!cfAssemblerNextToken(self, &colonToken))
                 cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION);
 
             if (cfStrLength(opcodeToken.ident) >= CF_LABEL_MAX)
                 cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_TOO_LONG_LABEL);
-            CfLabel label = {
-                .sourceLine = (uint32_t)self->lineIndex,
-                .codeOffset = (uint32_t)cfDarrSize(self->output),
-            };
 
-            memcpy(label.label, opcodeToken.ident.begin, cfStrLength(opcodeToken.ident));
+            switch (colonToken.type) {
 
-            if (cfDarrPush(&self->labels, &label) != CF_DARR_OK)
-                cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_INTERNAL_ERROR);
+            // jump label
+            case CF_ASSEMBLER_TOKEN_TYPE_COLON: {
+                CfLabel label = {
+                    .sourceLine = (uint32_t)self->lineIndex,
+                    .value      = (uint32_t)cfDarrSize(self->output),
+                    .isRelative = true,
+                };
+
+                memcpy(label.label, opcodeToken.ident.begin, cfStrLength(opcodeToken.ident));
+
+                if (cfDarrPush(&self->labels, &label) != CF_DARR_OK)
+                    cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_INTERNAL_ERROR);
+                break;
+            }
+
+            // constant
+            case CF_ASSEMBLER_TOKEN_TYPE_EQUAL: {
+                CfAssemblerToken valueToken = {};
+
+                if (!cfAssemblerNextToken(self, &valueToken))
+                    cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_INVALID_CONSTANT_VALUE);
+
+                uint32_t value = 0;
+                switch (valueToken.type) {
+                case CF_ASSEMBLER_TOKEN_TYPE_INTEGER: {
+                    value = valueToken.integer;
+                    break;
+                }
+
+                case CF_ASSEMBLER_TOKEN_TYPE_FLOATING: {
+                    *(float *)&value = valueToken.floating;
+                    break;
+                }
+
+                default:
+                    cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_INVALID_CONSTANT_VALUE);
+                }
+
+                CfLabel label = {
+                    .sourceLine = (uint32_t)self->lineIndex,
+                    .value      = value,
+                    .isRelative = false,
+                };
+
+                memcpy(label.label, opcodeToken.ident.begin, cfStrLength(opcodeToken.ident));
+
+                if (cfDarrPush(&self->labels, &label) != CF_DARR_OK)
+                    cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_INTERNAL_ERROR);
+                break;
+            }
+
+            default:
+                cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION);
+            }
         }
 
        // check for all line text being processed.
@@ -775,10 +921,11 @@ const char * cfAssemblyStatusStr( const CfAssemblyStatus status ) {
     case CF_ASSEMBLY_STATUS_JUMP_ARGUMENT_MISSING    : return "jump argument missing";
     case CF_ASSEMBLY_STATUS_EMPTY_LABEL              : return "label is empty";
     case CF_ASSEMBLY_STATUS_TOO_LONG_LABEL           : return "label is too long";
+    case CF_ASSEMBLY_STATUS_INVALID_CONSTANT_VALUE   : return "invalid constant value";
     case CF_ASSEMBLY_STATUS_UNEXPECTED_CHARACTERS    : return "unexpected characters";
-
-    default                                          : return "<invalid>";
     }
+
+    return "<invalid>";
 } // cfAssemblyStatusStr
 
 void cfAssemblyDetailsWrite(
@@ -790,7 +937,6 @@ void cfAssemblyDetailsWrite(
     assert(details != NULL);
 
     const char *str = cfAssemblyStatusStr(status);
-
     fprintf(out, "%s at %zu: \"", cfAssemblyStatusStr(status), details->line);
     cfStrWrite(out, details->contents);
     fprintf(out, "\"");

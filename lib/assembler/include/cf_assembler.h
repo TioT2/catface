@@ -33,6 +33,8 @@ typedef enum __CfAssemblyStatus {
     CF_ASSEMBLY_STATUS_EMPTY_LABEL,              ///< label must not be empty
     CF_ASSEMBLY_STATUS_TOO_LONG_LABEL,           ///< label is longer than CF_LABEL_MAX
 
+    CF_ASSEMBLY_STATUS_INVALID_CONSTANT_VALUE,   ///< invalid constant value
+
     CF_ASSEMBLY_STATUS_UNEXPECTED_CHARACTERS,    ///< unexpected (a.k.a. unrelated to instruction) characters occured.
 } CfAssemblyStatus;
 

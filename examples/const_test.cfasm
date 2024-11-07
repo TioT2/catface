@@ -1,0 +1,12 @@
+; Constant testing program
+
+start = 0
+
+push ax
+itof
+syscall 1
+
+push ax+1
+pop  ax
+
+jmp start

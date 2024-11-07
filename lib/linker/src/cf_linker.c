@@ -10,13 +10,21 @@
 
 #include "cf_linker.h"
 
+/// @brief linker internal label representation
+typedef struct __CfLinkerLabel {
+    CfStr    sourceName; ///< file label declared at
+    uint32_t sourceLine; ///< line label declared at
+    uint32_t value;      ///< label underlying value
+    CfStr    label;      ///< label name
+} CfLinkerLabel;
+
 /// @brief linker internal label and link representations
 typedef struct __CfLinkerLabelAndLink {
     CfStr    sourceName; ///< file label declared in
     uint32_t sourceLine; ///< line label declared at
     uint32_t codeOffset; ///< (global) offset in linked code
     CfStr    label;      ///< label name reference
-} CfLinkerLabel, CfLinkerLink;
+} CfLinkerLink;
 
 /// @brief linker representation structure
 typedef struct __CfLinker {
@@ -110,7 +118,10 @@ void cfLinkerAddObject( CfLinker *const self, const CfObject *const object ) {
         CfLinkerLabel label = {
             .sourceName = sourceName,
             .sourceLine = object->labels[i].sourceLine,
-            .codeOffset = object->labels[i].codeOffset + codeSize,
+            .value      = object->labels[i].isRelative
+                ? object->labels[i].value + codeSize
+                : object->labels[i].value
+            ,
             .label      = CF_STR(object->labels[i].label),
         };
 
@@ -157,7 +168,7 @@ void cfLinkerBuildExecutable( CfLinker *const self, CfExecutable *const dst ) {
             cfLinkerThrow(self, CF_LINK_STATUS_UNKNOWN_LABEL);
         }
 
-        memcpy(code + link->codeOffset, &label->codeOffset, sizeof(link->codeOffset));
+        memcpy(code + link->codeOffset, &label->value, sizeof(link->codeOffset));
     }
 
     dst->codeLength = cfDarrSize(self->code);
