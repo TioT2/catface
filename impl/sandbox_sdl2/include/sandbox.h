@@ -15,6 +15,10 @@ extern "C" {
 typedef struct __SandboxContext {
     uint64_t font[256];                        ///< font
 
+    SDL_atomic_t keyStates[(size_t)_CF_KEY_MAX]; ///< keystate array
+    SDL_atomic_t waitKeyRequired;                ///< vm thread is waiting for waitKeyValue
+    SDL_atomic_t waitKeyValue;                   ///< awaited key value. if no values pressed, yields NULL value
+
     SDL_Thread * sandboxThread;                ///< sandbox thread pointer
 
     // SDL -> VM
@@ -31,8 +35,6 @@ typedef struct __SandboxContext {
 
     void *memory;                              ///< executor memory pointer
     size_t memorySize;                         ///< size of executor memory
-
-    SDL_atomic_t keyStates[SDL_NUM_SCANCODES]; ///< keys by scancode array
 } SandboxContext;
 
 /**

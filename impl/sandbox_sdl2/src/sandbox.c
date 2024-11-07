@@ -8,12 +8,21 @@
 
 #include "sandbox.h"
 
+/**
+ * @brief character to framebuffer writing function
+ * 
+ * @param[out] dst             write destination
+ * @param[in]  dstPitch        destination framebuffer pitch (in bytes)
+ * @param[in]  letter          letter 'picture' (8x8 1 bit picture)
+ * @param[in]  foregroundColor foreground color
+ * @param[in]  backgroundColor background color
+ */
 static void sandboxWriteCharacter(
-    uint32_t *dst,
-    const size_t dstPitch,
-    uint64_t letter,
-    const uint32_t foregroundColor,
-    const uint32_t backgroundColor
+    uint32_t       * dst,
+    const size_t     dstPitch,
+    uint64_t         letter,
+    const uint32_t   foregroundColor,
+    const uint32_t   backgroundColor
 ) {
     uint8_t ly = 8;
     uint8_t lx;
@@ -21,13 +30,89 @@ static void sandboxWriteCharacter(
     while (ly--) {
         lx = 8;
         while (lx--) {
-            *dst++ = letter & 0x80 ? ~0 : 0;
-            letter <<= 1;
+            *dst++ = letter & 1 ? foregroundColor : backgroundColor;
+            letter >>= 1;
         }
-        letter >>= 16;
+
+        // set new value to dst
         dst = (uint32_t *)((uint8_t *)dst + dstPitch - CF_VIDEO_FONT_WIDTH * sizeof(uint32_t));
     }
-}
+} // sandboxWriteCharacter
+
+/**
+ * @brief SDL scancode into CF key transformation function
+ * 
+ * @param[in]  scancode SDL scancode
+ * 
+ * @return CF_KEY_NULL if no corresponding key found, valid key if not.
+ */
+static CfKey sandboxKeyFromSdlScancode( const SDL_Scancode scancode ) {
+    switch (scancode) {
+    case SDL_SCANCODE_A            : return CF_KEY_A             ;
+    case SDL_SCANCODE_B            : return CF_KEY_B             ;
+    case SDL_SCANCODE_C            : return CF_KEY_C             ;
+    case SDL_SCANCODE_D            : return CF_KEY_D             ;
+    case SDL_SCANCODE_E            : return CF_KEY_E             ;
+    case SDL_SCANCODE_F            : return CF_KEY_F             ;
+    case SDL_SCANCODE_G            : return CF_KEY_G             ;
+    case SDL_SCANCODE_H            : return CF_KEY_H             ;
+    case SDL_SCANCODE_I            : return CF_KEY_I             ;
+    case SDL_SCANCODE_J            : return CF_KEY_J             ;
+    case SDL_SCANCODE_K            : return CF_KEY_K             ;
+    case SDL_SCANCODE_L            : return CF_KEY_L             ;
+    case SDL_SCANCODE_M            : return CF_KEY_M             ;
+    case SDL_SCANCODE_N            : return CF_KEY_N             ;
+    case SDL_SCANCODE_O            : return CF_KEY_O             ;
+    case SDL_SCANCODE_P            : return CF_KEY_P             ;
+    case SDL_SCANCODE_Q            : return CF_KEY_Q             ;
+    case SDL_SCANCODE_R            : return CF_KEY_R             ;
+    case SDL_SCANCODE_S            : return CF_KEY_S             ;
+    case SDL_SCANCODE_T            : return CF_KEY_T             ;
+    case SDL_SCANCODE_U            : return CF_KEY_U             ;
+    case SDL_SCANCODE_V            : return CF_KEY_V             ;
+    case SDL_SCANCODE_W            : return CF_KEY_W             ;
+    case SDL_SCANCODE_X            : return CF_KEY_X             ;
+    case SDL_SCANCODE_Y            : return CF_KEY_Y             ;
+    case SDL_SCANCODE_Z            : return CF_KEY_Z             ;
+    case SDL_SCANCODE_0            : return CF_KEY_0             ;
+    case SDL_SCANCODE_1            : return CF_KEY_1             ;
+    case SDL_SCANCODE_2            : return CF_KEY_2             ;
+    case SDL_SCANCODE_3            : return CF_KEY_3             ;
+    case SDL_SCANCODE_4            : return CF_KEY_4             ;
+    case SDL_SCANCODE_5            : return CF_KEY_5             ;
+    case SDL_SCANCODE_6            : return CF_KEY_6             ;
+    case SDL_SCANCODE_7            : return CF_KEY_7             ;
+    case SDL_SCANCODE_8            : return CF_KEY_8             ;
+    case SDL_SCANCODE_9            : return CF_KEY_9             ;
+    case SDL_SCANCODE_RETURN       : return CF_KEY_ENTER         ;
+    case SDL_SCANCODE_BACKSPACE    : return CF_KEY_BACKSPACE     ;
+    case SDL_SCANCODE_MINUS        : return CF_KEY_MINUS         ;
+    case SDL_SCANCODE_EQUALS       : return CF_KEY_EQUAL         ;
+    case SDL_SCANCODE_PERIOD       : return CF_KEY_DOT           ;
+    case SDL_SCANCODE_COMMA        : return CF_KEY_COMMA         ;
+    case SDL_SCANCODE_SLASH        : return CF_KEY_SLASH         ;
+    case SDL_SCANCODE_BACKSLASH    : return CF_KEY_BACKSLASH     ;
+    case SDL_SCANCODE_APOSTROPHE   : return CF_KEY_QUOTE         ;
+    case SDL_SCANCODE_GRAVE        : return CF_KEY_BACKQUOTE     ;
+    case SDL_SCANCODE_TAB          : return CF_KEY_TAB           ;
+    case SDL_SCANCODE_LEFTBRACKET  : return CF_KEY_LEFT_BRACKET  ;
+    case SDL_SCANCODE_RIGHTBRACKET : return CF_KEY_RIGHT_BRACKET ;
+    case SDL_SCANCODE_SPACE        : return CF_KEY_SPACE         ;
+    case SDL_SCANCODE_SEMICOLON    : return CF_KEY_SEMICOLON     ;
+    case SDL_SCANCODE_UP           : return CF_KEY_UP            ;
+    case SDL_SCANCODE_DOWN         : return CF_KEY_DOWN          ;
+    case SDL_SCANCODE_LEFT         : return CF_KEY_LEFT          ;
+    case SDL_SCANCODE_RIGHT        : return CF_KEY_RIGHT         ;
+    case SDL_SCANCODE_LSHIFT       : return CF_KEY_SHIFT         ;
+    case SDL_SCANCODE_LALT         : return CF_KEY_ALT           ;
+    case SDL_SCANCODE_LCTRL        : return CF_KEY_CTRL          ;
+    case SDL_SCANCODE_RSHIFT       : return CF_KEY_SHIFT         ;
+    case SDL_SCANCODE_RALT         : return CF_KEY_ALT           ;
+    case SDL_SCANCODE_RCTRL        : return CF_KEY_CTRL          ;
+    case SDL_SCANCODE_ESCAPE       : return CF_KEY_ESCAPE        ;
+    default                        : return CF_KEY_NULL          ;
+    }
+} // sandboxKeyFromSdlScancode
 
 /**
  * @brief sandbox SDL therad function
@@ -90,6 +175,28 @@ static int SDLCALL sandboxThreadFn( void *userContext ) {
             switch (event.type) {
             case SDL_QUIT: {
                 continueExecution = false;
+                break;
+            }
+
+            case SDL_KEYUP: {
+                SDL_Scancode scancode = event.key.keysym.scancode;
+                const CfKey key = sandboxKeyFromSdlScancode(scancode);
+
+                if (key != CF_KEY_NULL)
+                    SDL_AtomicSet(&context->keyStates[(size_t)key], false);
+                break;
+            }
+
+            case SDL_KEYDOWN: {
+                SDL_Scancode scancode = event.key.keysym.scancode;
+                const CfKey key = sandboxKeyFromSdlScancode(scancode);
+
+                if (key != CF_KEY_NULL) {
+                    SDL_AtomicSet(&context->keyStates[(size_t)key], true);
+
+                    if (SDL_AtomicGet(&context->waitKeyRequired))
+                        SDL_AtomicSet(&context->waitKeyValue, key);
+                }
                 break;
             }
             }
@@ -169,7 +276,7 @@ static int SDLCALL sandboxThreadFn( void *userContext ) {
                 break; // not supported yet
             }
 
-            // just cop
+            // just copy
             case CF_VIDEO_STORAGE_FORMAT_TRUE_COLOR: {
                 blitSurface = trueColorSurface;
                 break;
@@ -230,7 +337,16 @@ static bool sandboxGetExecutionTime( void *userContext, float *dst ) {
  * @return true if succeeded, false if something went wrong.
  */
 bool sandboxGetKeyState( void *userContext, CfKey key, bool *dst ) {
-    return false; // unimplemented yet
+    assert(dst != NULL);
+
+    SandboxContext *context = (SandboxContext *)userContext;
+
+    if ((uint32_t)key >= (uint32_t)_CF_KEY_MAX) // check array bounds
+        return false;
+
+    *dst = SDL_AtomicGet(&context->keyStates[(size_t)key]);
+
+    return true; // unimplemented yet
 } // sandboxGetKeyState
 
 /**
@@ -242,7 +358,30 @@ bool sandboxGetKeyState( void *userContext, CfKey key, bool *dst ) {
  * @return true if succeeded, false if something went wrong.
  */
 bool sandboxWaitKeyDown( void *userContext, CfKey *dst ) {
-    return false; // unimplemented yet
+    // TODO(q): should I do main?
+    assert(dst != NULL);
+
+    SandboxContext *context = (SandboxContext *)userContext;
+
+    SDL_AtomicSet(&context->waitKeyValue, CF_KEY_NULL);
+    SDL_AtomicSet(&context->waitKeyRequired, true);
+
+    CfKey key = CF_KEY_NULL;
+    volatile int nopper = 0;
+
+    // wait for value is set
+    while (true
+        && !SDL_AtomicGet(&context->isTerminated)
+        && (key = (CfKey)SDL_AtomicGet(&context->waitKeyValue)) == CF_KEY_NULL
+    )
+        nopper = 42; // kind of nop
+
+    *dst = key;
+
+    // unsed waitKey requirement
+    SDL_AtomicSet(&context->waitKeyRequired, false);
+
+    return key != CF_KEY_NULL;
 } // sandboxWaitKeyDown
 
 /**
@@ -262,6 +401,12 @@ static bool sandboxInitialize( void *userContext, const CfExecContext *execConte
     };
 
     memcpy(context->font, font, sizeof(context->font));
+    // reverse font bytes to improve usage comfortability
+    for (size_t i = 0 ; i < 256; i++) {
+        context->font[i] = ((context->font[i] & 0x5555555555555555) << 1) | ((context->font[i] & 0xAAAAAAAAAAAAAAAA) >> 1);
+        context->font[i] = ((context->font[i] & 0x3333333333333333) << 2) | ((context->font[i] & 0xCCCCCCCCCCCCCCCC) >> 2);
+        context->font[i] = ((context->font[i] & 0x0F0F0F0F0F0F0F0F) << 4) | ((context->font[i] & 0xF0F0F0F0F0F0F0F0) >> 4);
+    }
 
     context->initialPerformanceCounter = SDL_GetPerformanceCounter();
     context->performanceFrequency = SDL_GetPerformanceFrequency();
@@ -275,6 +420,14 @@ static bool sandboxInitialize( void *userContext, const CfExecContext *execConte
 
     // initialize SDL -> VM variables
     SDL_AtomicSet(&context->isTerminated, false);
+
+    // initialize keyStates
+    for (uint32_t i = 0; i < (uint32_t)_CF_KEY_MAX; i++)
+        SDL_AtomicSet(&context->keyStates[i], false);
+
+    // initialize waitKey variables
+    SDL_AtomicSet(&context->waitKeyRequired, false);
+    SDL_AtomicSet(&context->waitKeyValue, CF_KEY_NULL);
 
     // initialize sandbox memory
     context->memory = execContext->memory;

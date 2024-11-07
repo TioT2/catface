@@ -82,4 +82,78 @@ const char * cfExecutableReadStatusStr( CfExecutableReadStatus status ) {
     }
 } // cfExecutableReadStatusStr
 
+CfKey cfKeyFromUint32( const uint32_t num ) {
+#define _CASE(k) case (uint32_t)(k): return (k);
+
+    switch (num) {
+    _CASE(CF_KEY_A)
+    _CASE(CF_KEY_B)
+    _CASE(CF_KEY_C)
+    _CASE(CF_KEY_D)
+    _CASE(CF_KEY_E)
+    _CASE(CF_KEY_F)
+    _CASE(CF_KEY_G)
+    _CASE(CF_KEY_H)
+    _CASE(CF_KEY_I)
+    _CASE(CF_KEY_J)
+    _CASE(CF_KEY_K)
+    _CASE(CF_KEY_L)
+    _CASE(CF_KEY_M)
+    _CASE(CF_KEY_N)
+    _CASE(CF_KEY_O)
+    _CASE(CF_KEY_P)
+    _CASE(CF_KEY_Q)
+    _CASE(CF_KEY_R)
+    _CASE(CF_KEY_S)
+    _CASE(CF_KEY_T)
+    _CASE(CF_KEY_U)
+    _CASE(CF_KEY_V)
+    _CASE(CF_KEY_W)
+    _CASE(CF_KEY_X)
+    _CASE(CF_KEY_Y)
+    _CASE(CF_KEY_Z)
+
+    _CASE(CF_KEY_0)
+    _CASE(CF_KEY_1)
+    _CASE(CF_KEY_2)
+    _CASE(CF_KEY_3)
+    _CASE(CF_KEY_4)
+    _CASE(CF_KEY_5)
+    _CASE(CF_KEY_6)
+    _CASE(CF_KEY_7)
+    _CASE(CF_KEY_8)
+    _CASE(CF_KEY_9)
+
+    _CASE(CF_KEY_ENTER        )
+    _CASE(CF_KEY_BACKSPACE    )
+    _CASE(CF_KEY_MINUS        )
+    _CASE(CF_KEY_EQUAL        )
+    _CASE(CF_KEY_DOT          )
+    _CASE(CF_KEY_COMMA        )
+    _CASE(CF_KEY_SLASH        )
+    _CASE(CF_KEY_BACKSLASH    )
+    _CASE(CF_KEY_QUOTE        )
+    _CASE(CF_KEY_BACKQUOTE    )
+    _CASE(CF_KEY_TAB          )
+    _CASE(CF_KEY_LEFT_BRACKET )
+    _CASE(CF_KEY_RIGHT_BRACKET)
+    _CASE(CF_KEY_SPACE        )
+    _CASE(CF_KEY_SEMICOLON    )
+
+    _CASE(CF_KEY_UP   )
+    _CASE(CF_KEY_DOWN )
+    _CASE(CF_KEY_LEFT )
+    _CASE(CF_KEY_RIGHT)
+
+    _CASE(CF_KEY_SHIFT )
+    _CASE(CF_KEY_ALT   )
+    _CASE(CF_KEY_CTRL  )
+    _CASE(CF_KEY_ESCAPE)
+    }
+
+#undef _CASE
+
+    return CF_KEY_NULL;
+} // cfKeyFromUint32
+
 // cf_executable.c

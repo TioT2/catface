@@ -97,56 +97,62 @@ typedef struct __CfInstructionPushPop {
 /// @brief keycode representatiton enumeration
 typedef enum __CfKey {
     // keys that can be represented as ASCII characters.
+    CF_KEY_NULL = 0, ///< 'null', don't represents any key actually key
 
-    CF_KEY_A = 'A',
-    CF_KEY_B = 'B',
-    CF_KEY_C = 'C',
-    CF_KEY_D = 'D',
-    CF_KEY_E = 'E',
-    CF_KEY_F = 'F',
-    CF_KEY_G = 'G',
-    CF_KEY_H = 'H',
-    CF_KEY_I = 'I',
-    CF_KEY_J = 'J',
-    CF_KEY_K = 'K',
-    CF_KEY_L = 'L',
-    CF_KEY_M = 'M',
-    CF_KEY_N = 'N',
-    CF_KEY_O = 'O',
-    CF_KEY_P = 'P',
-    CF_KEY_Q = 'Q',
-    CF_KEY_R = 'R',
-    CF_KEY_S = 'S',
-    CF_KEY_T = 'T',
-    CF_KEY_U = 'U',
-    CF_KEY_V = 'V',
-    CF_KEY_W = 'W',
-    CF_KEY_X = 'X',
-    CF_KEY_Y = 'Y',
-    CF_KEY_Z = 'Z',
+    CF_KEY_A = 'A', ///< A key
+    CF_KEY_B = 'B', ///< B key
+    CF_KEY_C = 'C', ///< C key
+    CF_KEY_D = 'D', ///< D key
+    CF_KEY_E = 'E', ///< E key
+    CF_KEY_F = 'F', ///< F key
+    CF_KEY_G = 'G', ///< G key
+    CF_KEY_H = 'H', ///< H key
+    CF_KEY_I = 'I', ///< I key
+    CF_KEY_J = 'J', ///< J key
+    CF_KEY_K = 'K', ///< K key
+    CF_KEY_L = 'L', ///< L key
+    CF_KEY_M = 'M', ///< M key
+    CF_KEY_N = 'N', ///< N key
+    CF_KEY_O = 'O', ///< O key
+    CF_KEY_P = 'P', ///< P key
+    CF_KEY_Q = 'Q', ///< Q key
+    CF_KEY_R = 'R', ///< R key
+    CF_KEY_S = 'S', ///< S key
+    CF_KEY_T = 'T', ///< T key
+    CF_KEY_U = 'U', ///< U key
+    CF_KEY_V = 'V', ///< V key
+    CF_KEY_W = 'W', ///< W key
+    CF_KEY_X = 'X', ///< X key
+    CF_KEY_Y = 'Y', ///< Y key
+    CF_KEY_Z = 'Z', ///< Z key
 
-    CF_KEY_0 = '0',
-    CF_KEY_1 = '1',
-    CF_KEY_2 = '2',
-    CF_KEY_3 = '3',
-    CF_KEY_4 = '4',
-    CF_KEY_5 = '5',
-    CF_KEY_6 = '6',
-    CF_KEY_7 = '7',
-    CF_KEY_8 = '8',
-    CF_KEY_9 = '9',
+    CF_KEY_0 = '0', ///< 0 number
+    CF_KEY_1 = '1', ///< 1 number
+    CF_KEY_2 = '2', ///< 2 number
+    CF_KEY_3 = '3', ///< 3 number
+    CF_KEY_4 = '4', ///< 4 number
+    CF_KEY_5 = '5', ///< 5 number
+    CF_KEY_6 = '6', ///< 6 number
+    CF_KEY_7 = '7', ///< 7 number
+    CF_KEY_8 = '8', ///< 8 number
+    CF_KEY_9 = '9', ///< 9 number
 
-    CF_KEY_ENTER = '\n',
-    CF_KEY_BACKSPACE = '\b',
-    CF_KEY_SLASH = '/',
-    CF_KEY_MINUS = '-',
-    CF_KEY_EQUAL = '=',
-    CF_KEY_DOT = '.',
-    CF_KEY_COMMA = ',',
-    CF_KEY_BACKSLASH = '\\',
-    CF_KEY_QUOTE = '\'',
-    CF_KEY_BACKQUOTE = '`',
-    CF_KEY_TAB = '\t',
+    CF_KEY_ENTER         = '\n',   ///< 
+    CF_KEY_BACKSPACE     = '\b',   ///< 
+    CF_KEY_MINUS         = '-',    ///< 
+    CF_KEY_EQUAL         = '=',    ///< 
+    CF_KEY_DOT           = '.',    ///< 
+    CF_KEY_COMMA         = ',',    ///< 
+    CF_KEY_SLASH         = '/',    ///< 
+    CF_KEY_BACKSLASH     = '\\',   ///< 
+    CF_KEY_QUOTE         = '\'',   ///< 
+    CF_KEY_BACKQUOTE     = '`',    ///< 
+    CF_KEY_TAB           = '\t',   ///< 
+    CF_KEY_LEFT_BRACKET  = '[',    ///< 
+    CF_KEY_RIGHT_BRACKET = ']',    ///< 
+    CF_KEY_SPACE         = ' ',    ///< 
+    CF_KEY_SEMICOLON     = ';',    ///< 
+    CF_KEY_ESCAPE        = '\x1b', ///< escape key
 
     /// @brief keycode that separates ASCII and non-ASCII keys
     _CF_KEY_ASCII_SEPARATOR = 0x80,
@@ -159,8 +165,18 @@ typedef enum __CfKey {
     CF_KEY_SHIFT,  ///< any shift key
     CF_KEY_ALT,    ///< any alt key
     CF_KEY_CTRL,   ///< any control key
-    CF_KEY_ESCAPE, ///< escape key
+
+    _CF_KEY_MAX = 0xFF, ///< maximal key value, aligner
 } CfKey;
+
+/**
+ * @brief key from uint32 getting function
+ * 
+ * @param[in]  num number to try to convert into key
+ * 
+ * @return key (CF_KEY_NULL if conversion failed)
+ */
+CfKey cfKeyFromUint32( uint32_t num );
 
 /// @brief instruction header representation enumeration
 typedef enum __CfOpcode {
@@ -233,7 +249,7 @@ typedef enum __CfOpcode {
     CF_OPCODE_MGS,  ///< (Memory Get Size) current memory size getting opcode. pushes RAM size into operand stack.
 
     CF_OPCODE_IWKD, ///< (Input Wait Key Down) waits any key press, returns pressed key opcode.
-    CF_OPCODE_IGKS, ///< (Input Get Key State) pushes current key state (1 if pressed 0 if not)
+    CF_OPCODE_IGKS, ///< (Input Get Key State) pushes current key state (1 if pressed 0 if not). In case if popped value does not correspond any key value, pushes 0.
 } CfOpcode;
 
 /// @brief colored character representation structure (used in coloredText video mode)
@@ -251,9 +267,9 @@ typedef union __CfVideoMemory {
     uint8_t            text       [CF_VIDEO_TEXT_WIDTH   * CF_VIDEO_TEXT_HEIGHT  ]; ///< text characters
 
     struct {
-        CfColoredCharacter coloredText[CF_VIDEO_TEXT_WIDTH   * CF_VIDEO_TEXT_HEIGHT]; ///< colored text characters
-        uint32_t foregroundPalette[16];                                               ///< text color palette
-        uint32_t backgroundPalette[16];                                               ///< background color palette
+        CfColoredCharacter coloredText[CF_VIDEO_TEXT_WIDTH * CF_VIDEO_TEXT_HEIGHT]; ///< colored text characters
+        uint32_t foregroundPalette[16];                                             ///< text color palette
+        uint32_t backgroundPalette[16];                                             ///< background color palette
     };
 
     struct {

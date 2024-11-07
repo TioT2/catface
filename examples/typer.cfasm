@@ -1,0 +1,56 @@
+; The simplest possible typing program
+
+call _start
+halt
+
+; bx - current char
+; cx - cell pointer
+
+_start:
+    ; set video mode
+    push 0x0 ; 0000, where 0 - manualUpdate, 000 - single-colored text
+    vsm
+
+    push 0
+    pop cx
+
+    _start__main_loop:
+
+        ; bx = getch()
+        iwkd
+        pop bx
+
+        ; don't display non-ascii character
+        push bx
+        push 0x80
+        cmp
+        jge _start__continue
+
+        push [cx]
+        push 0xFFFFFF00
+        and
+        push bx
+        or
+        pop [cx]
+
+    	; cx = cx + 1
+        push cx
+        push 1
+        add
+        pop cx
+    
+        _start__continue:
+
+        ; cx = cx - cx / 1000 * 1000
+        push cx
+        push cx
+        push 1000
+        div
+        push 1000
+        mul
+        sub
+        pop cx
+
+        vrs
+        jmp _start__main_loop
+ret

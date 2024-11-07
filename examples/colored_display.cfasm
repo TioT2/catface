@@ -1,0 +1,107 @@
+; Colored text/pressed displaying program
+
+call _start
+halt
+
+_setup_palettes:
+    push ax
+    push bx
+    push cx
+
+    push 0
+    pop ax
+
+    _setup_palettes__loop:
+        push ax
+        push 4
+        mul
+        pop bx
+
+        ; index to color
+        push ax
+        push 4
+        shl
+        pop cx
+
+        push cx
+        push cx
+        push 8
+        shl
+        or
+        pop cx
+
+        push cx
+        push cx
+        push 16
+        shl
+        or
+        pop cx
+
+        push cx
+        pop [bx+2000]
+
+        push cx
+        pop [bx+2064]
+
+        ; ax += 1
+        push ax
+        push 1
+        add
+        pop ax
+
+        ; if ax < 16: jmp _setup_palettes__loop
+        push ax
+        push 16
+        cmp
+        jl _setup_palettes__loop
+
+    pop cx
+    pop bx
+    pop ax
+    ret
+
+_start:
+    ; set colored text video mode
+    push 0x1
+    vsm
+
+    call _setup_palettes
+
+    push 0
+    pop ax
+
+    _start__setup:
+        ; bx = ax * 2
+        push ax
+        push 2
+        mul
+        pop bx
+
+        push ax
+        push 0x41
+        add
+        push ax
+        push 8
+        shl
+        or
+        pop [bx]
+
+        push ax
+        push 1
+        add
+        pop ax
+
+        push ax
+        push 16
+        cmp
+        jl _start__setup
+
+    ; setup X characters and colors
+    ; setup Y characters and colors
+
+    ; setup plane characters and colors
+
+    _start__loop:
+        vrs
+        jmp _start__loop
+    ret

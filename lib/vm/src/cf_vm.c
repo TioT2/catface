@@ -420,24 +420,24 @@ void cfVmRun( CfVm *const self ) {
             break;
         }
 
-        // TODO: implement IGKS and IWKD instructions
         case CF_OPCODE_IGKS: {
-            union {
-                uint32_t integer; ///< integer part
-                CfKey    key;     ///< key part
-            } ik = { .integer = 0 };
+            uint32_t keyInt = CF_KEY_NULL;
+            uint32_t stateInt = 0;
 
-            // TODO: Validate keycode
-            cfVmPopOperand(self, &ik.integer);
+            cfVmPopOperand(self, &keyInt);
 
-            bool state = false;
+            const CfKey key = cfKeyFromUint32(keyInt);
 
-            if (!self->sandbox->getKeyState(self->sandbox->userContext, ik.key, &state))
-                cfVmTerminate(self, CF_TERM_REASON_SANDBOX_ERROR);
+            if (key != CF_KEY_NULL) {
+                bool state = false;
 
-            const uint32_t stateInt = state;
+                if (!self->sandbox->getKeyState(self->sandbox->userContext, key, &state))
+                    cfVmTerminate(self, CF_TERM_REASON_SANDBOX_ERROR);
+
+                stateInt = state;
+            }
+
             cfVmPushOperand(self, &stateInt);
-
             break;
         }
 
