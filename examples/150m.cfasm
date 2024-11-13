@@ -1,0 +1,17 @@
+; Counting 0 to 150'000'000 program
+
+push 0
+pop ax
+
+start:
+
+push ax+1
+pop ax
+
+push ax
+push 150000000
+cmp
+
+jl start
+
+halt

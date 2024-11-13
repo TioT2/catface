@@ -3,58 +3,98 @@
 call _start
 halt
 
+; ax - coord
+; char <- stack+0
+_set_char:
+    push [ax]
+    push 0xFFFF0000
+    and
+    or
+    pop [ax]
+    ret
+
 _setup_palettes:
+    push 0xFFFFFFFF
+    pop [2000]
+    push 0x00000000
+    pop [2064]
+
+    push 0x00000000
+    pop [2004]
+    push 0xFFFFFFFF
+    pop [2068]
+    ret
+
+; ax - (sy * 40 + sx) * 2
+; bx - (dy * 40 + dx) * 2
+; cx - (ey * 40 + ex) * 2
+; dx - c0
+_print_range:
     push ax
-    push bx
-    push cx
+    push dx
 
-    push 0
-    pop ax
+    _print_range__main:
+        push dx
+        call _set_char
 
-    _setup_palettes__loop:
+        ; dx += 1
+        push dx+1
+        pop dx
+        
+        ; ax += bx
         push ax
-        push 4
-        mul
-        pop bx
-
-        ; index to color
-        push ax
-        push 4
-        shl
-        pop cx
-
-        push cx
-        push cx
-        push 8
-        shl
-        or
-        pop cx
-
-        push cx
-        push cx
-        push 16
-        shl
-        or
-        pop cx
-
-        push cx
-        pop [bx+2000]
-
-        push cx
-        pop [bx+2064]
-
-        ; ax += 1
-        push ax
-        push 1
+        push bx
         add
         pop ax
 
-        ; if ax < 16: jmp _setup_palettes__loop
+        ; if ax != cx jmp _print_range__main
         push ax
-        push 16
-        cmp
-        jl _setup_palettes__loop
+        push cx
+        icmp
+        jne _print_range__main
 
+    pop dx
+    pop ax
+    ret
+
+; ax - coord(sx, sy)
+; bx - coord(dx, dy)
+_print_hd_line:
+    push ax
+    push bx
+    push cx
+    push dx
+
+    push bx
+    push 10
+    mul
+    push ax
+    add
+    pop  cx
+
+    push 0x30
+    pop dx
+    call _print_range
+
+    push bx
+    push 10
+    mul
+    push ax
+    add
+    pop ax
+
+    push bx
+    push 6
+    mul
+    push ax
+    add
+    pop  cx
+
+    push 0x41
+    pop dx
+    call _print_range
+
+    pop dx
     pop cx
     pop bx
     pop ax
@@ -62,46 +102,90 @@ _setup_palettes:
 
 _start:
     ; set colored text video mode
-    push 0x1
+    push 0x9
     vsm
 
     call _setup_palettes
 
-    push 0
+    push 4
     pop ax
+    push 2
+    pop bx
+    call _print_hd_line
 
-    _start__setup:
-        ; bx = ax * 2
-        push ax
-        push 2
-        mul
-        pop bx
+    push 160
+    pop ax
+    push 80
+    pop bx
+    call _print_hd_line
 
-        push ax
-        push 0x41
-        add
-        push ax
-        push 8
-        shl
-        or
-        pop [bx]
 
-        push ax
-        push 1
-        add
-        pop ax
-
-        push ax
-        push 16
-        cmp
-        jl _start__setup
-
-    ; setup X characters and colors
-    ; setup Y characters and colors
-
-    ; setup plane characters and colors
+    ; bx - x
+    ; cx - y
 
     _start__loop:
+        push 0
+        pop cx
+
+        _start__y_loop:
+            push 0
+            pop bx
+
+            _start__x_loop:
+                ; ax = char
+                push cx
+                push 16
+                mul
+                push bx
+                add
+                pop ax
+
+                ; dx - coordinate
+                push cx
+                push 80
+                mul
+                push bx
+                push 2
+                mul
+                push 164
+                add
+                add
+                pop dx
+
+                ; ex - ax key state
+                push ax
+                igks
+                pop ex
+
+                push ex
+                push 12
+                shl
+                push ex
+                push 8
+                shl
+                or
+                push ax
+                or
+                pop [dx]
+
+                push bx+1
+                pop bx
+
+                push bx
+                push 16
+                cmp
+                jl _start__x_loop
+
+
+            push cx+1
+            pop cx
+
+            push cx
+            push 16
+            cmp
+            jl _start__y_loop
+
+    
         vrs
         jmp _start__loop
     ret

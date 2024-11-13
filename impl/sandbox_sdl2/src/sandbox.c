@@ -109,6 +109,7 @@ static CfKey sandboxKeyFromSdlScancode( const SDL_Scancode scancode ) {
     case SDL_SCANCODE_RSHIFT       : return CF_KEY_SHIFT         ;
     case SDL_SCANCODE_RALT         : return CF_KEY_ALT           ;
     case SDL_SCANCODE_RCTRL        : return CF_KEY_CTRL          ;
+    case SDL_SCANCODE_DELETE       : return CF_KEY_DELETE        ;
     case SDL_SCANCODE_ESCAPE       : return CF_KEY_ESCAPE        ;
     default                        : return CF_KEY_NULL          ;
     }
@@ -188,6 +189,9 @@ static int SDLCALL sandboxThreadFn( void *userContext ) {
             }
 
             case SDL_KEYDOWN: {
+                if (event.key.repeat != 0)
+                    break;
+
                 SDL_Scancode scancode = event.key.keysym.scancode;
                 const CfKey key = sandboxKeyFromSdlScancode(scancode);
 

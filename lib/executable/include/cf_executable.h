@@ -152,7 +152,8 @@ typedef enum __CfKey {
     CF_KEY_RIGHT_BRACKET = ']',    ///< 
     CF_KEY_SPACE         = ' ',    ///< 
     CF_KEY_SEMICOLON     = ';',    ///< 
-    CF_KEY_ESCAPE        = '\x1b', ///< escape key
+    CF_KEY_DELETE        = '\x7F', ///< delete key
+    CF_KEY_ESCAPE        = '\x1B', ///< escape key
 
     /// @brief keycode that separates ASCII and non-ASCII keys
     _CF_KEY_ASCII_SEPARATOR = 0x80,

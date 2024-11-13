@@ -148,6 +148,7 @@ CfKey cfKeyFromUint32( const uint32_t num ) {
     _CASE(CF_KEY_SHIFT )
     _CASE(CF_KEY_ALT   )
     _CASE(CF_KEY_CTRL  )
+    _CASE(CF_KEY_DELETE)
     _CASE(CF_KEY_ESCAPE)
     }
 
