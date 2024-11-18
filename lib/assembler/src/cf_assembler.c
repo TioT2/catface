@@ -377,11 +377,173 @@ static bool cfAssemblerParseRegister( CfAssembler *const self, CfStr ident, uint
     return false;
 } // cfAssemblerParseRegister
 
-typedef enum __CfAssemblerReadValueStatus {
-    CF_ASSEMBLER_READ_VALUE_STATUS_IMMEDIATE,       ///< immediate value
-    CF_ASSEMBLER_READ_VALUE_STATUS_REGISTER,        ///< register index
-    CF_ASSEMBLER_READ_VALUE_STATUS_LOCAL_REFERENCE,
-} CfAssemblerReadValueStatus;
+/// @brief pushPopInfo full description
+typedef struct __CfAssemblerPushPopInfoData {
+    CfPushPopInfo info; ///< pushPopInfo
+
+    ///< true if 'literal' value is valid in immediate, false if 'label'.
+    ///< This field is ok to read only in case if pushPopInfo.doReadImmediate is set to 1.
+    bool immediateIsLiteral;
+
+    union {
+        char     label[CF_LABEL_MAX]; ///< immediate is reference to some constant
+        uint32_t literal;             ///< immedidate is literal
+    } immediate; ///< immediate value storage representation union
+} CfAssemblerPushPopInfoData;
+
+/**
+ * @brief push/pop info immediate from token parsing function
+ * 
+ * @param[in]  self  assembler pointer
+ * @param[in]  token token to parse immediate from
+ * @param[out] data  parsing destination
+ * 
+ * @return true if parsed, false if not.
+ */
+static bool cfAssemblerParsePushPopInfoImmediate(
+    CfAssembler                *const self,
+    const CfAssemblerToken     *const token,
+    CfAssemblerPushPopInfoData *const data
+) {
+    switch (token->type) {
+    case CF_ASSEMBLER_TOKEN_TYPE_INTEGER: {
+        data->immediateIsLiteral = true;
+        data->immediate.literal = token->integer;
+
+        return true;
+    }
+
+    case CF_ASSEMBLER_TOKEN_TYPE_FLOATING: {
+        data->immediateIsLiteral = true;
+        *(float *)&data->immediate.literal = token->floating;
+
+        return true;
+    }
+
+    case CF_ASSEMBLER_TOKEN_TYPE_IDENT: {
+        const size_t length = cfStrLength(token->ident);
+
+        if (length >= CF_LABEL_MAX)
+            cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_TOO_LONG_LABEL);
+
+        data->immediateIsLiteral = false;
+
+        memcpy(data->immediate.label, token->ident.begin, length);
+        memset(data->immediate.label + length, 0, CF_LABEL_MAX - length);
+
+        return true;
+    }
+
+    default:
+        return false;
+    }
+} // cfAssemblerParsePushPopInfoImmediate
+
+/**
+ * @brief push/pop info or register from token parsing function
+ * 
+ * @param[in]  self  assembler pointer
+ * @param[in]  token token to read
+ * @param[out] data  reading destination
+ */
+static void cfAssemblerParsePushPopInfoImmediateOrRegister(
+    CfAssembler                *const self,
+    const CfAssemblerToken     *const token,
+    CfAssemblerPushPopInfoData *const data
+) {
+    uint8_t registerIndex = 0;
+
+    if (true
+        && token->type == CF_ASSEMBLER_TOKEN_TYPE_IDENT
+        && cfAssemblerParseRegister(self, token->ident, &registerIndex)
+    ) {
+        data->info.doReadImmediate = false;
+        data->info.registerIndex = registerIndex;
+    } else if (cfAssemblerParsePushPopInfoImmediate(self, token, data)) {
+        data->info.doReadImmediate = true;
+        data->info.registerIndex = 0;
+    } else {
+        cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_INVALID_PUSHPOP_ARGUMENT);
+    }
+} // cfAssemblerParsePushPopInfoImmediateOrRegister
+
+/**
+ * @brief push/pop info parsing function
+ *
+ * @param[in] self assembler poniter
+ * @param[in] data push/pop info full description pointer
+ */
+static void cfAssemblerParsePushPopInfo2(
+    CfAssembler *const self,
+    CfAssemblerPushPopInfoData *const data
+) {
+    CfAssemblerToken tokens[5] = {};
+    uint32_t tokenCount = 0;
+
+    for (uint32_t i = 0; i < 5; i++) {
+        if (!cfAssemblerNextToken(self, &tokens[tokenCount]))
+            break;
+        tokenCount++;
+    }
+
+    if (tokenCount == 5) {
+        // validate token types
+        if (false
+            || tokens[0].type != CF_ASSEMBLER_TOKEN_TYPE_LEFT_SQUARE_BRACKET
+            || tokens[1].type != CF_ASSEMBLER_TOKEN_TYPE_IDENT
+            || tokens[2].type != CF_ASSEMBLER_TOKEN_TYPE_PLUS
+            || !cfAssemblerParsePushPopInfoImmediate(self, &tokens[3], data)
+            || tokens[4].type != CF_ASSEMBLER_TOKEN_TYPE_RIGHT_SQUARE_BRACKET
+        ) {
+            cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_INVALID_PUSHPOP_ARGUMENT);
+        }
+
+        uint8_t regNum = 0;
+        if (!cfAssemblerParseRegister(self, tokens[1].ident, &regNum))
+            cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_UNKNOWN_REGISTER);
+
+        data->info.isMemoryAccess = true;
+        data->info.doReadImmediate = true;
+        data->info.registerIndex = regNum;
+
+        return;
+    }
+
+    if (tokenCount == 3) {
+        if (true
+            && tokens[0].type == CF_ASSEMBLER_TOKEN_TYPE_LEFT_SQUARE_BRACKET
+            && tokens[2].type == CF_ASSEMBLER_TOKEN_TYPE_RIGHT_SQUARE_BRACKET
+        ) {
+            data->info.isMemoryAccess = true;
+            cfAssemblerParsePushPopInfoImmediateOrRegister(self, &tokens[1], data);
+        } else if (true
+            && tokens[0].type == CF_ASSEMBLER_TOKEN_TYPE_IDENT
+            && tokens[1].type == CF_ASSEMBLER_TOKEN_TYPE_PLUS
+            && cfAssemblerParsePushPopInfoImmediate(self, &tokens[2], data)
+        ) {
+            uint8_t registerIndex = 0;
+
+            if (!cfAssemblerParseRegister(self, tokens[0].ident, &registerIndex))
+                cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_UNKNOWN_REGISTER);
+
+            data->info.isMemoryAccess = false;
+            data->info.doReadImmediate = true;
+            data->info.registerIndex = registerIndex;
+        } else {
+            cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_INVALID_PUSHPOP_ARGUMENT);
+        }
+
+        return;
+    }
+
+    if (tokenCount == 1) {
+        data->info.isMemoryAccess = false;
+        cfAssemblerParsePushPopInfoImmediateOrRegister(self, &tokens[0], data);
+        return;
+    }
+
+    cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_INVALID_PUSHPOP_ARGUMENT);
+} // cfAssemblerParsePushPopInfo2
 
 /**
  * @brief push/pop info parsing function
@@ -527,57 +689,6 @@ static void cfAssemblerParsePushPopInfo(
     cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_INVALID_PUSHPOP_ARGUMENT);
 } // cfAssemblerParsePushPopInfo
 
-/// @brief object-level immediate representation type
-typedef enum __CfAssemblerImmType {
-    CF_ASSEMBLER_IMM_TYPE_VALUE, ///< 32-bit constant
-    CF_ASSEMBLER_IMM_TYPE_LINK,  ///< link to some named value
-} CfAssemblerImmType;
-
-/// @brief object-level immediate representation
-typedef struct __CfAssemblerImm {
-    CfAssemblerImmType type; ///< immediate type
-
-    union {
-        uint32_t value; ///< constant value
-        CfStr    link;  ///< reference to some external value
-    };
-} CfAssemblerImm;
-
-/**
- * @brief immediate parsing function
- * 
- * @param[in]  token token to parse imm from
- * @param[out] dst   parsing destination
- * 
- * @return true if parsed, false if not
- */
-bool cfAssemblerParseImm( const CfAssemblerToken *const token, CfAssemblerImm *const dst ) {
-    switch (token->type) {
-    case CF_ASSEMBLER_TOKEN_TYPE_FLOATING: {
-        dst->type = CF_ASSEMBLER_IMM_TYPE_VALUE;
-        *(float *)&dst->value = token->floating;
-        return true;
-    }
-
-    case CF_ASSEMBLER_TOKEN_TYPE_INTEGER: {
-        dst->type = CF_ASSEMBLER_IMM_TYPE_VALUE;
-        dst->value = token->integer;
-        return true;
-    }
-
-    case CF_ASSEMBLER_TOKEN_TYPE_IDENT: {
-        dst->type = CF_ASSEMBLER_IMM_TYPE_LINK;
-        dst->link = token->ident;
-        return true;
-    }
-
-    default:
-        return false;
-    }
-
-    return false;
-} // cfAssemblerParseImm
-
 /**
  * @brief assembling starting function
  * 
@@ -620,64 +731,29 @@ void cfAssemblerRun( CfAssembler *const self ) {
 
             case CF_OPCODE_PUSH:
             case CF_OPCODE_POP: {
-                CfPushPopInfo pushPopInfo = {0};
-                uint32_t imm = 0;
+                CfAssemblerPushPopInfoData data = {0};
 
-//                CfAssemblerToken tokens[5] = {{}};
-//                uint32_t tokenCount = 0;
-//
-//                // switch tokenCount
-//                while (cfAssemblerNextToken(self, &tokens[tokenCount]))
-//                    tokenCount++;
-//
-//                switch (tokenCount) {
-//                case 5: { // [reg+imm]
-//                    CfAssemblerImm assemblerImm = {};
-//
-//                    if (false
-//                        || tokens[0].type != CF_ASSEMBLER_TOKEN_TYPE_LEFT_SQUARE_BRACKET
-//                        || tokens[1].type != CF_ASSEMBLER_TOKEN_TYPE_IDENT
-//                        || tokens[2].type != CF_ASSEMBLER_TOKEN_TYPE_PLUS
-//                        || !cfAssemblerParseImm(&tokens[3], &assemblerImm)
-//                        || tokens[4].type != CF_ASSEMBLER_TOKEN_TYPE_RIGHT_SQUARE_BRACKET
-//                    )
-//                        cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_INVALID_PUSHPOP_ARGUMENT);
-//
-//                    switch (assemblerImm.type) {
-//                    case CF_ASSEMBLER_IMM_TYPE_LINK: {
-//                        break;
-//                    }
-//                    }
-//
-//                    pushPopInfo.doReadImmediate = true;
-//                    pushPopInfo.isMemoryAccess = true;
-//                    break;
-//                }
-//
-//                case 3: { // reg+imm | [reg] | [imm]
-//                    break;
-//                }
-//
-//                case 1: { // reg | imm
-//                    break;
-//                }
-//
-//
-//                default:
-//                    cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_INVALID_PUSHPOP_ARGUMENT);
-//                }
-//
-//                cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_INVALID_PUSHPOP_ARGUMENT);
-//
-//                _cfAssemblerRun__parse_pushpop_info_ok:
-
-                cfAssemblerParsePushPopInfo(self, &pushPopInfo, &imm);
+                cfAssemblerParsePushPopInfo2(self, &data);
 
                 instructionData[0] = opcode;
-                instructionData[1] = *(uint8_t *)&pushPopInfo;
+                instructionData[1] = *(uint8_t *)&data.info;
 
-                if (pushPopInfo.doReadImmediate) {
-                    memcpy(instructionData + 2, &imm, 4);
+                if (data.info.doReadImmediate) {
+                    if (data.immediateIsLiteral) {
+                        memcpy(instructionData + 2, &data.immediate.literal, 4);
+                    } else {
+                        memset(instructionData + 2, 0xFF, 4);
+
+                        CfLink link = {
+                            .sourceLine = (uint32_t)self->lineIndex,
+                            .codeOffset = (uint32_t)cfDarrSize(self->output) + 2,
+                        };
+                        memcpy(link.label, data.immediate.label, CF_LABEL_MAX);
+
+                        if (cfDarrPush(&self->links, &link) != CF_DARR_OK)
+                            cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_INTERNAL_ERROR);
+                    }
+
                     instructionSize = 6;
                 } else {
                     instructionSize = 2;

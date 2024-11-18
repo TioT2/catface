@@ -1,8 +1,8 @@
-file(GLOB_RECURSE "src" CONFIGURE_DEPENDS
+file(GLOB_RECURSE "source" CONFIGURE_DEPENDS
     src/*.c
 )
-set_source_files_properties(${source} include/*.h PROPERTIES LANGUAGE ${CF_LANGUAGE})
-add_library(executable STATIC ${src})
+set_source_files_properties(${source} PROPERTIES LANGUAGE ${CF_LANGUAGE})
+add_library(executable STATIC ${source})
 
 # setup include directories
 target_include_directories(executable PUBLIC include)

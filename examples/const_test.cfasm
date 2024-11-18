@@ -1,12 +1,7 @@
 ; Constant testing program
 
-start = 0
+constant = 42
 
-push ax
+push constant
 itof
 syscall 1
-
-push ax+1
-pop  ax
-
-jmp start
