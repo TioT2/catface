@@ -142,7 +142,7 @@ int main( void ) {
         }
 
         // compare lists
-        CfListIterator iter = cfListIter(list);
+        CfListIter iter = cfListIterStart(list);
         uint64_t *listValue = NULL;
 
         auto controlIter = controlList.begin();
@@ -162,6 +162,9 @@ int main( void ) {
                 return 1;
             }
         }
+
+        // finish iteration
+        list = cfListIterFinish(&iter);
 
         if (controlIter != controlEnd) {
             printf("List ends unmatched");

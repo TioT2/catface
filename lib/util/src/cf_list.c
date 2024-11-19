@@ -18,7 +18,7 @@ typedef struct __CfListLinks {
 typedef struct __CfListImpl {
     size_t      elementSize;    ///< list element size
     size_t      capacity;       ///< current list capacity
-    size_t      length;         ///< list length
+    size_t      length;         ///< list used element count
 
     uint32_t    freeStartIndex; ///< free STACK start index
 
@@ -37,19 +37,19 @@ static void * cfListGetData( CfList list ) {
 } // cfListGetData
 
 /**
- * @brief list data array accessing function
+ * @brief list data element by index in data array accessing function
  * 
  * @param[in] list  list to access data array of (non-null)
  * @param[in] index index to access data array by ( > 0)
  * 
- * @return element pointer
+ * @return data element pointer
  */
-static void * cfListDataArrayAccess( CfList list, uint32_t index ) {
+static void * cfListGetElementByIndex( CfList list, const uint32_t index ) {
     assert(list != NULL);
     assert(index > 0);
 
     return (uint8_t *)cfListGetData(list) + list->elementSize * (index - 1);
-} // cfListDataArrayAccess
+} // cfListGetElementByIndex
 
 /**
  * @brief free index array region setting up funciton
@@ -135,6 +135,7 @@ static bool cfListResize( CfList *list, const size_t newCapacity ) {
     // chain new elements to free stack
     newImpl->links[newImpl->capacity].next = impl->freeStartIndex;
     newImpl->freeStartIndex = impl->capacity + 1;
+    newImpl->length = impl->length;
 
     free(impl);
     *list = newImpl;
@@ -184,6 +185,69 @@ static void cfListPushFree( CfListImpl *const impl, const uint32_t index ) {
     impl->freeStartIndex = index;
 } // cfListPushFree
 
+/**
+ * @brief list element insertion function
+ * 
+ * @param[in] list  list to insert element in
+ * @param[in] data  data to insert
+ * @param[in] index index to insert element after
+ */
+static CfListStatus cfListInsertAfter( CfList *list, const void *data, uint32_t index ) {
+    assert(data != NULL);
+
+    uint32_t freeIndex = cfListPopFree(list);
+    if (freeIndex == 0)
+        return CF_LIST_STATUS_INTERNAL_ERROR; // the only reason why popFree may fail, actually
+
+    CfListImpl *impl = *list;
+
+    // copy data
+    memcpy(cfListGetElementByIndex(impl, freeIndex), data, impl->elementSize);
+
+    impl->links[freeIndex].next = impl->links[index].next;
+    impl->links[freeIndex].prev = index;
+
+    impl->links[impl->links[index].next].prev = freeIndex;
+    impl->links[index].next = freeIndex;
+
+    impl->length++;
+
+    return CF_LIST_STATUS_OK;
+} // cfListInsertByIndex
+
+/**
+ * @brief list element by index popping function
+ * 
+ * @param[in,out] list  list to pop element from (non-null)
+ * @param[out]    data  data to write popped element data to (nullable)
+ * @param[in]     index index to pop element by
+ * 
+ * @return operation status
+ */
+static CfListStatus cfListPopAt( CfList *list, void *data, uint32_t index ) {
+    assert(list != NULL);
+    CfListImpl *impl = *list;
+    assert(impl != NULL);
+
+    if (index == 0)
+        return CF_LIST_STATUS_NO_ELEMENTS;
+
+    const uint32_t prev = impl->links[index].prev;
+    const uint32_t next = impl->links[index].next;
+
+    impl->links[impl->links[index].next].prev = prev;
+    impl->links[impl->links[index].prev].next = next;
+
+    if (data != NULL) // ?
+        memcpy(data, cfListGetElementByIndex(impl, index), impl->elementSize);
+
+    impl->links[index].next = impl->freeStartIndex;
+    impl->freeStartIndex = index;
+
+    impl->length--;
+    return CF_LIST_STATUS_OK;
+} // cfListPopAt
+
 CfList cfListCtor( const size_t elementSize, size_t initialCapacity ) {
     CfListImpl *list = cfListAlloc(elementSize, initialCapacity);
 
@@ -203,75 +267,27 @@ void cfListDtor( CfList list ) {
 } //cfListDtor
 
 CfListStatus cfListPushBack( CfList *list, const void *data ) {
+    // uugh
     assert(data != NULL);
-
-    uint32_t dstIndex = cfListPopFree(list);
-    if (dstIndex == 0)
-        return CF_LIST_STATUS_INTERNAL_ERROR; // see popFree doc
-
     CfListImpl *impl = *list;
+    assert(impl != NULL);
 
-    // copy data
-    memcpy(cfListDataArrayAccess(impl, dstIndex), data, impl->elementSize);
-
-    // link last element with dst
-    impl->links[dstIndex].prev = impl->links[0].prev;
-    impl->links[dstIndex].next = 0;
-
-    impl->links[impl->links[0].prev].next = dstIndex;
-    impl->links[0].prev = dstIndex;
-
-    impl->length++;
-
-    return CF_LIST_STATUS_OK;
+    return cfListInsertAfter(list, data, impl->links[0].prev);
 } // cfListPushBack
 
 CfListStatus cfListPopBack( CfList *list, void *data ) {
+    // uugh
     assert(list != NULL);
     CfListImpl *impl = *list;
     assert(impl != NULL);
 
-    const uint32_t elem = impl->links[0].prev;
-
-    if (elem == 0)
-        return CF_LIST_STATUS_NO_ELEMENTS;
-
-    impl->links[impl->links[elem].prev].next = 0;
-    impl->links[0].prev = impl->links[elem].prev;
-
-    if (data != NULL) // ?
-        memcpy(data, cfListDataArrayAccess(impl, elem), impl->elementSize);
-
-    impl->links[elem].next = impl->freeStartIndex;
-    impl->freeStartIndex = elem;
-
-    impl->length--;
-
-    return CF_LIST_STATUS_OK;
+    return cfListPopAt(list, data, impl->links[0].prev);
 } // cfListPopBack
 
 CfListStatus cfListPushFront( CfList *list, const void *data ) {
     assert(data != NULL);
 
-    uint32_t dstIndex = cfListPopFree(list);
-    if (dstIndex == 0)
-        return CF_LIST_STATUS_INTERNAL_ERROR; // the only reason why popFree may fail, actually
-
-    CfListImpl *impl = *list;
-
-    // copy data
-    memcpy(cfListDataArrayAccess(impl, dstIndex), data, impl->elementSize);
-
-    // link last element with dst
-    impl->links[dstIndex].next = impl->links[0].next;
-    impl->links[dstIndex].prev = 0;
-
-    impl->links[impl->links[0].next].prev = dstIndex;
-    impl->links[0].next = dstIndex;
-
-    impl->length++;
-
-    return CF_LIST_STATUS_OK;
+    return cfListInsertAfter(list, data, 0);
 } // cfListPushFront
 
 CfListStatus cfListPopFront( CfList *list, void *data ) {
@@ -279,45 +295,35 @@ CfListStatus cfListPopFront( CfList *list, void *data ) {
     CfListImpl *impl = *list;
     assert(impl != NULL);
 
-    const uint32_t elem = impl->links[0].next;
-
-    if (elem == 0)
-        return CF_LIST_STATUS_NO_ELEMENTS;
-
-    impl->links[impl->links[elem].next].prev = 0;
-    impl->links[0].next = impl->links[elem].next;
-
-    if (data != NULL) // ?
-        memcpy(data, cfListDataArrayAccess(impl, elem), impl->elementSize);
-
-    impl->links[elem].next = impl->freeStartIndex;
-    impl->freeStartIndex = elem;
-
-    impl->length--;
-
-    return CF_LIST_STATUS_OK;
+    return cfListPopAt(list, data, impl->links[0].next);
 } // cfListPopFront
 
-CfListIterator cfListIter( CfList list ) {
+CfListIter cfListIterStart( CfList list ) {
     assert(list != NULL);
 
     const uint32_t index = list->links[0].next;
 
-    return (CfListIterator){
+    return (CfListIter){
         .list = list,
         .index = index,
         .finished = index == 0,
     };
-} // cfListIter
+} // cfListIterStart
 
-void * cfListIterNext( CfListIterator *const iter ) {
+CfList cfListIterFinish( CfListIter *iter ) {
+    assert(iter != NULL);
+
+    return iter->list;
+} // cfListIterFinish
+
+void * cfListIterNext( CfListIter *const iter ) {
     assert(iter != NULL);
     assert(iter->list != NULL);
 
     if (iter->finished)
         return NULL;
 
-    void *const data = cfListDataArrayAccess(iter->list, iter->index);
+    void *const data = cfListGetElementByIndex(iter->list, iter->index);
     const uint32_t nextIndex = iter->list->links[iter->index].next;
 
     // update finish flag
@@ -328,6 +334,21 @@ void * cfListIterNext( CfListIterator *const iter ) {
 
     return data;
 } // cfListIterNext
+
+void * cfListIterGet( const CfListIter *iter ) {
+    assert(iter != NULL);
+    assert(!iter->finished);
+
+    return cfListGetElementByIndex(iter->list, iter->index);
+} // cfListIterGet
+
+CfListStatus cfListIterInsertAfter( CfListIter *iter, const void *data ) {
+    assert(iter != NULL);
+    assert(iter->list != NULL);
+    assert(!iter->finished);
+
+    return cfListInsertAfter(&iter->list, data, iter->index); // uugh
+} // cfListIterInsertBefore
 
 void cfListPrint( FILE *const out, CfList list, CfListElementDumpFn dumpElement ) {
     assert(list != NULL);
@@ -341,7 +362,7 @@ void cfListPrint( FILE *const out, CfList list, CfListElementDumpFn dumpElement 
         if (nextIndex == 0)
             return;
 
-        void *const data = cfListDataArrayAccess(list, nextIndex);
+        void *const data = cfListGetElementByIndex(list, nextIndex);
 
         fprintf(out, "%5d: ", elementIndex++);
         dumpElement(out, data);
@@ -350,6 +371,67 @@ void cfListPrint( FILE *const out, CfList list, CfListElementDumpFn dumpElement 
         index = nextIndex;
     }
 } // cfListPrint
+
+void cfListPrintDot( FILE *out, CfList list, CfListElementDumpFn desc ) {
+    // declare digraph
+    fprintf(out, "digraph {\n");
+    fprintf(out, "    // set graph parameters\n");
+    fprintf(out, "    node [shape=record];\n");
+    fprintf(out, "    rankdir = LR;\n");
+    fprintf(out, "\n\n");
+
+    // describe list elements
+    uint32_t index = 0;
+
+    fprintf(out, "    // setup nodes and logical node connections\n");
+    for (uint32_t logicalIndex = 0; logicalIndex <= list->length; logicalIndex++) {
+        // read data
+        void *data = index != 0
+            ? cfListGetElementByIndex(list, index)
+            : NULL;
+
+        // The Node
+        fprintf(out, "    node%d [label = \""
+            "<index>'ring' index: %d|"
+            "<LIndex> 'iter' index: %d|"
+            "<ptr>data at 0x%08zX|"
+            "<data> data preview: ",
+            index,
+            index,
+            logicalIndex - 1,
+            (size_t)data
+        );
+
+        if (data == NULL)
+            fprintf(out, "[no data]");
+        else {
+            fprintf(out, "\\\"");
+            desc(out, data);
+            fprintf(out, "\\\"");
+        }
+
+        fprintf(out, "\"];\n");
+
+        // setup connection between current and prev node
+        if (index != 0)
+            fprintf(out, "    node%d -> node%d [color = \"#0000FF\"];\n", index, list->links[index].prev);
+        // setup connection between current and next node
+        if (list->links[index].next != 0)
+            fprintf(out, "    node%d -> node%d [color = \"#FF0000\"];\n", index, list->links[index].next);
+
+        index = list->links[index].next;
+    }
+    fprintf(out, "\n\n");
+
+    // add 'overweight' connections for straight list structure
+    fprintf(out, "    // add invisible 'aligner' connections to make scheme linear\n");
+    for (uint32_t i = 0; i < list->length; i++)
+        fprintf(out, "    node%d:ptr -> node%d:ptr [weight = 1000; color = \"#0000FF00\"];\n", i, i + 1);
+    fprintf(out, "\n\n");
+
+    // close digraph
+    fprintf(out, "}\n");
+} // cfListPrintDot
 
 size_t cfListLength( CfList list ) {
     assert(list != NULL);

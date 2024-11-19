@@ -108,7 +108,7 @@
             "name": "(gdb) Launch list test",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/build/test/list/_test_list",
+            "program": "${workspaceRoot}/build/test/list/test_list",
             "preLaunchTask": "CMake: build",
             "args": [],
             "externalConsole": false,

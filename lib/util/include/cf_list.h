@@ -87,7 +87,7 @@ typedef struct __CfListIterator {
     CfList   list;     ///< iterated list
     uint32_t index;    ///< index
     bool     finished; ///< iteration finished if set to true
-} CfListIterator;
+} CfListIter;
 
 /**
  * @brief list iterator getting function
@@ -96,18 +96,44 @@ typedef struct __CfListIterator {
  * 
  * @return iterator on current list
  * 
- * @note iterator remains valid while list itself is not modified.
+ * @note iter structure takes list ownership
  */
-CfListIterator cfListIter( CfList list );
+CfListIter cfListIterStart( CfList list );
+
+/**
+ * @brief list iteration finishing function
+ * 
+ * @param[in] iter iterator pointer
+ * 
+ * @return iterated list (function returns list ownership to user)
+ */
+CfList cfListIterFinish( CfListIter *iter );
 
 /**
  * @brief iterator next element getting function
  * 
- * @param[in] iter iterator to get next element from (initialized by cfListIter result)
+ * @param[in] iter iterator to get next element from (initialized by cfListIterStart result)
  * 
  * @return pointer to element if it exists, NULL if not (a.k.a. iteration finished)
  */
-void * cfListIterNext( CfListIterator *iter );
+void * cfListIterNext( CfListIter *iter );
+
+/**
+ * @brief data by iterator getting function
+ * 
+ * @param[in] iter iterator to get data from
+ * 
+ * @return underlying data
+ */
+void * cfListIterGet( const CfListIter *iter );
+
+/**
+ * @brief by iterator insertion function
+ * 
+ * @param[in] iter iterator
+ * @param[in] data data to insert
+ */
+CfListStatus cfListIterInsertAfter( CfListIter *iter, const void *data );
 
 /**
  * @brief element dumping function pointer
@@ -117,7 +143,7 @@ void * cfListIterNext( CfListIterator *iter );
  * 
  * @note callback of this type may be used for binary and for text dumping too.
  */
-typedef void (* CfListElementDumpFn)( FILE *out, void *element );
+typedef void (* CfListElementDumpFn)( FILE *out, const void *element );
 
 /**
  * @brief list printig function
@@ -125,10 +151,17 @@ typedef void (* CfListElementDumpFn)( FILE *out, void *element );
  * @param[in] out   file to dump list to
  * @param[in] list  list to dump (non-null)
  * @param[in] print element printing function (nullable)
- * 
- * @note in this case 'print' function recieves file in binary format
  */
 void cfListPrint( FILE *out, CfList list, CfListElementDumpFn print );
+
+/**
+ * @brief list in dot format printing function
+ * 
+ * @param[in] out  output file
+ * @param[in] list list to dump(non-null)
+ * @param[in] desc short element description printing function (nullable)
+ */
+void cfListPrintDot( FILE *out, CfList list, CfListElementDumpFn desc );
 
 /**
  * @brief list length getting function

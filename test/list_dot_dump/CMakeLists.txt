@@ -1,0 +1,2 @@
+add_executable(test_list_dot_dump main.cpp)
+target_link_libraries(test_list_dot_dump PRIVATE util)

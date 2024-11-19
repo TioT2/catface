@@ -1,2 +1,2 @@
-add_executable(_test_list main.cpp)
-target_link_libraries(_test_list PRIVATE util)
+add_executable(test_list main.cpp)
+target_link_libraries(test_list PRIVATE util)
