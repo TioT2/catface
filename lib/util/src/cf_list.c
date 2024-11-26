@@ -350,6 +350,27 @@ CfListStatus cfListIterInsertAfter( CfListIter *iter, const void *data ) {
     return cfListInsertAfter(&iter->list, data, iter->index); // uugh
 } // cfListIterInsertBefore
 
+CfListStatus cfListIterInsertBefore( CfListIter *iter, const void *data ) {
+    assert(iter != NULL);
+    assert(iter->list != NULL);
+    assert(!iter->finished);
+
+    return cfListInsertAfter(&iter->list, data, iter->list->links[iter->index].prev); // uugh
+} // cfListIterInsertBefore
+
+CfListStatus cfListIterRemoveAt( CfListIter *iter, void *data ) {
+    assert(iter != NULL);
+    assert(iter->list != NULL);
+    assert(!iter->finished);
+
+    const uint32_t newIndex = iter->list->links[iter->index].next;
+    const CfListStatus status = cfListPopAt(&iter->list, data, iter->index);
+
+    if (status == CF_LIST_STATUS_OK)
+        iter->index = newIndex;
+    return status;
+} // cfListIterRemoveAt
+
 void cfListPrint( FILE *const out, CfList list, CfListElementDumpFn dumpElement ) {
     assert(list != NULL);
 
@@ -372,66 +393,112 @@ void cfListPrint( FILE *const out, CfList list, CfListElementDumpFn dumpElement 
     }
 } // cfListPrint
 
-void cfListPrintDot( FILE *out, CfList list, CfListElementDumpFn desc ) {
+/**
+ * @brief node in dot format dumping function
+ * 
+ * @param[in,out] out       output file
+ * @param[in]     nodeIndex node to dump index
+ * @param[in]     nodeData  node data
+ * @param[in]     desc      short text node description getting function
+ * @param[in]     isDeleted true if node is located in free list, false if not
+ */
+static void cfListPrintDotDumpNode(
+    FILE                * out,
+    uint32_t              nodeIndex,
+    const void          * nodeData,
+    CfListElementDumpFn   desc,
+    bool                  isDeleted
+) {
+    // The Node
+    fprintf(out,
+        "    node%d [label = \""
+        "<index>'ring' index: %d|"
+        "<ptr>data at 0x%016zX",
+        nodeIndex,
+        nodeIndex,
+        // nodeLogicalIndex - 1,
+        (size_t)nodeData
+    );
+
+    // don't display data for deleted nodes
+    if (!isDeleted) {
+        fprintf(out, "|<data> data preview: ");
+        if (nodeData == NULL)
+            fprintf(out, "[no data]");
+        else {
+            fprintf(out, "\\\"");
+            desc(out, nodeData);
+            fprintf(out, "\\\"");
+        }
+    }
+
+    fprintf(out, "\"];\n");
+} // cfListPrintDotDumpNode
+
+void cfDbgListPrintDot( FILE *out, CfList list, CfListElementDumpFn desc ) {
     // declare digraph
     fprintf(out, "digraph {\n");
     fprintf(out, "    // set graph parameters\n");
     fprintf(out, "    node [shape=record];\n");
     fprintf(out, "    rankdir = LR;\n");
+    fprintf(out, "    nodeStat [label = \"<del>list free start index: %d|<cap>list capacity: %d|<size>list length: %d|<elemSize>list element size: %d\"];\n",
+        list->freeStartIndex,
+        (uint32_t)list->capacity,
+        (uint32_t)list->length,
+        (uint32_t)list->elementSize
+    );
     fprintf(out, "\n\n");
 
-    // describe list elements
-    uint32_t index = 0;
+    // check freee element list validness (it's required to determine is element free or not)
+    uint32_t index = list->freeStartIndex;
 
-    fprintf(out, "    // setup nodes and logical node connections\n");
-    for (uint32_t logicalIndex = 0; logicalIndex <= list->length; logicalIndex++) {
-        // read data
-        void *data = index != 0
-            ? cfListGetElementByIndex(list, index)
-            : NULL;
-
-        // The Node
-        fprintf(out, "    node%d [label = \""
-            "<index>'ring' index: %d|"
-            "<LIndex> 'iter' index: %d|"
-            "<ptr>data at 0x%08zX|"
-            "<data> data preview: ",
-            index,
-            index,
-            logicalIndex - 1,
-            (size_t)data
-        );
-
-        if (data == NULL)
-            fprintf(out, "[no data]");
-        else {
-            fprintf(out, "\\\"");
-            desc(out, data);
-            fprintf(out, "\\\"");
-        }
-
-        fprintf(out, "\"];\n");
-
-        // setup connection between current and prev node
-        if (index != 0)
-            fprintf(out, "    node%d -> node%d [color = \"#0000FF\"];\n", index, list->links[index].prev);
-        // setup connection between current and next node
-        if (list->links[index].next != 0)
-            fprintf(out, "    node%d -> node%d [color = \"#FF0000\"];\n", index, list->links[index].next);
-
+    for (uint32_t i = 0; i < list->capacity - list->length; i++)
         index = list->links[index].next;
+
+    if (index != 0) {
+        fprintf(out, "    // invalid free list\n}\n");
+        return;
     }
-    fprintf(out, "\n\n");
 
     // add 'overweight' connections for straight list structure
-    fprintf(out, "    // add invisible 'aligner' connections to make scheme linear\n");
-    for (uint32_t i = 0; i < list->length; i++)
-        fprintf(out, "    node%d:ptr -> node%d:ptr [weight = 1000; color = \"#0000FF00\"];\n", i, i + 1);
+    for (uint32_t i = 0; i <= list->capacity; i++) {
+        // check for node being located in free list
+        // quite ugly, but still working solution
+        bool isDeleted = false;
+        uint32_t freeIndex = list->freeStartIndex;
+        while (freeIndex != 0) {
+            if (freeIndex == i) {
+                isDeleted = true;
+                break;
+            }
+            freeIndex = list->links[freeIndex].next;
+        }
+
+        // dump node
+        cfListPrintDotDumpNode(
+            out,
+            i,
+            i != 0
+                ? cfListGetElementByIndex(list, i)
+                : NULL,
+            desc,
+            isDeleted
+        );
+
+        // setup connection between current and prev node
+        if (!isDeleted)
+            fprintf(out, "    node%d -> node%d [color = \"#0000FF\"];\n", i, list->links[i].prev);
+        // setup connection between current and next node
+        fprintf(out, "    node%d -> node%d [color = \"#FF0000\"];\n", i, list->links[i].next);
+
+        // add 'overweight' connection to straighten dump structure
+        fprintf(out, "    node%d:ptr -> node%d:ptr [weight = 1000; color = \"#0000FF00\"];\n", i, (i + 1) % (uint32_t)list->capacity);
+    }
     fprintf(out, "\n\n");
 
     // close digraph
     fprintf(out, "}\n");
-} // cfListPrintDot
+} // cfDbgListPrintDot
 
 size_t cfListLength( CfList list ) {
     assert(list != NULL);

@@ -128,6 +128,31 @@
                     "ignoreFailures": true
                 }
             ]
+        },
+        {
+            "name": "(gdb) Launch list dot dump test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/build/test/list_dot_dump/test_list_dot_dump",
+            "preLaunchTask": "CMake: build",
+            "args": [],
+            "externalConsole": false,
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}",
+            "environment": [],
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
         }
     ]
 }

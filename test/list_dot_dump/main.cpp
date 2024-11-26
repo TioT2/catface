@@ -1,3 +1,5 @@
+#include <cassert>
+
 #include <cf_list.h>
 
 void dumpFn( FILE *out, const void *data ) {
@@ -6,22 +8,25 @@ void dumpFn( FILE *out, const void *data ) {
 
 int main( void ) {
     CfList list = cfListCtor(sizeof(uint64_t), 0);
-    uint64_t temp = 0;
-    temp = 3; cfListPushBack(&list, &temp);
-    temp = 1; cfListPushBack(&list, &temp);
-    temp = 2; cfListPushBack(&list, &temp);
-    temp = 4; cfListPushBack(&list, &temp);
-    temp = 5; cfListPushBack(&list, &temp);
+
+    for (uint32_t i = 0; i < 10; i++) {
+        uint64_t temp = i;
+
+        CfListStatus status = cfListPushBack(&list, &temp);
+        assert(status == CF_LIST_STATUS_OK);
+    }
 
     CfListIter iter = cfListIterStart(list);
 
-    cfListIterNext(&iter);
-    cfListIterNext(&iter);
-    temp = 11044; cfListIterInsertAfter(&iter, &temp);
+    for (uint32_t i = 0; i < 5; i++)
+        cfListIterNext(&iter);
+
+    CfListStatus status = cfListIterRemoveAt(&iter, NULL);
+    assert(status == CF_LIST_STATUS_OK);
 
     list = cfListIterFinish(&iter);
 
-    cfListPrintDot(stdout, list, dumpFn);
+    cfDbgListPrintDot(stdout, list, dumpFn);
 
     cfListDtor(list);
 

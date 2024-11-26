@@ -130,10 +130,34 @@ void * cfListIterGet( const CfListIter *iter );
 /**
  * @brief by iterator insertion function
  * 
- * @param[in] iter iterator
- * @param[in] data data to insert
+ * @param[in] iter iterator (non-null)
+ * @param[in] data data to insert (non-null)
+ * 
+ * @return operation status
  */
 CfListStatus cfListIterInsertAfter( CfListIter *iter, const void *data );
+
+/**
+ * @brief by iteration insertion function
+ * 
+ * @param[in] iter iterator (non-null)
+ * @param[in] data data to insert (non-null)
+ * 
+ * @return operation status
+ */
+CfListStatus cfListIterInsertBefore( CfListIter *iter, const void *data );
+
+/**
+ * @brief removing at iterator function
+ * 
+ * @param[in] iter iterator (non-nulll)
+ * @param[in] data data destination (nullable)
+ * 
+ * @return operation status
+ * 
+ * @note iterator jumps to next element
+ */
+CfListStatus cfListIterRemoveAt( CfListIter *iter, void *data );
 
 /**
  * @brief element dumping function pointer
@@ -155,15 +179,6 @@ typedef void (* CfListElementDumpFn)( FILE *out, const void *element );
 void cfListPrint( FILE *out, CfList list, CfListElementDumpFn print );
 
 /**
- * @brief list in dot format printing function
- * 
- * @param[in] out  output file
- * @param[in] list list to dump(non-null)
- * @param[in] desc short element description printing function (nullable)
- */
-void cfListPrintDot( FILE *out, CfList list, CfListElementDumpFn desc );
-
-/**
  * @brief list length getting function
  * 
  * @param[in] list list handle (non-null)
@@ -175,6 +190,17 @@ size_t cfListLength( CfList list );
 /***
  * Debugging-related functions. Actually, may be removed.
  ***/
+
+/**
+ * @brief list in dot format printing function
+ * 
+ * @param[in] out  output file
+ * @param[in] list list to dump(non-null)
+ * @param[in] desc short element description printing function (nullable)
+ * 
+ * @note this function is dbg because it displays list's internals
+ */
+void cfDbgListPrintDot( FILE *out, CfList list, CfListElementDumpFn desc );
 
 /**
  * @brief prev-next match checking function
