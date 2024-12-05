@@ -405,16 +405,27 @@ void cfListPrint( FILE *const out, CfList list, CfListElementDumpFn dumpElement 
 static void cfListPrintDotDumpNode(
     FILE                * out,
     uint32_t              nodeIndex,
-    const void          * nodeData,
+    CfList                list,
     CfListElementDumpFn   desc,
     bool                  isDeleted
 ) {
+    void * nodeData = nodeIndex == 0
+        ? NULL
+        : cfListGetElementByIndex(list, nodeIndex)
+    ;
+    CfListLinks nodeLinks = list->links[nodeIndex];
+
     // The Node
     fprintf(out,
-        "    node%d [label = \""
-        "<index>'ring' index: %d|"
-        "<ptr>data at 0x%016zX",
+        "    node%d [color = \"%s\" label = \""
+        "<index>index: %d|"
+        "<ptr>data location 0x%016zX",
         nodeIndex,
+        nodeIndex == 0
+            ? "forestgreen"
+            : isDeleted
+                ? "black"
+                : "green",
         nodeIndex,
         // nodeLogicalIndex - 1,
         (size_t)nodeData
@@ -432,6 +443,8 @@ static void cfListPrintDotDumpNode(
         }
     }
 
+    fprintf(out, "|{<prev>prev: %d | <next>next: %d}", nodeLinks.prev, nodeLinks.next);
+
     fprintf(out, "\"];\n");
 } // cfListPrintDotDumpNode
 
@@ -439,9 +452,9 @@ void cfDbgListPrintDot( FILE *out, CfList list, CfListElementDumpFn desc ) {
     // declare digraph
     fprintf(out, "digraph {\n");
     fprintf(out, "    // set graph parameters\n");
-    fprintf(out, "    node [shape=record];\n");
+    fprintf(out, "    node [shape = record; penwidth = 3];\n");
     fprintf(out, "    rankdir = LR;\n");
-    fprintf(out, "    nodeStat [label = \"<del>list free start index: %d|<cap>list capacity: %d|<size>list length: %d|<elemSize>list element size: %d\"];\n",
+    fprintf(out, "    nodeStat [color = \"purple\"; label = \"<del>list free start index: %d|<cap>list capacity: %d|<size>list length: %d|<elemSize>list element size: %d\"];\n",
         list->freeStartIndex,
         (uint32_t)list->capacity,
         (uint32_t)list->length,
@@ -460,7 +473,7 @@ void cfDbgListPrintDot( FILE *out, CfList list, CfListElementDumpFn desc ) {
         return;
     }
 
-    // add 'overweight' connections for straight list structure
+    // add 'overweight' connections to straighten list structure
     for (uint32_t i = 0; i <= list->capacity; i++) {
         // check for node being located in free list
         // quite ugly, but still working solution
@@ -475,25 +488,21 @@ void cfDbgListPrintDot( FILE *out, CfList list, CfListElementDumpFn desc ) {
         }
 
         // dump node
-        cfListPrintDotDumpNode(
-            out,
-            i,
-            i != 0
-                ? cfListGetElementByIndex(list, i)
-                : NULL,
-            desc,
-            isDeleted
-        );
+        cfListPrintDotDumpNode(out, i, list, desc, isDeleted);
 
         // setup connection between current and prev node
         if (!isDeleted)
-            fprintf(out, "    node%d -> node%d [color = \"#0000FF\"];\n", i, list->links[i].prev);
+            fprintf(out, "    node%d -> node%d [constraint = false; color = \"#0000FF\"];\n", i, list->links[i].prev);
         // setup connection between current and next node
-        fprintf(out, "    node%d -> node%d [color = \"#FF0000\"];\n", i, list->links[i].next);
+        fprintf(out, "    node%d -> node%d [constraint = false; color = \"#FF0000\"];\n", i, list->links[i].next);
 
         // add 'overweight' connection to straighten dump structure
-        fprintf(out, "    node%d:ptr -> node%d:ptr [weight = 1000; color = \"#0000FF00\"];\n", i, (i + 1) % (uint32_t)list->capacity);
+        uint32_t nextOverweightIndex = (i + 1) % (uint32_t)(list->capacity + 1);
+
+        if (nextOverweightIndex != 0)
+            fprintf(out, "    node%d -> node%d [weight = 1000; color = \"#0000FF00\"];\n", i, nextOverweightIndex);
     }
+
     fprintf(out, "\n\n");
 
     // close digraph

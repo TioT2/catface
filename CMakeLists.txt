@@ -21,6 +21,7 @@ add_subdirectory(lib/assembler)
 add_subdirectory(lib/disassembler)
 add_subdirectory(lib/linker)
 add_subdirectory(lib/vm)
+add_subdirectory(lib/ast)
 
 # add implementation librariess
 add_subdirectory(impl/sandbox_sdl2)
