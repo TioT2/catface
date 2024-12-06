@@ -5,7 +5,8 @@
 #ifndef CF_AST_H_
 #define CF_AST_H_
 
-#include <cf_string.h>
+#include <stdint.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,9 +24,8 @@ typedef struct __CfAstExpr CfAstExpr;
 /// @brief block forward-declaration
 typedef struct __CfAstBlock CfAstBlock;
 
-/// @brief span representation structure
+/// @brief source text region representaiton structure
 typedef struct __CfAstSpan {
-    CfStr  file;  ///< file span located in
     size_t begin; ///< offset from file start (in characters) to span start
     size_t end;   ///< offset from file start (in characters) to span end (exclusive)
 } CfAstSpan;
@@ -47,14 +47,14 @@ typedef enum __CfAstDeclType {
 
 /// @brief function parameter representation structure
 typedef struct __CfAstFunctionParam {
-    CfStr     name; ///< parameter name
-    CfAstType type; ///< parameter type
-    CfAstSpan span; ///< span function param located in
+    const char * name; ///< parameter name
+    CfAstType    type; ///< parameter type
+    CfAstSpan    span; ///< span function param located in
 } CfAstFunctionParam;
 
 /// @brief function declaration structure
 typedef struct __CfAstFunction {
-    CfStr                name;       ///< name
+    const char         * name;       ///< name
     CfAstFunctionParam * params;     ///< parameter array (owned)
     size_t               paramCount; ///< parameter array size
     CfAstType            returnType; ///< returned function type
@@ -63,36 +63,29 @@ typedef struct __CfAstFunction {
 } CfAstFunction;
 
 /// @brief variable declaration structure
-typedef struct __CfAsttVariable {
-    CfStr       name; ///< name
-    CfAstType   type; ///< type
-    CfAstExpr * init; ///< initializer expression (may be null)
-    CfAstSpan   span; ///< span variable declaration located in
+typedef struct __CfAstVariable {
+    const char * name; ///< name
+    CfAstType    type; ///< type
+    CfAstExpr  * init; ///< initializer expression (may be null)
+    CfAstSpan    span; ///< span variable declaration located in
 } CfAstVariable;
 
-/// @brief declaration structure implementation
+/// @brief declaration structure
 struct __CfAstDecl {
     CfAstDeclType type; ///< declaration union tag
     CfAstSpan     span; ///< span declaration located in
 
     union {
-        CfAstFunction fn;  ///< function declaration
-        CfAstVariable let; ///< 'let' expression
+        CfAstFunction fn;  ///< function
+        CfAstVariable let; ///< global variable
     };
 }; // struct CfAstDecl
 
-/// @brief block (curly brace enclosed statement sequence) representation structure
-struct __CfAstBlock {
-    CfAstStmt * stmts;     ///< statement array
-    size_t      stmtCount; ///< statement array size
-    CfAstSpan   span;      ///< span block located in
-}; // struct __CfAstBlock
-
 /// @brief statement union tag
 typedef enum __CfAstStmtType {
-    CF_AST_STMT_TYPE_EXPRESSION,  ///< expression
-    CF_AST_STMT_TYPE_DECLARATION, ///< statement that declares something
-    CF_AST_STMT_TYPE_BLOCK,       ///< block statement (curly brace enclosed sequence)
+    CF_AST_STMT_TYPE_EXPR,  ///< expression
+    CF_AST_STMT_TYPE_DECL,  ///< statement that declares something
+    CF_AST_STMT_TYPE_BLOCK, ///< block statement (curly brace enclosed sequence)
 } CfAstStmtType;
 
 /// @brief statement repersentation structure
@@ -101,11 +94,18 @@ struct __CfAstStmt {
     CfAstSpan     span; ///< span statement located in
 
     union {
-        CfAstExpr  * expression;  ///< expression statament
-        CfAstDecl  * declaration; ///< declarative expression
-        CfAstBlock * block;       ///< block expression
+        CfAstExpr  * expr;  ///< expression statament
+        CfAstDecl  * decl;  ///< declarative expression
+        CfAstBlock * block; ///< block expression
     };
 }; // struct __CfAstStmt
+
+/// @brief block (curly brace enclosed statement sequence) representation structure
+struct __CfAstBlock {
+    CfAstSpan   span;      ///< span block located in
+    size_t      stmtCount; ///< statement array size
+    CfAstStmt   stmts[1];  ///< statement array (extends beyond struct memory for stmtCount - 1 elements)
+}; // struct __CfAstBlock
 
 /// @brief expression type (expression union tag)
 typedef enum __CfAstExprType {
@@ -123,6 +123,43 @@ struct __CfAstExpr {
         double   floating; ///< floating-point expression
     };
 }; // struct __CfAstExpr
+
+/// @brief AST handle representation structure
+typedef struct __CfAstImpl * CfAst;
+
+/**
+ * @brief AST destructor
+ * 
+ * @param[in] ast AST to destroy (nullable)
+ */
+void cfAstDtor( CfAst ast );
+
+/**
+ * @brief AST declarations getting function
+ * 
+ * @param[in] ast AST to get declarations of (non-null)
+ * 
+ * @return AST declaration array pointer
+ */
+const CfAstDecl * cfAstGetDecls( const CfAst ast );
+
+/**
+ * @brief AST declaration count getting function
+ * 
+ * @param[in] ast AST to get declarations off (non-null)
+ * 
+ * @return AST declaration count
+ */
+size_t cfAstGetDeclCount( const CfAst ast );
+
+/**
+ * @brief AST source file name getting function
+ * 
+ * @param[in] ast AST to get source file name of (non-null)
+ * 
+ * @return AST source file name slice
+ */
+const char * cfAstGetSourceFileName( const CfAst ast );
 
 #ifdef __cplusplus
 }
