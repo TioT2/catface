@@ -10,8 +10,8 @@ extern "C" {
 #endif
 
 #include <stdbool.h>
-#include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 /// @brief string slice representation structure
 typedef struct __CfStr {
