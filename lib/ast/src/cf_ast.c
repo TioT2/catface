@@ -10,11 +10,28 @@
 
 /// @brief AST main structure
 typedef struct __CfAstImpl {
-    CfArena      mem;            ///< AST data holder
+    CfArena      mem;            ///< AST allocation holder
     const char * sourceFileName; ///< source file name
     size_t       declCount;      ///< count
     CfAstDecl    decls[1];       ///< declaration array (extends beyond structure memory for declCount - 1 elements)
 } CfAstImpl;
+
+CfStr cfAstSpanCutStr( CfAstSpan span, CfStr str ) {
+    CfStr result = {
+        .begin = str.begin + span.begin,
+        .end = str.begin + span.end,
+    };
+
+    return (CfStr) {
+        .begin = result.begin < str.end
+            ? result.begin
+            : str.end,
+
+        .end = result.end < str.end
+            ? result.end
+            : str.end,
+    };
+} // cfAstSpanCutStr
 
 void cfAstDtor( CfAst ast ) {
     // AST allocation is located in corresponding arena

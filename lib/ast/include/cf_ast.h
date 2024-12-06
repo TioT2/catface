@@ -8,6 +8,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include <cf_string.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -30,6 +32,16 @@ typedef struct __CfAstSpan {
     size_t end;   ///< offset from file start (in characters) to span end (exclusive)
 } CfAstSpan;
 
+/**
+ * @brief substr from string by span getting function
+ * 
+ * @param[in] span span to cut str by
+ * @param[in] str  str to cut
+ * 
+ * @return strnig cut by span
+ */
+CfStr cfAstSpanCutStr( CfAstSpan span, CfStr str );
+
 /// @brief primitive (e.g. builtin) type representation enumeration
 /// @note this kind of type declaration is TMP solution
 typedef enum __CfAstType {
@@ -47,14 +59,14 @@ typedef enum __CfAstDeclType {
 
 /// @brief function parameter representation structure
 typedef struct __CfAstFunctionParam {
-    const char * name; ///< parameter name
-    CfAstType    type; ///< parameter type
-    CfAstSpan    span; ///< span function param located in
+    CfStr     name; ///< parameter name
+    CfAstType type; ///< parameter type
+    CfAstSpan span; ///< span function param located in
 } CfAstFunctionParam;
 
 /// @brief function declaration structure
 typedef struct __CfAstFunction {
-    const char         * name;       ///< name
+    CfStr              * name;       ///< name
     CfAstFunctionParam * params;     ///< parameter array (owned)
     size_t               paramCount; ///< parameter array size
     CfAstType            returnType; ///< returned function type
@@ -64,10 +76,10 @@ typedef struct __CfAstFunction {
 
 /// @brief variable declaration structure
 typedef struct __CfAstVariable {
-    const char * name; ///< name
-    CfAstType    type; ///< type
-    CfAstExpr  * init; ///< initializer expression (may be null)
-    CfAstSpan    span; ///< span variable declaration located in
+    CfStr       name; ///< name
+    CfAstType   type; ///< type
+    CfAstExpr * init; ///< initializer expression (may be null)
+    CfAstSpan   span; ///< span variable declaration located in
 } CfAstVariable;
 
 /// @brief declaration structure
@@ -160,6 +172,31 @@ size_t cfAstGetDeclCount( const CfAst ast );
  * @return AST source file name slice
  */
 const char * cfAstGetSourceFileName( const CfAst ast );
+
+/// @brief AST parsing status
+typedef enum __CfAstParseStatus {
+    CF_AST_PARSE_STATUS_OK,             ///< parsing succeeded
+    CF_AST_PARSE_STATUS_INTERNAL_ERROR, ///< internal error occured
+} CfAstParseStatus;
+
+/// @brief AST parsing result (tagged union)
+typedef struct __CfAstParseResult {
+    CfAstParseStatus status; ///< operation status
+
+    union {
+        CfAst ok; ///< success case
+    };
+} CfAstParseResult;
+
+/**
+ * @brief AST from file contents parsing function
+ * 
+ * @param[in] fileName     input file name
+ * @param[in] fileContents text to parse, actually
+ * 
+ * @return operation result
+ */
+CfAstParseResult cfAstParse( CfStr fileName, CfStr fileContents );
 
 #ifdef __cplusplus
 }

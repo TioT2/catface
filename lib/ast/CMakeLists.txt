@@ -10,3 +10,4 @@ target_include_directories(ast PUBLIC include)
 
 # link dependencies
 target_link_libraries(ast PUBLIC util)
+target_link_libraries(ast PRIVATE m)
