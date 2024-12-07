@@ -188,6 +188,7 @@ typedef enum __CFAstTokenType {
     CF_AST_TOKEN_TYPE_COLON,           ///< ':' symbol
     CF_AST_TOKEN_TYPE_SEMICOLON,       ///< ';' symbol
     CF_AST_TOKEN_TYPE_COMMA,           ///< ',' symbol
+    CF_AST_TOKEN_TYPE_EQUAL,           ///< '=' symbol
     CF_AST_TOKEN_TYPE_CURLY_BR_OPEN,   ///< '{' symbol
     CF_AST_TOKEN_TYPE_CURLY_BR_CLOSE,  ///< '}' symbol
     CF_AST_TOKEN_TYPE_ROUND_BR_OPEN,   ///< '(' symbol
@@ -219,6 +220,9 @@ typedef enum __CfAstParseStatus {
     CF_AST_PARSE_STATUS_UNEXPECTED_SYMBOL,     ///< unexpected symbol occured (tokenization error)
     CF_AST_PARSE_STATUS_UNEXPECTED_TOKEN_TYPE, ///< function signature parsing error occured
     CF_AST_PARSE_STATUS_NOT_DECLARATION_START, ///< current token can't belong to ANY declaration start
+    CF_AST_PARSE_STATUS_VARIABLE_TYPE_MISSING, ///< no variable type
+
+    CF_AST_PARSE_STATUS_EXPR_VALUE_REQUIRED,   ///< expression 'value' (ident/number) required
 } CfAstParseStatus;
 
 /// @brief AST parsing result (tagged union)
@@ -231,18 +235,16 @@ typedef struct __CfAstParseResult {
         struct {
             char   symbol; ///< unexpected symbol itself
             size_t offset; ///< offset to the symbol in source text
-
-        } unexpectedSymbol; ///< unexpected symbol occured
+        } unexpectedSymbol;
 
         struct {
             CfAstToken     actualToken;  ///< actual token
             CfAstTokenType expectedType; ///< expected token type
+        } unexpectedTokenType;
 
-        } unexpectedTokenType; ///< unexpected token 
-
-        struct {
-            CfAstToken token; ///< actual token
-        } notDeclarationStart;
+        CfAstToken notDeclarationStart;
+        CfAstToken variableTypeMissing;
+        CfAstToken exprValueRequired;
     };
 } CfAstParseResult;
 

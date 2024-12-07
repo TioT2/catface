@@ -294,14 +294,85 @@ CfAstFunction cfAstParseFunction( CfAstParser *const self, const CfAstToken **to
 } // cfAstParseFunction
 
 /**
+ * @brief expression parsing function
+ * 
+ * @param[in] self      parser pointer
+ * @param[in] tokenList token list
+ * 
+ * @return parsed expression pointer (non-null)
+ * 
+ * @note This function assumes, that expression is required
+ */
+CfAstExpr * cfAstParseExpr( CfAstParser *const self, const CfAstToken **tokenListPtr ) {
+    CfAstExpr *result = (CfAstExpr *)cfArenaAlloc(self->dataArena, sizeof(CfAstExpr));
+    cfAstParserAssert(self, result != NULL);
+
+    switch ((*tokenListPtr)->type) {
+    case CF_AST_TOKEN_TYPE_INTEGER:
+        *result = (CfAstExpr) {
+            .type = CF_AST_EXPR_TYPE_INTEGER,
+            .span = (*tokenListPtr)->span,
+            .integer = (*tokenListPtr)->integer,
+        };
+        break;
+
+    case CF_AST_TOKEN_TYPE_FLOATING:
+        *result = (CfAstExpr) {
+            .type = CF_AST_EXPR_TYPE_FLOATING,
+            .span = (*tokenListPtr)->span,
+            .floating = (*tokenListPtr)->floating,
+        };
+        break;
+
+    default:
+        cfAstParserFinish(self, (CfAstParseResult) {
+            .status = CF_AST_PARSE_STATUS_EXPR_VALUE_REQUIRED,
+            .exprValueRequired = **tokenListPtr,
+        });
+        return NULL;
+    }
+
+    (*tokenListPtr)++;
+    return result;
+} // cfAstParseExpr
+
+/**
  * @brief variable declaration parsing function
  * 
  * @param[in] self parser pointer
  */
 CfAstVariable cfAstParseVariable( CfAstParser *const self, const CfAstToken **tokenListPtr ) {
-    // not implemented yet))
-    cfAstParserAssert(self, false);
-    return (CfAstVariable) {};
+    const CfAstToken *tokenList = *tokenListPtr;
+    size_t spanBegin = tokenList->span.begin;
+
+    cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_LET, true);
+    CfStr name = cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_IDENT, true)->ident;
+    cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_COLON, true);
+
+    CfAstType type = {};
+    if (!cfAstParseType(self, &tokenList, &type))
+        cfAstParserFinish(self, (CfAstParseResult) {
+            .status = CF_AST_PARSE_STATUS_VARIABLE_TYPE_MISSING,
+            .variableTypeMissing = tokenList[0],
+        });
+
+    CfAstExpr *init = NULL;
+    if (cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_EQUAL, false) != NULL)
+        init = cfAstParseExpr(self, &tokenList);
+
+    // semicolon required
+    cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_SEMICOLON, true);
+
+    size_t spanEnd = tokenList->span.begin;
+
+    *tokenListPtr = tokenList;
+
+    return (CfAstVariable) {
+        .name = name,
+        .type = type,
+        .init = init,
+        .span = (CfAstSpan) { spanBegin, spanEnd },
+    };
 } // cfAstParseVariable
 
 /**
@@ -359,9 +430,7 @@ bool cfAstParseDecl( CfAstParser *const self, const CfAstToken **tokenListPtr, C
     default:
         cfAstParserFinish(self, (CfAstParseResult) {
             .status = CF_AST_PARSE_STATUS_NOT_DECLARATION_START,
-            .notDeclarationStart = {
-                .token = tokenList[0],
-            },
+            .notDeclarationStart = tokenList[0],
         });
         return false; // no difference, actually
     }
