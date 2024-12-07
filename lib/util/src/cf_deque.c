@@ -54,7 +54,7 @@ typedef struct __CfDequeImpl {
 static CfDequeChunk * cfDequeAllocChunk( CfDeque deque ) {
     assert(deque != NULL);
 
-    size_t allocSize = sizeof(CfDequeChunk) + deque->chunkSize * deque->elementSize - 1;
+    size_t allocSize = sizeof(CfDequeChunk) + deque->chunkSize * deque->elementSize;
 
     return deque->arena == NULL
         ? (CfDequeChunk *)calloc(allocSize, 1)
@@ -217,12 +217,36 @@ bool cfDequePushBack( CfDeque deque, const void *data ) {
         deque->back.index++;
     }
 
+    deque->size++;
     return true;
 } // cfDequePushBack
 
 bool cfDequePopBack( CfDeque deque, void *data ) {
-    assert(false && "Not implemented yet");
-    return false;
+    assert(deque != NULL);
+
+    // check case where this is no elements to pop
+    if (deque->back.chunk == deque->front.chunk && deque->back.index == deque->front.index)
+        return false;
+
+    // no elements to pop
+    if (deque->back.index <= 0) {
+        deque->back.chunk->isPinned = false;
+        deque->back.chunk = deque->back.chunk->prev;
+        deque->back.chunk->isPinned = true;
+        deque->back.index = deque->chunkSize - 1;
+    } else {
+        deque->back.index--;
+    }
+
+    if (data != NULL)
+        memcpy(
+            data,
+            deque->back.chunk->data + deque->back.index * deque->elementSize,
+            deque->elementSize
+        );
+
+    deque->size--;
+    return true;
 } // cfDequePopBack
 
 bool cfDequePushFront( CfDeque deque, const void *data ) {
@@ -268,12 +292,36 @@ bool cfDequePushFront( CfDeque deque, const void *data ) {
         deque->elementSize
     );
 
+    deque->size++;
     return true;
 } // cfDequePushFront
 
 bool cfDequePopFront( CfDeque deque, void *data ) {
-    assert(false && "Not implemented yet");
-    return false;
+    assert(deque != NULL);
+
+    // check case where this is no elements to pop
+    if (deque->front.chunk == deque->back.chunk && deque->front.index == deque->back.index)
+        return false;
+
+    if (data != NULL)
+        memcpy(
+            data,
+            deque->front.chunk->data + deque->front.index * deque->elementSize,
+            deque->elementSize
+        );
+
+    // no elements to pop from current chunk
+    if (deque->front.index >= deque->chunkSize - 1) {
+        deque->front.chunk->isPinned = false;
+        deque->front.chunk = deque->front.chunk->next;
+        deque->front.chunk->isPinned = true;
+        deque->front.index = 0;
+    } else {
+        deque->front.index++;
+    }
+
+    deque->size--;
+    return true;
 } // cfDequePopFront
 
 // cf_deque.c

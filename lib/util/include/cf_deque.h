@@ -72,8 +72,8 @@ bool cfDequePushBack( CfDeque deque, const void *data );
 /**
  * @brief element from back popping function
  * 
- * @param[in]  deque deque to push element in (non-null)
- * @param[out] data  data to push to deque (nullable)
+ * @param[in]  deque deque to pop element from (non-null)
+ * @param[out] data  memory to pop into (nullable)
  * 
  * @return true if popped, false if not
  */
@@ -92,8 +92,8 @@ bool cfDequePushFront( CfDeque deque, const void *data );
 /**
  * @brief element from front popping function
  * 
- * @param[in]  deque deque to push element in (non-null)
- * @param[out] data  data to push to deque (nullable)
+ * @param[in]  deque deque to pop element from (non-null)
+ * @param[out] data  memory to pop into (nullable)
  * 
  * @return true if popped, false if not
  */

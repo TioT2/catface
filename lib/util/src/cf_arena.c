@@ -75,7 +75,7 @@ CfArena cfArenaCtor( size_t chunkSize ) {
     if (chunkSize == CF_ARENA_CHUNK_SIZE_UNDEFINED)
         chunkSize = 1024;
 
-    CfArenaImpl *arena = (CfArenaImpl *)calloc(1, sizeof(CfArena));
+    CfArenaImpl *arena = (CfArenaImpl *)calloc(1, sizeof(CfArenaImpl));
 
     if (arena != NULL)
         arena->chunkSize = chunkSize;
