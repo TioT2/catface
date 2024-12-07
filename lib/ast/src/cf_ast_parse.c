@@ -30,6 +30,19 @@ void cfAstParserFinish( CfAstParser *const self, CfAstParseResult parseResult ) 
 } // cfAstParserFinish
 
 /**
+ * @brief kind-of assertion function
+ * 
+ * @param[in] self      parser pointer
+ * @param[in] condition just some condition
+ * 
+ * @note this function finishes parsing with INTERNAL_ERROR if condition is false
+ */
+void cfAstParserAssert( CfAstParser *const self, bool condition ) {
+    if (!condition)
+        cfAstParserFinish(self, (CfAstParseResult) { CF_AST_PARSE_STATUS_INTERNAL_ERROR });
+} // cfAstParserAssert
+
+/**
  * @brief token list parsing function
  * 
  * @param[in]  self             parser pointer
@@ -40,7 +53,7 @@ void cfAstParserFinish( CfAstParser *const self, CfAstParseResult parseResult ) 
  * @note
  * - Token array is allocated from temporary arena.
  * 
- * - Token array IS terminated by token with type = CF_AST_TOKEN_TYPE_END
+ * - Token array **is** terminated by token with CF_AST_TOKEN_TYPE_END type
  */
 void cfAstParseTokenList(
     CfAstParser *const self,
@@ -53,9 +66,7 @@ void cfAstParseTokenList(
 
     CfDeque tokenList = cfDequeCtor(sizeof(CfAstToken), CF_DEQUE_CHUNK_SIZE_UNDEFINED, self->tempArena);
 
-    // check if tokenList is constructed
-    if (tokenList == NULL)
-        cfAstParserFinish(self, (CfAstParseResult) { CF_AST_PARSE_STATUS_INTERNAL_ERROR });
+    cfAstParserAssert(self, tokenList != NULL);
 
     CfAstSpan restSpan = { 0, cfStrLength(fileContents) };
 
@@ -70,8 +81,7 @@ void cfAstParseTokenList(
 
             // ignore comments
             if (result.ok.token.type != CF_AST_TOKEN_TYPE_COMMENT)
-                if (!cfDequePushBack(tokenList, &result.ok.token))
-                    cfAstParserFinish(self, (CfAstParseResult) { CF_AST_PARSE_STATUS_INTERNAL_ERROR });
+                cfAstParserAssert(self, cfDequePushBack(tokenList, &result.ok.token));
 
             restSpan = result.ok.rest;
             break;
@@ -93,8 +103,7 @@ void cfAstParseTokenList(
     // allocate 'final' token array
     CfAstToken *tokenArray = (CfAstToken *)cfArenaAlloc(self->tempArena, sizeof(CfAstToken) * cfDequeLength(tokenList));
 
-    if (tokenArray == NULL)
-        cfAstParserFinish(self, (CfAstParseResult) { CF_AST_PARSE_STATUS_INTERNAL_ERROR });
+    cfAstParserAssert(self, tokenArray != NULL);
 
     cfDequeWrite(tokenList, tokenArray);
 
@@ -103,17 +112,259 @@ void cfAstParseTokenList(
 } // cfAstParseTokenList
 
 /**
+ * @brief type from AST parsing function
+ * 
+ * @param[in] self         parser pointer
+ * @param[in] tokenListPtr token list pointer
+ * @param[in] typeDst      token type parsing destination
+ * 
+ * @return true if parsed, false if not
+ */
+bool cfAstParseType( CfAstParser *const self, const CfAstToken **tokenListPtr, CfAstType *typeDst ) {
+    switch ((*tokenListPtr)->type) {
+    case CF_AST_TOKEN_TYPE_I32  : *typeDst = CF_AST_TYPE_I32;  break;
+    case CF_AST_TOKEN_TYPE_U32  : *typeDst = CF_AST_TYPE_U32;  break;
+    case CF_AST_TOKEN_TYPE_F32  : *typeDst = CF_AST_TYPE_F32;  break;
+    case CF_AST_TOKEN_TYPE_VOID : *typeDst = CF_AST_TYPE_VOID; break;
+
+    default:
+        return false;
+    }
+
+    (*tokenListPtr)++;
+    return true;
+} // cfAstParseType
+
+/**
+ * @brief function param parsing function
+ * 
+ * @param[in]     self         parser pointer
+ * @param[in,out] tokenListPtr token list to parse function param from
+ * @param[out]    paramDst     parameter parsing destination
+ * 
+ * @return true if parsed, false otherwise.
+ */
+bool cfAstParseFunctionParam( CfAstParser *const self, const CfAstToken **tokenListPtr, CfAstFunctionParam *paramDst ) {
+    const CfAstToken *tokenList = *tokenListPtr;
+    CfAstType type;
+
+    if (false
+        || tokenList[0].type != CF_AST_TOKEN_PARSING_STATUS_OK
+        || tokenList[1].type != CF_AST_TOKEN_TYPE_COLON
+        || (tokenList += 2, !cfAstParseType(self, &tokenList, &type))
+    )
+        return false;
+
+    *paramDst = (CfAstFunctionParam) {
+        .name = (*tokenListPtr)[0].ident,
+        .type = type,
+        .span = (CfAstSpan) { (*tokenListPtr)[0].span.begin, tokenList->span.begin }
+    };
+
+    *tokenListPtr = tokenList;
+    return true;
+} // cfAstParseFunctionParam
+
+/**
+ * @brief token with certain type parsing function
+ * 
+ * @param[in] self              parser pointer
+ * @param[in] tokenListPtr      token list pointer
+ * @param[in] expectedTokenType expected type
+ * @param[in] required          if true, function will throw error, if false - return NULL
+ * 
+ * @return token pointer (non-null if required == true)
+ */
+const CfAstToken * cfAstParseToken(
+    CfAstParser       *const self,
+    const CfAstToken **      tokenListPtr,
+    CfAstTokenType           expectedType,
+    bool                     required
+) {
+    if ((*tokenListPtr)->type == expectedType)
+        return (*tokenListPtr)++;
+    if (required)
+        cfAstParserFinish(self, (CfAstParseResult) {
+            .status = CF_AST_PARSE_STATUS_UNEXPECTED_TOKEN_TYPE,
+            .unexpectedTokenType = {
+                .actualToken = **tokenListPtr,
+                .expectedType = expectedType,
+            },
+        });
+
+    return NULL;
+} // cfAstParseToken
+
+/**
+ * @brief block parsing function
+ * 
+ * @param[in] self self pointer
+ * 
+ * @return parsed block pointer (NULL if parsing failed)
+ */
+CfAstBlock * cfAstParseBlock( CfAstParser *const self, const CfAstToken **tokenListPtr ) {
+    const CfAstToken *tokenList = *tokenListPtr;
+
+    if (cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_CURLY_BR_OPEN, false) == NULL)
+        return NULL;
+
+    cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_CURLY_BR_CLOSE, true);
+
+    CfAstBlock *block = (CfAstBlock *)cfArenaAlloc(self->dataArena, sizeof(CfAstBlock));
+    cfAstParserAssert(self, block != NULL);
+
+    *tokenListPtr = tokenList;
+
+    return block;
+} // cfAstParseBlock
+
+/**
+ * @brief function from token list parsing function
+ * 
+ * @param[in] self         parser pointer
+ * @param[in] tokenListPtr list of tokens to parse function from (non-null)
+ * 
+ * @return parsed function (throws error if failed.)
+ * 
+ * @note Token list **must** start from CF_AST_TOKEN_TYPE_FN token.
+ */
+CfAstFunction cfAstParseFunction( CfAstParser *const self, const CfAstToken **tokenListPtr ) {
+    const CfAstToken *tokenList = *tokenListPtr;
+    size_t signatureSpanBegin = tokenList[0].span.begin;
+
+    cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_FN, true);
+    CfStr name = cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_IDENT, true)->ident;
+    cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_ROUND_BR_OPEN, true);
+
+    // create param list
+    CfDeque paramDeque = cfDequeCtor(sizeof(CfAstFunctionParam), CF_DEQUE_CHUNK_SIZE_UNDEFINED, self->tempArena);
+
+    for (;;) {
+        CfAstFunctionParam param = {};
+
+        // parse function parameter
+        if (!cfAstParseFunctionParam(self, &tokenList, &param))
+            break;
+
+        // insert param into parameter list
+        cfAstParserAssert(self, cfDequePushBack(paramDeque, &param));
+
+        // (try to) parse comma. in case if comma isn't parsed, stop parsing parameters
+        if (cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_COMMA, false) == NULL)
+            break;
+    }
+
+    // parse closing bracket
+    cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_ROUND_BR_CLOSE, true);
+
+    // parameter array
+    size_t paramArrayLength = cfDequeLength(paramDeque);
+    CfAstFunctionParam *paramArray = (CfAstFunctionParam *)cfArenaAlloc(
+        self->dataArena,
+        sizeof(CfAstFunctionParam) * paramArrayLength
+    );
+    cfAstParserAssert(self, paramArray != NULL);
+
+    // parse return type
+    CfAstType returnType = {};
+    if (!cfAstParseType(self, &tokenList, &returnType))
+        returnType = CF_AST_TYPE_VOID;
+
+    size_t signatureSpanEnd = tokenList[0].span.begin;
+
+    CfAstBlock *impl = cfAstParseBlock(self, &tokenList);
+
+    // parse block
+    if (impl == NULL)
+        cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_SEMICOLON, true);
+
+    size_t spanEnd = tokenList[0].span.end;
+
+    *tokenListPtr = tokenList;
+
+    return (CfAstFunction) {
+        .name          = name,
+        .params        = paramArray,
+        .paramCount    = paramArrayLength,
+        .returnType    = returnType,
+        .signatureSpan = (CfAstSpan) { signatureSpanBegin, signatureSpanEnd },
+        .span          = (CfAstSpan) { signatureSpanBegin, spanEnd },
+        .impl          = impl,
+    };
+} // cfAstParseFunction
+
+/**
+ * @brief variable declaration parsing function
+ * 
+ * @param[in] self parser pointer
+ */
+CfAstVariable cfAstParseVariable( CfAstParser *const self, const CfAstToken **tokenListPtr ) {
+    // not implemented yet))
+    cfAstParserAssert(self, false);
+    return (CfAstVariable) {};
+} // cfAstParseVariable
+
+/**
  * @brief declaration parsing function
  * 
- * @param[in]     self      parser pointer
- * @param[in,out] tokenList list of tokens to parse declaration from
- * @param[out]    dst       parsing destination
+ * @param[in]     self         parser pointer
+ * @param[in,out] tokenListPtr list of tokens to parse declaration from (non-null, no comment tokens in)
+ * @param[out]    dst          parsing destination (non-null)
  * 
  * @return true if parsed, false if end reached.
  */
-bool cfAstParseDecl( CfAstParser *const self, const CfAstToken **tokenList, CfAstDecl *dst ) {
-    cfAstParserFinish(self, (CfAstParseResult) { CF_AST_PARSE_STATUS_INTERNAL_ERROR });
-    return false;
+bool cfAstParseDecl( CfAstParser *const self, const CfAstToken **tokenListPtr, CfAstDecl *dst ) {
+    assert(tokenListPtr != NULL);
+    assert(dst != NULL);
+
+    const CfAstToken *tokenList = *tokenListPtr;
+
+    // check for token end
+    if (tokenList[0].type == CF_AST_TOKEN_TYPE_END)
+        return false;
+
+    // it's possible to find out declaraion type by first token
+    switch (tokenList[0].type) {
+    case CF_AST_TOKEN_TYPE_FN: {
+        CfAstFunction function = cfAstParseFunction(self, &tokenList);
+
+        *dst = (CfAstDecl) {
+            .type = CF_AST_DECL_TYPE_FN,
+            .span = function.span,
+            .fn = function,
+        };
+
+        *tokenListPtr = tokenList;
+        return true;
+    }
+
+    case CF_AST_TOKEN_TYPE_LET: {
+        CfAstVariable variable = cfAstParseVariable(self, &tokenList);
+
+        *dst = (CfAstDecl) {
+            .type = CF_AST_DECL_TYPE_LET,
+            .span = variable.span,
+            .let = variable,
+        };
+
+        *tokenListPtr = tokenList;
+        return true;
+    }
+
+    // the only reason
+    case CF_AST_TOKEN_TYPE_END:
+        *tokenListPtr = tokenList + 1;
+        return false;
+
+    default:
+        cfAstParserFinish(self, (CfAstParseResult) {
+            .status = CF_AST_PARSE_STATUS_NOT_DECLARATION_START,
+            .notDeclarationStart = {
+                .token = tokenList[0],
+            },
+        });
+        return false; // no difference, actually
+    }
 } // cfAstParseDecl
 
 /**
@@ -140,8 +391,7 @@ void cfAstParseDecls(
     // parse declcarations from tokens
     CfDeque declList = cfDequeCtor(sizeof(CfAstDecl), CF_DEQUE_CHUNK_SIZE_UNDEFINED, self->tempArena);
 
-    if (declList == NULL)
-        return cfAstParserFinish(self, (CfAstParseResult) { CF_AST_PARSE_STATUS_INTERNAL_ERROR });
+    cfAstParserAssert(self, declList != NULL);
 
     const CfAstToken *restTokens = tokenArray;
 
@@ -149,15 +399,12 @@ void cfAstParseDecls(
         CfAstDecl decl = {};
         if (!cfAstParseDecl(self, &restTokens, &decl))
             break;
-
-        if (!cfDequePushBack(declList, &decl))
-            cfAstParserFinish(self, (CfAstParseResult) { CF_AST_PARSE_STATUS_INTERNAL_ERROR });
+        cfAstParserAssert(self, cfDequePushBack(declList, &decl));
     }
 
     CfAstDecl *declArray = (CfAstDecl *)cfArenaAlloc(self->dataArena, sizeof(CfAstDecl) * cfDequeLength(declList));
 
-    if (declArray == NULL)
-        cfAstParserFinish(self, (CfAstParseResult) { CF_AST_PARSE_STATUS_INTERNAL_ERROR });
+    cfAstParserAssert(self, declArray != NULL);
 
     *declArrayDst = declArray;
     *declArrayLenDst = cfDequeLength(declList);

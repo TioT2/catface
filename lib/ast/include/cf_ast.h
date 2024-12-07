@@ -64,12 +64,13 @@ typedef struct __CfAstFunctionParam {
 
 /// @brief function declaration structure
 typedef struct __CfAstFunction {
-    CfStr              * name;       ///< name
-    CfAstFunctionParam * params;     ///< parameter array (owned)
-    size_t               paramCount; ///< parameter array size
-    CfAstType            returnType; ///< returned function type
-    CfAstBlock         * impl;       ///< implementation
-    CfAstSpan            span;       ///< span function located in
+    CfStr                name;          ///< name
+    CfAstFunctionParam * params;        ///< parameter array (owned)
+    size_t               paramCount;    ///< parameter array size
+    CfAstType            returnType;    ///< returned function type
+    CfAstSpan            signatureSpan; ///< signature span
+    CfAstSpan            span;          ///< span function located in
+    CfAstBlock         * impl;          ///< implementation
 } CfAstFunction;
 
 /// @brief variable declaration structure
@@ -171,12 +172,53 @@ size_t cfAstGetDeclCount( const CfAst ast );
  */
 CfStr cfAstGetSourceFileName( const CfAst ast );
 
+/// @brief token type (union tag)
+typedef enum __CFAstTokenType {
+    CF_AST_TOKEN_TYPE_INTEGER,         ///< integer constant
+    CF_AST_TOKEN_TYPE_FLOATING,        ///< floating-point constant
+    CF_AST_TOKEN_TYPE_IDENT,           ///< ident
+
+    CF_AST_TOKEN_TYPE_FN,              ///< "fn"   keyword
+    CF_AST_TOKEN_TYPE_LET,             ///< "let"  keyword
+    CF_AST_TOKEN_TYPE_I32,             ///< "i32"  keyword
+    CF_AST_TOKEN_TYPE_U32,             ///< "u32"  keyword
+    CF_AST_TOKEN_TYPE_F32,             ///< "f32"  keyword
+    CF_AST_TOKEN_TYPE_VOID,            ///< "void" keyword
+
+    CF_AST_TOKEN_TYPE_COLON,           ///< ':' symbol
+    CF_AST_TOKEN_TYPE_SEMICOLON,       ///< ';' symbol
+    CF_AST_TOKEN_TYPE_COMMA,           ///< ',' symbol
+    CF_AST_TOKEN_TYPE_CURLY_BR_OPEN,   ///< '{' symbol
+    CF_AST_TOKEN_TYPE_CURLY_BR_CLOSE,  ///< '}' symbol
+    CF_AST_TOKEN_TYPE_ROUND_BR_OPEN,   ///< '(' symbol
+    CF_AST_TOKEN_TYPE_ROUND_BR_CLOSE,  ///< ')' symbol
+    CF_AST_TOKEN_TYPE_SQUARE_BR_OPEN,  ///< '[' symbol
+    CF_AST_TOKEN_TYPE_SQUARE_BR_CLOSE, ///< ']' symbol
+
+    CF_AST_TOKEN_TYPE_COMMENT,         ///< comment
+    CF_AST_TOKEN_TYPE_END,             ///< text ending token
+} CfAstTokenType;
+
+/// @brief token representation structure (tagged union, actually)
+typedef struct __CfAstToken {
+    CfAstTokenType type; ///< token kind
+    CfAstSpan      span; ///< span this token occupies
+
+    union {
+        CfStr    ident;    ///< ident
+        uint64_t integer;  ///< integer constant
+        double   floating; ///< floating-point constant
+        CfStr    comment;  ///< comment token
+    };
+} CfAstToken;
+
 /// @brief AST parsing status
 typedef enum __CfAstParseStatus {
-    CF_AST_PARSE_STATUS_OK,             ///< parsing succeeded
-    CF_AST_PARSE_STATUS_INTERNAL_ERROR, ///< internal error occured
-
-    CF_AST_PARSE_STATUS_UNEXPECTED_SYMBOL, ///< unexpected symbol occured (tokenization error)
+    CF_AST_PARSE_STATUS_OK,                    ///< parsing succeeded
+    CF_AST_PARSE_STATUS_INTERNAL_ERROR,        ///< internal error occured
+    CF_AST_PARSE_STATUS_UNEXPECTED_SYMBOL,     ///< unexpected symbol occured (tokenization error)
+    CF_AST_PARSE_STATUS_UNEXPECTED_TOKEN_TYPE, ///< function signature parsing error occured
+    CF_AST_PARSE_STATUS_NOT_DECLARATION_START, ///< current token can't belong to ANY declaration start
 } CfAstParseStatus;
 
 /// @brief AST parsing result (tagged union)
@@ -189,7 +231,18 @@ typedef struct __CfAstParseResult {
         struct {
             char   symbol; ///< unexpected symbol itself
             size_t offset; ///< offset to the symbol in source text
-        } unexpectedSymbol;
+
+        } unexpectedSymbol; ///< unexpected symbol occured
+
+        struct {
+            CfAstToken     actualToken;  ///< actual token
+            CfAstTokenType expectedType; ///< expected token type
+
+        } unexpectedTokenType; ///< unexpected token 
+
+        struct {
+            CfAstToken token; ///< actual token
+        } notDeclarationStart;
     };
 } CfAstParseResult;
 

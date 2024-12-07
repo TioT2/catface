@@ -13,44 +13,6 @@ extern "C" {
 
 // quite good example of brain Rust
 
-/// @brief token type (union tag)
-typedef enum __CFAstTokenType {
-    CF_AST_TOKEN_TYPE_INTEGER,         ///< integer constant
-    CF_AST_TOKEN_TYPE_FLOATING,        ///< floating-point constant
-    CF_AST_TOKEN_TYPE_IDENT,           ///< ident
-
-    CF_AST_TOKEN_TYPE_FN,              ///< "fn"   keyword
-    CF_AST_TOKEN_TYPE_LET,             ///< "let"  keyword
-    CF_AST_TOKEN_TYPE_I32,             ///< "i32"  keyword
-    CF_AST_TOKEN_TYPE_U32,             ///< "u32"  keyword
-    CF_AST_TOKEN_TYPE_F32,             ///< "f32"  keyword
-    CF_AST_TOKEN_TYPE_VOID,            ///< "void" keyword
-
-    CF_AST_TOKEN_TYPE_COLON,           ///< ':' symbol
-    CF_AST_TOKEN_TYPE_CURLY_BR_OPEN,   ///< '{' symbol
-    CF_AST_TOKEN_TYPE_CURLY_BR_CLOSE,  ///< '}' symbol
-    CF_AST_TOKEN_TYPE_ROUND_BR_OPEN,   ///< '(' symbol
-    CF_AST_TOKEN_TYPE_ROUND_BR_CLOSE,  ///< ')' symbol
-    CF_AST_TOKEN_TYPE_SQUARE_BR_OPEN,  ///< '[' symbol
-    CF_AST_TOKEN_TYPE_SQUARE_BR_CLOSE, ///< ']' symbol
-
-    CF_AST_TOKEN_TYPE_COMMENT,         ///< comment
-    CF_AST_TOKEN_TYPE_END,             ///< text ending token
-} CfAstTokenType;
-
-/// @brief token representation structure (tagged union, actually)
-typedef struct __CfAstToken {
-    CfAstTokenType type; ///< token kind
-    CfAstSpan      span; ///< span this token occupies
-
-    union {
-        CfStr    ident;    ///< ident
-        uint64_t integer;  ///< integer constant
-        double   floating; ///< floating-point constant
-        CfStr    comment;  ///< comment token
-    };
-} CfAstToken;
-
 /// @brief token parsing status
 typedef enum __CfAstTokenParsingStatus {
     CF_AST_TOKEN_PARSING_STATUS_OK,                ///< parsing succeeded
