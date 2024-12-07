@@ -63,7 +63,16 @@ CfAstTokenParsingResult cfAstNextToken( CfStr source, CfAstSpan span ) {
 
     // check if there is at least one symbol to parse available
     if (str.begin == str.end)
-        return (CfAstTokenParsingResult) { .status = CF_AST_TOKEN_PARSING_STATUS_END };
+        return (CfAstTokenParsingResult) {
+            .status = CF_AST_TOKEN_PARSING_STATUS_OK,
+            .ok = {
+                .rest = span,
+                .token = (CfAstToken) {
+                    .type = CF_AST_TOKEN_TYPE_END,
+                    .span = span,
+                },
+            },
+        };
 
     // offset from current str begin to span begin
     size_t strOffset = str.begin - (source.begin + span.begin);
@@ -230,5 +239,12 @@ CfAstTokenParsingResult cfAstNextToken( CfStr source, CfAstSpan span ) {
         .unexpectedSymbol = *str.begin,
     };
 } // cfAstNextToken
+
+bool cfAstTokenize(
+    CfStr         str,
+    CfAstToken ** tokenArrayDst,
+    size_t      * tokenArrayLenDst,
+    size_t      * unexpectedSymbolPositionDst
+);
 
 // cf_ast_lexer.c

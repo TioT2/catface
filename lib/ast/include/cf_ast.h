@@ -5,10 +5,8 @@
 #ifndef CF_AST_H_
 #define CF_AST_H_
 
-#include <stdint.h>
-#include <stddef.h>
-
 #include <cf_string.h>
+#include <cf_arena.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -193,10 +191,11 @@ typedef struct __CfAstParseResult {
  * 
  * @param[in] fileName     input file name
  * @param[in] fileContents text to parse, actually
+ * @param[in] tempArena    arena to allocate temporary memory in (nullable)
  * 
  * @return operation result
  */
-CfAstParseResult cfAstParse( CfStr fileName, CfStr fileContents );
+CfAstParseResult cfAstParse( CfStr fileName, CfStr fileContents, CfArena tempArena );
 
 #ifdef __cplusplus
 }

@@ -4,17 +4,7 @@
 
 #include <assert.h>
 
-#include <cf_arena.h>
-
-#include "cf_ast.h"
-
-/// @brief AST main structure
-typedef struct __CfAstImpl {
-    CfArena      mem;            ///< AST allocation holder
-    const char * sourceFileName; ///< source file name
-    size_t       declCount;      ///< count
-    CfAstDecl    decls[1];       ///< declaration array (extends beyond structure memory for declCount - 1 elements)
-} CfAstImpl;
+#include "cf_ast_internal.h"
 
 CfStr cfAstSpanCutStr( CfAstSpan span, CfStr str ) {
     CfStr result = {

@@ -11,6 +11,8 @@
 extern "C" {
 #endif
 
+// quite good example of brain Rust
+
 /// @brief token type (union tag)
 typedef enum __CFAstTokenType {
     CF_AST_TOKEN_TYPE_INTEGER,         ///< integer constant
@@ -33,6 +35,7 @@ typedef enum __CFAstTokenType {
     CF_AST_TOKEN_TYPE_SQUARE_BR_CLOSE, ///< ']' symbol
 
     CF_AST_TOKEN_TYPE_COMMENT,         ///< comment
+    CF_AST_TOKEN_TYPE_END,             ///< text ending token
 } CfAstTokenType;
 
 /// @brief token representation structure (tagged union, actually)
@@ -51,7 +54,6 @@ typedef struct __CfAstToken {
 /// @brief token parsing status
 typedef enum __CfAstTokenParsingStatus {
     CF_AST_TOKEN_PARSING_STATUS_OK,                ///< parsing succeeded
-    CF_AST_TOKEN_PARSING_STATUS_END,               ///< parsing actually finished
     CF_AST_TOKEN_PARSING_STATUS_UNEXPECTED_SYMBOL, ///< symbol that can't be part of any token
 } CfAstTokenParsingStatus;
 
