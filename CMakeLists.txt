@@ -34,6 +34,7 @@ add_subdirectory(app/linker)
 
 # compile tests (debug-only)
 if (CMAKE_BUILD_TYPE MATCHES Debug)
+    add_subdirectory(test/ast)
     add_subdirectory(test/deque)
     add_subdirectory(test/list)
     add_subdirectory(test/list_dot_dump)

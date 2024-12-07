@@ -77,7 +77,7 @@ void cfAstParseTokenList(
 
         switch (result.status) {
         case CF_AST_TOKEN_PARSING_STATUS_OK: {
-            endParsed = (result.ok.token.type = CF_AST_TOKEN_TYPE_END);
+            endParsed = (result.ok.token.type == CF_AST_TOKEN_TYPE_END);
 
             // ignore comments
             if (result.ok.token.type != CF_AST_TOKEN_TYPE_COMMENT)
@@ -149,7 +149,7 @@ bool cfAstParseFunctionParam( CfAstParser *const self, const CfAstToken **tokenL
     CfAstType type;
 
     if (false
-        || tokenList[0].type != CF_AST_TOKEN_PARSING_STATUS_OK
+        || tokenList[0].type != CF_AST_TOKEN_TYPE_IDENT
         || tokenList[1].type != CF_AST_TOKEN_TYPE_COLON
         || (tokenList += 2, !cfAstParseType(self, &tokenList, &type))
     )
@@ -264,6 +264,7 @@ CfAstFunction cfAstParseFunction( CfAstParser *const self, const CfAstToken **to
         sizeof(CfAstFunctionParam) * paramArrayLength
     );
     cfAstParserAssert(self, paramArray != NULL);
+    cfDequeWrite(paramDeque, paramArray);
 
     // parse return type
     CfAstType returnType = {};
@@ -471,9 +472,11 @@ void cfAstParseDecls(
         cfAstParserAssert(self, cfDequePushBack(declList, &decl));
     }
 
-    CfAstDecl *declArray = (CfAstDecl *)cfArenaAlloc(self->dataArena, sizeof(CfAstDecl) * cfDequeLength(declList));
+    cfAstParseToken(self, &restTokens, CF_AST_TOKEN_TYPE_END, true);
 
+    CfAstDecl *declArray = (CfAstDecl *)cfArenaAlloc(self->dataArena, sizeof(CfAstDecl) * cfDequeLength(declList));
     cfAstParserAssert(self, declArray != NULL);
+    cfDequeWrite(declList, declArray);
 
     *declArrayDst = declArray;
     *declArrayLenDst = cfDequeLength(declList);
@@ -486,7 +489,7 @@ CfAstParseResult cfAstParse( CfStr fileName, CfStr fileContents, CfArena tempAre
 
     if (false
         || (dataArena = cfArenaCtor(CF_ARENA_CHUNK_SIZE_UNDEFINED)) == NULL
-        || ((ast == cfArenaAlloc(dataArena, sizeof(CfAstImpl))))
+        || (ast = (CfAst)cfArenaAlloc(dataArena, sizeof(CfAstImpl))) == NULL
     ) {
         cfArenaDtor(dataArena);
         return (CfAstParseResult) { .status = CF_AST_PARSE_STATUS_INTERNAL_ERROR };

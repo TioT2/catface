@@ -10,9 +10,24 @@ size_t cfStrLength( CfStr str ) {
     return str.end - str.begin;
 } // cfStrLength
 
-int cfStrWrite( FILE *file, CfStr slice ) {
-    return fprintf(file, "%.*s", (int)(slice.end - slice.begin), slice.begin);
+void cfStrWrite( FILE *file, CfStr slice ) {
+    fprintf(file, "%.*s", (int)(slice.end - slice.begin), slice.begin);
 } // cfStrWrite
+
+void cfStrWriteShielded( FILE *file, CfStr slice ) {
+    for (const char *ch = slice.begin; ch < slice.end; ch++)
+        switch (*ch) {
+        case '\b': fputs("\\b",  file); break;
+        case '\f': fputs("\\f",  file); break;
+        case '\n': fputs("\\n",  file); break;
+        case '\r': fputs("\\r",  file); break;
+        case '\t': fputs("\\t",  file); break;
+        case '\"': fputs("\\\"", file); break;
+        case '\'': fputs("\\\'", file); break;
+        case '\\': fputs("\\",   file); break;
+        default  : fputc(*ch,    file);
+        }
+} // cfStrWriteShielded
 
 bool cfStrStartsWith( CfStr slice, const char *start ) {
     if (slice.begin >= slice.end)
@@ -22,11 +37,14 @@ bool cfStrStartsWith( CfStr slice, const char *start ) {
         const char sliceChar = *slice.begin;
         const char startChar = *start;
 
+        if (startChar == '\0')
+            return true;
+
         if (sliceChar != startChar)
             return false;
         slice.begin++;
         start++;
-        if (slice.begin >= slice.end || startChar == '\0')
+        if (slice.begin >= slice.end)
             return true;
     }
 } // cfStrStartsWith

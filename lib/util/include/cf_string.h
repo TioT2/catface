@@ -39,7 +39,15 @@ size_t cfStrLength( CfStr str );
  * 
  * @return count of characters printed.
  */
-int cfStrWrite( FILE *file, CfStr slice );
+void cfStrWrite( FILE *file, CfStr slice );
+
+/**
+ * @brief shielded string slice printing function
+ * 
+ * @param[in] file  file to print slice to
+ * @param[in] slice slice to print
+ */
+void cfStrWriteShielded( FILE *file, CfStr slice );
 
 /**
  * @brief slice starting with zero-terminated string checking function

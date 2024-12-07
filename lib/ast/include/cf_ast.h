@@ -40,6 +40,14 @@ typedef struct __CfAstSpan {
  */
 CfStr cfAstSpanCutStr( CfAstSpan span, CfStr str );
 
+/**
+ * @brief span in json format dumping function
+ * 
+ * @param[in] out  destination file
+ * @param[in] span span to dump
+ */
+void cfAstSpanDumpJson( FILE *out, CfAstSpan span );
+
 /// @brief primitive (e.g. builtin) type representation enumeration
 /// @note this kind of type declaration is TMP solution
 typedef enum __CfAstType {
@@ -49,11 +57,29 @@ typedef enum __CfAstType {
     CF_AST_TYPE_VOID, ///< zero-sized primitive type
 } CfAstType;
 
+/**
+ * @brief AST type name getting function
+ * 
+ * @param[in] type type to get name of
+ * 
+ * @return type name
+ */
+const char * cfAstTypeStr( CfAstType type );
+
 /// @brief declaration union tag
 typedef enum __CfAstDeclType {
     CF_AST_DECL_TYPE_FN,  ///< function declaration
     CF_AST_DECL_TYPE_LET, ///< variable declaration
 } CfAstDeclType;
+
+/**
+ * @brief declaration type name getting function
+ * 
+ * @param[in] declType declaration type
+ * 
+ * @return declaration type name
+ */
+const char * cfAstDeclTypeStr( CfAstDeclType declType );
 
 /// @brief function parameter representation structure
 typedef struct __CfAstFunctionParam {
@@ -144,6 +170,14 @@ typedef struct __CfAstImpl * CfAst;
  * @param[in] ast AST to destroy (nullable)
  */
 void cfAstDtor( CfAst ast );
+
+/**
+ * @brief AST in JSON format writing function
+ * 
+ * @param[in] out output file to write ast to
+ * @param[in] ast ast to write
+ */
+void cfAstDumpJson( FILE *out, const CfAst ast );
 
 /**
  * @brief AST declarations getting function

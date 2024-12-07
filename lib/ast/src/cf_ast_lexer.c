@@ -199,17 +199,20 @@ CfAstTokenParsingResult cfAstTokenParse( CfStr source, CfAstSpan span ) {
         found = false;
     }
 
-    if (found)
+    if (found) {
+        size_t spanBegin = str.begin - source.begin;
+
         return (CfAstTokenParsingResult) {
             .status = CF_AST_TOKEN_PARSING_STATUS_OK,
             .ok = {
-                .rest = (CfAstSpan) { span.begin + 1, span.end },
+                .rest = (CfAstSpan) { spanBegin + 1, span.end },
                 .token = (CfAstToken) {
                     .type = type,
-                    .span = (CfAstSpan) { span.begin, span.begin + 1 },
+                    .span = (CfAstSpan) { spanBegin, spanBegin + 1 },
                 }
             },
         };
+    }
 
     // try to parse ident
     if (isalpha(*str.begin) || *str.begin == '_') {
