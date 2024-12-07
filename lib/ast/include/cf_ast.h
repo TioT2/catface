@@ -132,7 +132,7 @@ struct __CfAstStmt {
 
     union {
         CfAstExpr  * expr;  ///< expression statament
-        CfAstDecl  * decl;  ///< declarative expression
+        CfAstDecl    decl;  ///< declarative expression
         CfAstBlock * block; ///< block expression
     };
 }; // struct __CfAstStmt
@@ -253,10 +253,10 @@ typedef enum __CfAstParseStatus {
     CF_AST_PARSE_STATUS_INTERNAL_ERROR,        ///< internal error occured
     CF_AST_PARSE_STATUS_UNEXPECTED_SYMBOL,     ///< unexpected symbol occured (tokenization error)
     CF_AST_PARSE_STATUS_UNEXPECTED_TOKEN_TYPE, ///< function signature parsing error occured
-    CF_AST_PARSE_STATUS_NOT_DECLARATION_START, ///< current token can't belong to ANY declaration start
-    CF_AST_PARSE_STATUS_VARIABLE_TYPE_MISSING, ///< no variable type
+    CF_AST_PARSE_STATUS_END_EXPECTED,          ///< end token expected, got: 
 
-    CF_AST_PARSE_STATUS_EXPR_VALUE_REQUIRED,   ///< expression 'value' (ident/number) required
+    CF_AST_PARSE_STATUS_VARIABLE_TYPE_MISSING, ///< no variable type
+    CF_AST_PARSE_STATUS_VARIABLE_INIT_MISSING, ///< variable initailizer missing
 } CfAstParseStatus;
 
 /// @brief AST parsing result (tagged union)
@@ -276,9 +276,9 @@ typedef struct __CfAstParseResult {
             CfAstTokenType expectedType; ///< expected token type
         } unexpectedTokenType;
 
-        CfAstToken notDeclarationStart;
+        CfAstToken endExpected;
         CfAstToken variableTypeMissing;
-        CfAstToken exprValueRequired;
+        CfAstToken variableInitMissing;
     };
 } CfAstParseResult;
 

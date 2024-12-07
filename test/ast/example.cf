@@ -3,11 +3,16 @@
 let nice_global_variable: i32 = 42;
 
 fn func_with_no_args() {
-
+    31245;
 }
 
 fn main(argc: u32) i32 {
     // no code allowed here
+    47;
+    {
+
+    }
+    let f: f32 = 0.47e1;
 }
 
 // example.cf

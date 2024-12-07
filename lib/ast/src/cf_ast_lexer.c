@@ -113,18 +113,14 @@ CfAstTokenParsingResult cfAstTokenParse( CfStr source, CfAstSpan span ) {
             : cfStrStartsWith(str, "0o") ? 8
             : cfStrStartsWith(str, "0b") ? 1
             : 10;
-
-        uint32_t offset = str.end - str.begin > 1 && !isdigit(str.begin[1])
-            ? 2
-            : 0
-        ;
+        uint32_t offset = base != 10 ? 2 : 0;
 
         bool isFloat = false;
 
         str.begin += offset;
 
         uint64_t integer = 0;
-        uint64_t exponent = 0;
+        int64_t exponent = 0;
         double fractional = 0.0;
 
         while (isxdigit(*str.begin)) {
@@ -139,23 +135,34 @@ CfAstTokenParsingResult cfAstTokenParse( CfStr source, CfAstSpan span ) {
 
         // if number is decimal, try to parse float
         if (base == 10) {
-            if (*str.begin == '.') {
+            if (str.begin < str.end && *str.begin == '.') {
+                str.begin++;
                 isFloat = true;
 
                 double exp = 1.0;
 
-                while (isdigit(*str.begin)) {
+                while (str.begin < str.end && isdigit(*str.begin)) {
                     exp *= 0.1;
                     fractional += exp * (double)(*str.begin - '0');
+                    str.begin++;
                 }
             }
 
-            if (*str.begin == 'e') {
+            if (str.begin < str.end && *str.begin == 'e') {
+                str.begin++;
                 isFloat = true;
+                int64_t expSign = 1;
 
-                while (isdigit(*str.begin)) {
-                    exponent = exponent * 10 + (*str.begin - '0');
+                if (str.begin < str.end && (*str.begin == '-' || *str.begin == '+')) {
+                    expSign = (*str.begin == '-') ? -1 : 1;
+                    str.begin++;
                 }
+
+                while (str.begin < str.end && isdigit(*str.begin)) {
+                    exponent = exponent * 10 + (*str.begin - '0');
+                    str.begin++;
+                }
+                exponent *= expSign;
             }
         }
 
