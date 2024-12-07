@@ -117,7 +117,7 @@ int testDeque( uint32_t seed, CfDeque deque ) {
         }
         }
 
-        size_t size = cfDequeSize(deque);
+        size_t size = cfDequeLength(deque);
         size_t correctSize = correctDeque.size();
 
         if (size != correctSize) {

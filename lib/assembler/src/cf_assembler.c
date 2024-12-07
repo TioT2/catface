@@ -746,7 +746,7 @@ void cfAssemblerRun( CfAssembler *const self ) {
 
                         CfLink link = {
                             .sourceLine = (uint32_t)self->lineIndex,
-                            .codeOffset = (uint32_t)cfDarrSize(self->output) + 2,
+                            .codeOffset = (uint32_t)cfDarrLength(self->output) + 2,
                         };
                         memcpy(link.label, data.immediate.label, CF_LABEL_MAX);
 
@@ -783,7 +783,7 @@ void cfAssemblerRun( CfAssembler *const self ) {
                     cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_TOO_LONG_LABEL);
                 CfLink link = {
                     .sourceLine = (uint32_t)self->lineIndex,
-                    .codeOffset = (uint32_t)cfDarrSize(self->output) + 1,
+                    .codeOffset = (uint32_t)cfDarrLength(self->output) + 1,
                 };
                 memcpy(link.label, labelToken.ident.begin, cfStrLength(labelToken.ident));
 
@@ -858,7 +858,7 @@ void cfAssemblerRun( CfAssembler *const self ) {
             case CF_ASSEMBLER_TOKEN_TYPE_COLON: {
                 CfLabel label = {
                     .sourceLine = (uint32_t)self->lineIndex,
-                    .value      = (uint32_t)cfDarrSize(self->output),
+                    .value      = (uint32_t)cfDarrLength(self->output),
                     .isRelative = true,
                 };
 
@@ -930,9 +930,9 @@ CfAssemblyStatus cfAssemble( CfStr text, CfStr sourceName, CfObject *dst, CfAsse
         // should I actually do it?
         memset(dst, 0, sizeof(CfObject));
 
-        dst->codeLength = cfDarrSize(assembler.output);
-        dst->linkCount = cfDarrSize(assembler.links);
-        dst->labelCount = cfDarrSize(assembler.labels);
+        dst->codeLength = cfDarrLength(assembler.output);
+        dst->linkCount = cfDarrLength(assembler.links);
+        dst->labelCount = cfDarrLength(assembler.labels);
 
         if (false
             || cfDarrIntoData(assembler.output, (void **)&dst->code)   != CF_DARR_OK

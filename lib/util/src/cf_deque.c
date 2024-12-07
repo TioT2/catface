@@ -122,10 +122,10 @@ void cfDequeDtor( CfDeque deque ) {
     free(deque);
 } // cfDequeDtor
 
-size_t cfDequeSize( const CfDeque deque ) {
+size_t cfDequeLength( const CfDeque deque ) {
     assert(deque != NULL);
     return deque->size;
-} // cfDequeSize
+} // cfDequeLength
 
 void cfDequeWrite( const CfDeque deque, void *dst ) {
     assert(deque != NULL);

@@ -31,7 +31,9 @@ typedef struct __CfDequeImpl * CfDeque;
  * 
  * - Function may return NULL in case if smth went wrong.
  * 
- * - Function **do not** gets ownership on 'arena' value.
+ * - Resulting deque **do not** gets ownership on 'arena' value.
+ * 
+ * - In case if 'arena' is not NULL, deque constructor may not be called.
  */
 CfDeque cfDequeCtor( size_t elementSize, size_t chunkSize, CfArena arena );
 
@@ -43,13 +45,13 @@ CfDeque cfDequeCtor( size_t elementSize, size_t chunkSize, CfArena arena );
 void cfDequeDtor( CfDeque deque );
 
 /**
- * @brief deque size getting function
+ * @brief deque length getting function
  * 
- * @param[in] deque deque to get size of
+ * @param[in] deque deque to get length of
  * 
- * @return size of deque in elements
+ * @return count of elements located in deque
  */
-size_t cfDequeSize( const CfDeque deque );
+size_t cfDequeLength( const CfDeque deque );
 
 /**
  * @brief deque contents to contigious array copying function

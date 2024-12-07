@@ -108,7 +108,7 @@ int main( const int _argc, const char **_argv ) {
         CfLinkDetails details;
         CfLinkStatus status = cfLink(
             (CfObject *)cfDarrData(objectArray),
-            cfDarrSize(objectArray),
+            cfDarrLength(objectArray),
             &executable,
             &details
         );
@@ -137,7 +137,7 @@ int main( const int _argc, const char **_argv ) {
 
 
     CfObject *objects = (CfObject *)cfDarrData(objectArray);
-    for (size_t i = 0, n = cfDarrSize(objectArray); i < n; i++)
+    for (size_t i = 0, n = cfDarrLength(objectArray); i < n; i++)
         cfObjectDtor(&objects[i]);
 
     cfDarrDtor(objectArray);

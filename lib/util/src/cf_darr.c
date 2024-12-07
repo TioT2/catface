@@ -83,10 +83,10 @@ void * cfDarrData( CfDarr darr ) {
     return darr->data;
 } // cfDarrData
 
-size_t cfDarrSize( CfDarr darr ) {
+size_t cfDarrLength( CfDarr darr ) {
     assert(darr != NULL);
     return darr->size;
-} // cfDarrSize
+} // cfDarrLength
 
 CfDarrStatus cfDarrIntoData( CfDarr darr, void **dst ) {
     assert(darr != NULL);

@@ -79,13 +79,13 @@ CfDarrStatus cfDarrPop( CfDarr *darr, void *dst );
 void * cfDarrData( CfDarr darr );
 
 /**
- * @brief dynamic array size getting function
+ * @brief dynamic array length getting function
  * 
- * @param[in] darr dynamic array to get size of
+ * @param[in] darr dynamic array to get length of
  * 
- * @return array size
+ * @return array length
  */
-size_t cfDarrSize( CfDarr darr );
+size_t cfDarrLength( CfDarr darr );
 
 /**
  * @brief non-dynamic-sized array with exactly same data allocation function

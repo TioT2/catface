@@ -31,17 +31,17 @@ void cfAstDtor( CfAst ast ) {
 
 const CfAstDecl * cfAstGetDecls( const CfAst ast ) {
     assert(ast != NULL);
-    return ast->decls;
+    return ast->declArray;
 } // cfAstGetDecls
 
 size_t cfAstGetDeclCount( const CfAst ast ) {
     assert(ast != NULL);
-    return ast->declCount;
+    return ast->declArrayLen;
 } // cfAstGetDeclCount
 
-const char * cfAstGetSourceFileName( const CfAst ast ) {
+CfStr cfAstGetSourceFileName( const CfAst ast ) {
     assert(ast != NULL);
-    return ast->sourceFileName;
+    return ast->sourceName;
 } // cfAstGetSourceFileName
 
 // cf_ast.c

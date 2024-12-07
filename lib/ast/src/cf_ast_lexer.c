@@ -55,7 +55,7 @@ static uint32_t cfAstTokenParseHexDigit( char ch ) {
         : 0;
 } // cfAstTokenParseHexDigit
 
-CfAstTokenParsingResult cfAstNextToken( CfStr source, CfAstSpan span ) {
+CfAstTokenParsingResult cfAstTokenParse( CfStr source, CfAstSpan span ) {
     CfStr str = cfAstSpanCutStr(span, source);
 
     while (str.begin < str.end && isspace(*str.begin))
@@ -238,13 +238,6 @@ CfAstTokenParsingResult cfAstNextToken( CfStr source, CfAstSpan span ) {
         .status = CF_AST_TOKEN_PARSING_STATUS_UNEXPECTED_SYMBOL,
         .unexpectedSymbol = *str.begin,
     };
-} // cfAstNextToken
-
-bool cfAstTokenize(
-    CfStr         str,
-    CfAstToken ** tokenArrayDst,
-    size_t      * tokenArrayLenDst,
-    size_t      * unexpectedSymbolPositionDst
-);
+} // cfAstTokenParse
 
 // cf_ast_lexer.c

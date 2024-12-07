@@ -79,7 +79,7 @@ typedef struct __CfTokenParsingResult {
  * 
  * @return token parsing result
  */
-CfAstTokenParsingResult cfAstNextToken( CfStr str, CfAstSpan span );
+CfAstTokenParsingResult cfAstTokenParse( CfStr str, CfAstSpan span );
 
 #ifdef __cplusplus
 }

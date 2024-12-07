@@ -169,12 +169,14 @@ size_t cfAstGetDeclCount( const CfAst ast );
  * 
  * @return AST source file name slice
  */
-const char * cfAstGetSourceFileName( const CfAst ast );
+CfStr cfAstGetSourceFileName( const CfAst ast );
 
 /// @brief AST parsing status
 typedef enum __CfAstParseStatus {
     CF_AST_PARSE_STATUS_OK,             ///< parsing succeeded
     CF_AST_PARSE_STATUS_INTERNAL_ERROR, ///< internal error occured
+
+    CF_AST_PARSE_STATUS_UNEXPECTED_SYMBOL, ///< unexpected symbol occured (tokenization error)
 } CfAstParseStatus;
 
 /// @brief AST parsing result (tagged union)
@@ -183,6 +185,11 @@ typedef struct __CfAstParseResult {
 
     union {
         CfAst ok; ///< success case
+
+        struct {
+            char   symbol; ///< unexpected symbol itself
+            size_t offset; ///< offset to the symbol in source text
+        } unexpectedSymbol;
     };
 } CfAstParseResult;
 
@@ -194,6 +201,9 @@ typedef struct __CfAstParseResult {
  * @param[in] tempArena    arena to allocate temporary memory in (nullable)
  * 
  * @return operation result
+ * 
+ * @note
+ * - 'fileName' and 'fileContents' parameter contents **must** live longer, than resulting AST in case if this function execution succeeded.
  */
 CfAstParseResult cfAstParse( CfStr fileName, CfStr fileContents, CfArena tempArena );
 

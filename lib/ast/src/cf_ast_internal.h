@@ -6,6 +6,7 @@
 #define CF_AST_INTERNAL_H_
 
 #include "cf_ast.h"
+#include "cf_ast_lexer.h"
 
 #ifdef __cplusplus
 extern "C" {

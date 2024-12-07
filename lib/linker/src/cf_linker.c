@@ -59,7 +59,7 @@ void cfLinkerThrow( CfLinker *const self, const CfLinkStatus error ) {
 CfLinkerLabel * cfLinkerFindLabel( CfLinker *const self, CfStr label ) {
     CfLinkerLabel *labels = (CfLinkerLabel *)cfDarrData(self->labels);
 
-    for (size_t i = 0, n = cfDarrSize(self->labels); i < n; i++)
+    for (size_t i = 0, n = cfDarrLength(self->labels); i < n; i++)
         if (cfStrIsSame(label, labels[i].label))
             return labels + i;
     return NULL;
@@ -109,7 +109,7 @@ void cfLinkerAddLink( CfLinker *const self, const CfLinkerLink *const link ) {
  */
 void cfLinkerAddObject( CfLinker *const self, const CfObject *const object ) {
     CfStr sourceName = CF_STR(object->sourceName);
-    uint32_t codeSize = (uint32_t)cfDarrSize(self->code);
+    uint32_t codeSize = (uint32_t)cfDarrLength(self->code);
 
     // TODO: is it ok to duplicate code here?
 
@@ -155,7 +155,7 @@ void cfLinkerBuildExecutable( CfLinker *const self, CfExecutable *const dst ) {
     uint8_t *code = (uint8_t *)cfDarrData(self->code);
 
     CfLinkerLink *link = (CfLinkerLink *)cfDarrData(self->links);
-    CfLinkerLink *const end = link + cfDarrSize(self->links);
+    CfLinkerLink *const end = link + cfDarrLength(self->links);
 
     for (;link < end; link++) {
         CfLinkerLabel *label = cfLinkerFindLabel(self, link->label);
@@ -171,7 +171,7 @@ void cfLinkerBuildExecutable( CfLinker *const self, CfExecutable *const dst ) {
         memcpy(code + link->codeOffset, &label->value, sizeof(link->codeOffset));
     }
 
-    dst->codeLength = cfDarrSize(self->code);
+    dst->codeLength = cfDarrLength(self->code);
     if (CF_DARR_OK != cfDarrIntoData(self->code, &dst->code))
         cfLinkerThrow(self, CF_LINK_STATUS_INTERNAL_ERROR);
 } // cfLinkerBuildExecutable
