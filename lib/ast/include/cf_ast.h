@@ -148,6 +148,8 @@ struct __CfAstBlock {
 typedef enum __CfAstExprType {
     CF_AST_EXPR_TYPE_INTEGER,  ///< integer constant
     CF_AST_EXPR_TYPE_FLOATING, ///< float-point constant
+    CF_AST_EXPR_TYPE_IDENT,    ///< ident expression
+    CF_AST_EXPR_TYPE_CALL,     ///< function call
 } CfAstExprType;
 
 /// @brief expression representaiton structure
@@ -158,6 +160,13 @@ struct __CfAstExpr {
     union {
         uint64_t integer;  ///< integer expression
         double   floating; ///< floating-point expression
+        CfStr    ident;    ///< ident
+
+        struct {
+            CfAstExpr  * callee;           ///< called expression
+            size_t       paramArrayLength; ///< parameters function called by
+            CfAstExpr ** paramArray;       ///< parameter array
+        } call; ///< function call
     };
 }; // struct __CfAstExpr
 
@@ -249,14 +258,14 @@ typedef struct __CfAstToken {
 
 /// @brief AST parsing status
 typedef enum __CfAstParseStatus {
-    CF_AST_PARSE_STATUS_OK,                    ///< parsing succeeded
-    CF_AST_PARSE_STATUS_INTERNAL_ERROR,        ///< internal error occured
-    CF_AST_PARSE_STATUS_UNEXPECTED_SYMBOL,     ///< unexpected symbol occured (tokenization error)
-    CF_AST_PARSE_STATUS_UNEXPECTED_TOKEN_TYPE, ///< function signature parsing error occured
-    CF_AST_PARSE_STATUS_END_EXPECTED,          ///< end token expected, got: 
+    CF_AST_PARSE_STATUS_OK,                             ///< parsing succeeded
+    CF_AST_PARSE_STATUS_INTERNAL_ERROR,                 ///< internal error occured
+    CF_AST_PARSE_STATUS_UNEXPECTED_SYMBOL,              ///< unexpected symbol occured (tokenization error)
+    CF_AST_PARSE_STATUS_UNEXPECTED_TOKEN_TYPE,          ///< function signature parsing error occured
+    CF_AST_PARSE_STATUS_EXPR_BRACKET_INTERNALS_MISSING, ///< no contents in sub-expression
 
-    CF_AST_PARSE_STATUS_VARIABLE_TYPE_MISSING, ///< no variable type
-    CF_AST_PARSE_STATUS_VARIABLE_INIT_MISSING, ///< variable initailizer missing
+    CF_AST_PARSE_STATUS_VARIABLE_TYPE_MISSING,          ///< no variable type
+    CF_AST_PARSE_STATUS_VARIABLE_INIT_MISSING,          ///< variable initailizer missing
 } CfAstParseStatus;
 
 /// @brief AST parsing result (tagged union)
@@ -276,9 +285,9 @@ typedef struct __CfAstParseResult {
             CfAstTokenType expectedType; ///< expected token type
         } unexpectedTokenType;
 
-        CfAstToken endExpected;
         CfAstToken variableTypeMissing;
         CfAstToken variableInitMissing;
+        CfAstSpan  bracketInternalsMissing;
     };
 } CfAstParseResult;
 

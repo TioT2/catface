@@ -90,7 +90,16 @@ bool cfAstParseType( CfAstParser *const self, const CfAstToken **tokenListPtr, C
     return true;
 } // cfAstParseType
 
-bool cfAstParseFunctionParam(
+/**
+ * @brief function param parsing function
+ * 
+ * @param[in]     self         parser pointer
+ * @param[in,out] tokenListPtr token list to parse function param from
+ * @param[out]    paramDst     parameter parsing destination
+ * 
+ * @return true if parsed, false otherwise.
+ */
+static bool cfAstParseFunctionParam(
     CfAstParser         *const self,
     const CfAstToken   **      tokenListPtr,
     CfAstFunctionParam  *      paramDst
@@ -135,7 +144,17 @@ const CfAstToken * cfAstParseToken(
     return NULL;
 } // cfAstParseToken
 
-bool cfAstParseStmt( CfAstParser *const self, const CfAstToken **tokenListPtr, CfAstStmt *stmtDst ) {
+
+/**
+ * @brief statement parsing function
+ * 
+ * @param[in]  self         parser pointer
+ * @param[in]  tokenListPtr token list pointer
+ * @param[out] stmtDst      statement parsing destination
+ * 
+ * @return true if parsed, false if not.
+ */
+static bool cfAstParseStmt( CfAstParser *const self, const CfAstToken **tokenListPtr, CfAstStmt *stmtDst ) {
     const CfAstToken *tokenList = *tokenListPtr;
 
     CfAstBlock *block = NULL;
@@ -270,35 +289,6 @@ CfAstFunction cfAstParseFunction( CfAstParser *const self, const CfAstToken **to
         .impl          = impl,
     };
 } // cfAstParseFunction
-
-CfAstExpr * cfAstParseExpr( CfAstParser *const self, const CfAstToken **tokenListPtr ) {
-    CfAstExpr *result = (CfAstExpr *)cfArenaAlloc(self->dataArena, sizeof(CfAstExpr));
-    cfAstParserAssert(self, result != NULL);
-
-    switch ((*tokenListPtr)->type) {
-    case CF_AST_TOKEN_TYPE_INTEGER:
-        *result = (CfAstExpr) {
-            .type = CF_AST_EXPR_TYPE_INTEGER,
-            .span = (*tokenListPtr)->span,
-            .integer = (*tokenListPtr)->integer,
-        };
-        break;
-
-    case CF_AST_TOKEN_TYPE_FLOATING:
-        *result = (CfAstExpr) {
-            .type = CF_AST_EXPR_TYPE_FLOATING,
-            .span = (*tokenListPtr)->span,
-            .floating = (*tokenListPtr)->floating,
-        };
-        break;
-
-    default:
-        return NULL;
-    }
-
-    (*tokenListPtr)++;
-    return result;
-} // cfAstParseExpr
 
 CfAstVariable cfAstParseVariable( CfAstParser *const self, const CfAstToken **tokenListPtr ) {
     const CfAstToken *tokenList = *tokenListPtr;

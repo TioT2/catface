@@ -73,21 +73,6 @@ void cfAstParseTokenList(
 bool cfAstParseType( CfAstParser *const self, const CfAstToken **tokenListPtr, CfAstType *typeDst );
 
 /**
- * @brief function param parsing function
- * 
- * @param[in]     self         parser pointer
- * @param[in,out] tokenListPtr token list to parse function param from
- * @param[out]    paramDst     parameter parsing destination
- * 
- * @return true if parsed, false otherwise.
- */
-bool cfAstParseFunctionParam(
-    CfAstParser         *const self,
-    const CfAstToken   **      tokenListPtr,
-    CfAstFunctionParam  *      paramDst
-);
-
-/**
  * @brief token with certain type parsing function
  * 
  * @param[in] self              parser pointer
@@ -103,17 +88,6 @@ const CfAstToken * cfAstParseToken(
     CfAstTokenType           expectedType,
     bool                     required
 );
-
-/**
- * @brief statement parsing function
- * 
- * @param[in]  self         parser pointer
- * @param[in]  tokenListPtr token list pointer
- * @param[out] stmtDst      statement parsing destination
- * 
- * @return true if parsed, false if not.
- */
-bool cfAstParseStmt( CfAstParser *const self, const CfAstToken **tokenListPtr, CfAstStmt *stmtDst );
 
 /**
  * @brief block parsing function

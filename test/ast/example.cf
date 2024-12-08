@@ -12,7 +12,7 @@ fn main(argc: u32) i32 {
     {
 
     }
-    let f: f32 = 0.47e1;
+    let f: f32 = ((0.47e1))(11, 0, ident);
 }
 
 // example.cf
