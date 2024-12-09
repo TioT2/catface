@@ -13,6 +13,27 @@ fn main(argc: u32) i32 {
     qu = 40 + 47 / 80 + f;
 
     __cfvm_write(qu);
-}
+
+    if qu / ponos {
+        createDescriptorSet();
+    } else {
+        openBhuddaFinger();
+    }
+
+    if qu / 42 {
+        let q: i32 = 12;
+
+        q = qu;
+        {
+
+        }
+
+        if 11044 {
+
+        } else {
+
+        }
+    }
+} // main
 
 // example.cf

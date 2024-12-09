@@ -161,9 +161,51 @@ static bool cfAstParseStmt( CfAstParser *const self, const CfAstToken **tokenLis
     CfAstExpr *expr = NULL;
     CfAstDecl decl = {};
 
+    size_t spanBegin = tokenList->span.begin;
+
     // try to parse new block
-    if ((block = cfAstParseBlock(self, &tokenList)) != NULL) {
-        stmtDst->type = CF_AST_STMT_TYPE_BLOCK;
+    if (cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_IF, false) != NULL) {
+        // parse condition and corresponding block
+        CfAstExpr *cond = cfAstParseExpr(self, &tokenList);
+
+        if (cond == NULL)
+            cfAstParserFinish(self, (CfAstParseResult) {
+                .status = CF_AST_PARSE_STATUS_IF_CONDITION_MISSING,
+                .ifConditionMissing = (CfAstSpan) { spanBegin, tokenList->span.begin },
+            });
+
+        CfAstBlock *codeThen = cfAstParseBlock(self, &tokenList);
+
+        if (codeThen == NULL)
+            cfAstParserFinish(self, (CfAstParseResult) {
+                .status = CF_AST_PARSE_STATUS_IF_BLOCK_MISSING,
+                .ifBlockMissing = (CfAstSpan) { spanBegin, tokenList->span.begin },
+            });
+
+        CfAstBlock *codeElse = NULL;
+        const CfAstToken *elseToken = NULL;
+        if ((elseToken = cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_ELSE, false)) != NULL) {
+            // parse else block
+            codeElse = cfAstParseBlock(self, &tokenList);
+
+            if (codeElse == NULL)
+                cfAstParserFinish(self, (CfAstParseResult) {
+                    .status = CF_AST_PARSE_STATUS_ELSE_BLOCK_MISSING,
+                    .elseBlockMissing = elseToken->span,
+                });
+        }
+
+        stmtDst->type = CF_AST_STMT_TYPE_IF;
+        *stmtDst = (CfAstStmt) {
+            .type = CF_AST_STMT_TYPE_BLOCK,
+            .if_ = {
+                .condition = cond,
+                .codeThen  = codeThen,
+                .codeElse  = codeElse,
+            },
+        };
+
+    } else if ((block = cfAstParseBlock(self, &tokenList)) != NULL) {
         *stmtDst = (CfAstStmt) {
             .type = CF_AST_STMT_TYPE_BLOCK,
             .span = block->span,
@@ -302,7 +344,7 @@ CfAstVariable cfAstParseVariable( CfAstParser *const self, const CfAstToken **to
     if (!cfAstParseType(self, &tokenList, &type))
         cfAstParserFinish(self, (CfAstParseResult) {
             .status = CF_AST_PARSE_STATUS_VARIABLE_TYPE_MISSING,
-            .variableTypeMissing = tokenList[0],
+            .variableTypeMissing = (CfAstSpan) { spanBegin, tokenList->span.begin },
         });
 
     CfAstExpr *init = NULL;
@@ -312,7 +354,7 @@ CfAstVariable cfAstParseVariable( CfAstParser *const self, const CfAstToken **to
         if (init == NULL)
             cfAstParserFinish(self, (CfAstParseResult) {
                 .status = CF_AST_PARSE_STATUS_VARIABLE_INIT_MISSING,
-                .variableInitMissing = *tokenList,
+                .variableInitMissing = (CfAstSpan) { spanBegin, tokenList->span.begin },
             });
     }
 

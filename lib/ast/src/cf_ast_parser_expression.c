@@ -17,10 +17,11 @@
 static CfAstExpr * cfAstParseExprValue( CfAstParser *const self, const CfAstToken **tokenListPtr ) {
     const CfAstToken *tokenList = *tokenListPtr;
 
-    // try to parse value (ident, literal or expression in '()')
+    // FIXME Arena memory leaks in 'default' case.
     CfAstExpr *resultExpr = (CfAstExpr *)cfArenaAlloc(self->dataArena, sizeof(CfAstExpr));
     cfAstParserAssert(self, resultExpr != NULL);
 
+    // try to parse value (ident, literal or expression in '()')
     switch (tokenList->type) {
     case CF_AST_TOKEN_TYPE_INTEGER:
         *resultExpr = (CfAstExpr) {
@@ -71,7 +72,6 @@ static CfAstExpr * cfAstParseExprValue( CfAstParser *const self, const CfAstToke
     default:
         return NULL;
     }
-
 
     // try to parse function call
     if (tokenList->type == CF_AST_TOKEN_TYPE_ROUND_BR_OPEN) {
@@ -242,14 +242,37 @@ static CfAstExpr * cfAstParseExprAssignment(
 ) {
     const CfAstToken *tokenList = *tokenListPtr;
 
+    size_t spanBegin = tokenList->span.begin;
+
     const CfAstToken *destToken = cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_IDENT, false);
 
     if (destToken == NULL || cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_EQUAL, false) == NULL)
         return NULL;
-    CfStr dest = destToken->ident;
+    CfStr destination = destToken->ident;
+
+    // parse expression
+    CfAstExpr *value = cfAstParseExpr(self, &tokenList);
+
+    if (value == NULL)
+        cfAstParserFinish(self, (CfAstParseResult) {
+            .status                 = CF_AST_PARSE_STATUS_EXPR_ASSIGNMENT_VALUE_MISSING,
+            .assignmentValueMissing = (CfAstSpan) { spanBegin, tokenList->span.begin },
+        });
+
+    CfAstExpr *resultExpr = (CfAstExpr *)cfArenaAlloc(self->dataArena, sizeof(CfAstExpr));
+    cfAstParserAssert(self, resultExpr != NULL);
+
+    *resultExpr = (CfAstExpr) {
+        .type = CF_AST_EXPR_TYPE_ASSIGNMENT,
+        .span = (CfAstSpan) { spanBegin, tokenList->span.begin },
+        .assignment = {
+            .destination = destination,
+            .value       = value,
+        },
+    };
 
     *tokenListPtr = tokenList;
-    return NULL;
+    return resultExpr;
 } // cfAstParseExprAssignment
 
 CfAstExpr * cfAstParseExpr( CfAstParser *const self, const CfAstToken **tokenListPtr ) {

@@ -28,6 +28,9 @@ static bool cfAstTokenKeywordFromIdent( CfStr ident, CfAstTokenType *kwDst ) {
         {"u32",  CF_AST_TOKEN_TYPE_U32  },
         {"f32",  CF_AST_TOKEN_TYPE_F32  },
         {"void", CF_AST_TOKEN_TYPE_VOID },
+        {"if",   CF_AST_TOKEN_TYPE_IF   },
+        {"else", CF_AST_TOKEN_TYPE_ELSE },
+
     };
 
     for (size_t i = 0, n = sizeof(table) / sizeof(table[0]); i < n; i++) {

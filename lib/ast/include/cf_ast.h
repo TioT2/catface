@@ -123,6 +123,7 @@ typedef enum __CfAstStmtType {
     CF_AST_STMT_TYPE_EXPR,  ///< expression
     CF_AST_STMT_TYPE_DECL,  ///< statement that declares something
     CF_AST_STMT_TYPE_BLOCK, ///< block statement (curly brace enclosed sequence)
+    CF_AST_STMT_TYPE_IF,    ///< if/else statement
 } CfAstStmtType;
 
 /// @brief statement repersentation structure
@@ -131,9 +132,15 @@ struct __CfAstStmt {
     CfAstSpan     span; ///< span statement located in
 
     union {
-        CfAstExpr  * expr;  ///< expression statament
+        CfAstExpr  * expr;  ///< expression statament (non-null)
         CfAstDecl    decl;  ///< declarative expression
-        CfAstBlock * block; ///< block expression
+        CfAstBlock * block; ///< block expression (non-null)
+
+        struct {
+            CfAstExpr  * condition; ///< condition (non-null)
+            CfAstBlock * codeThen;  ///< code to execute then condition returned true (non-null)
+            CfAstBlock * codeElse;  ///< code to execute then condition returned false (nulllable)
+        } if_; ///< if statement
     };
 }; // struct __CfAstStmt
 
@@ -177,6 +184,11 @@ struct __CfAstExpr {
             size_t       paramArrayLength; ///< parameters function called by
             CfAstExpr ** paramArray;       ///< parameter array
         } call; ///< function call
+
+        struct {
+            CfStr       destination; ///< variable to assign to name (variable assignment only is supported at least now)
+            CfAstExpr * value;       ///< value to assign to
+        } assignment; ///< assignment
 
         struct {
             CfAstBinaryOperator   op;  ///< operator to perform
@@ -243,6 +255,8 @@ typedef enum __CFAstTokenType {
     CF_AST_TOKEN_TYPE_U32,             ///< "u32"  keyword
     CF_AST_TOKEN_TYPE_F32,             ///< "f32"  keyword
     CF_AST_TOKEN_TYPE_VOID,            ///< "void" keyword
+    CF_AST_TOKEN_TYPE_IF,              ///< ident
+    CF_AST_TOKEN_TYPE_ELSE,            ///< ident
 
     CF_AST_TOKEN_TYPE_COLON,           ///< ':' symbol
     CF_AST_TOKEN_TYPE_SEMICOLON,       ///< ';' symbol
@@ -284,6 +298,11 @@ typedef enum __CfAstParseStatus {
     CF_AST_PARSE_STATUS_UNEXPECTED_TOKEN_TYPE,          ///< function signature parsing error occured
     CF_AST_PARSE_STATUS_EXPR_BRACKET_INTERNALS_MISSING, ///< no contents in sub-expression
     CF_AST_PARSE_STATUS_EXPR_RHS_MISSING,               ///< right hand side missing
+    CF_AST_PARSE_STATUS_EXPR_ASSIGNMENT_VALUE_MISSING,  ///< missing value to assign to expression
+
+    CF_AST_PARSE_STATUS_IF_CONDITION_MISSING,           ///< 'if' statement condition missing
+    CF_AST_PARSE_STATUS_IF_BLOCK_MISSING,               ///< 'if' statement code block is missing
+    CF_AST_PARSE_STATUS_ELSE_BLOCK_MISSING,             ///< 'else' code block is missing
 
     CF_AST_PARSE_STATUS_VARIABLE_TYPE_MISSING,          ///< no variable type
     CF_AST_PARSE_STATUS_VARIABLE_INIT_MISSING,          ///< variable initailizer missing
@@ -306,10 +325,16 @@ typedef struct __CfAstParseResult {
             CfAstTokenType expectedType; ///< expected token type
         } unexpectedTokenType;
 
-        CfAstToken variableTypeMissing;
-        CfAstToken variableInitMissing;
-        CfAstSpan  bracketInternalsMissing;
-        CfAstSpan  rhsMissing;
+        // single missing error message?
+
+        CfAstSpan variableTypeMissing;     ///< variable type missing
+        CfAstSpan variableInitMissing;     ///< variable initializer missing
+        CfAstSpan bracketInternalsMissing; ///< bracket internals missing
+        CfAstSpan rhsMissing;              ///< right hand side missing
+        CfAstSpan ifConditionMissing;      ///< 'if' condition missing
+        CfAstSpan ifBlockMissing;          ///< 'if' code block missing
+        CfAstSpan elseBlockMissing;        ///< 'else' code block missing
+        CfAstSpan assignmentValueMissing;  ///< assignment value missing
     };
 } CfAstParseResult;
 

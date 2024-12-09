@@ -13,6 +13,9 @@ const char * cfAstDeclTypeStr( CfAstDeclType declType ) {
     case CF_AST_DECL_TYPE_FN  : return "fn";
     case CF_AST_DECL_TYPE_LET : return "let";
     }
+
+    assert(false && "Invalid 'declType' parameter passed");
+    return NULL;
 } // cfAstDeclTypeStr
 
 const char * cfAstTypeStr( CfAstType type ) {
@@ -22,6 +25,9 @@ const char * cfAstTypeStr( CfAstType type ) {
     case CF_AST_TYPE_F32:  return "f32";
     case CF_AST_TYPE_VOID: return "void";
     }
+
+    assert(false && "Invalid 'type' parameter passed");
+    return NULL;
 } // cfAstTypeStr
 
 CfStr cfAstSpanCutStr( CfAstSpan span, CfStr str ) {

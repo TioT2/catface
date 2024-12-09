@@ -1,7 +1,3 @@
-file(READ example.cf content CONFIGURE_DEPENDS)
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/include/gen/example.cf" "R\"(\n${content}\n)\"")
-
-
 add_executable(test_ast main.cpp)
-include_directories(test_ast PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/include")
 target_link_libraries(test_ast PRIVATE ast)
+target_compile_definitions(test_ast PRIVATE _TEST_EXAMPLE_DIR="${CMAKE_SOURCE_DIR}/examples/lang")
