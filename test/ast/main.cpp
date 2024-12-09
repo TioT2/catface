@@ -10,6 +10,7 @@
  * @brief main program function
  */
 int main( void ) {
+    // 'example.cf' file is processed to be C++ raw string and added to /include/gen build subdirectory
     char source[] =
         #include "gen/example.cf"
     ;

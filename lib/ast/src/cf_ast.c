@@ -66,6 +66,16 @@ void cfAstSpanDumpJson( FILE *out, CfAstSpan span ) {
     fprintf(out, "[%zu, %zu]", span.begin, span.end);
 } // cfAstSpanDumpJson
 
+/**
+ * @brief AST expression in json dumping function
+ * 
+ * @param[in] out    output file
+ * @param[in] expr   expression to dump
+ * @param[in] offset expression offset
+ */
+static void cfAstExprDumpJson( FILE *out, const CfAstExpr *expr, size_t offset ) {
+} // 
+
 void cfAstDumpJson( FILE *out, const CfAst ast ) {
     fprintf(out, "{\n");
 
@@ -80,29 +90,29 @@ void cfAstDumpJson( FILE *out, const CfAst ast ) {
     fprintf(out, "    \"declarations\": [\n");
     for (size_t i = 0; i < ast->declArrayLen; i++) {
         const CfAstDecl *decl = &ast->declArray[i];
-        fprintf(out, "        {\n");
+        fprintf(out, "%*s{\n", 8, "");
 
         // display type
-        fprintf(out, "            \"type\": \"");
+        fprintf(out, "%*s\"type\": \"", 12, "");
         cfStrWriteShielded(out, CF_STR(cfAstDeclTypeStr(decl->type)));
         fprintf(out, "\",\n");
 
-        fprintf(out, "            \"span\": ");
+        fprintf(out, "%*s\"span\": ", 12, "");
         cfAstSpanDumpJson(out, decl->span);
         fprintf(out, ",\n");
 
         switch (decl->type) {
         case CF_AST_DECL_TYPE_FN: {
-
+            // don't dump function additional content))
             break;
         }
 
         case CF_AST_DECL_TYPE_LET: {
-            fprintf(out, "            \"name\": \"");
+            fprintf(out, "%*s\"name\": \"", 12, "");
             cfStrWriteShielded(out, decl->let.name);
             fprintf(out, "\",\n");
 
-            fprintf(out, "            \"type\": \"");
+            fprintf(out, "%*s\"type\": \"", 12, "");
             cfStrWriteShielded(out, CF_STR(cfAstTypeStr(decl->let.type)));
             fprintf(out, "\"\n");
 

@@ -144,12 +144,22 @@ struct __CfAstBlock {
     CfAstStmt   stmts[1];  ///< statement array (extends beyond struct memory for stmtCount - 1 elements)
 }; // struct __CfAstBlock
 
+/// @brief binary operator enumeration
+typedef enum __CfAstBinaryOperator {
+    CF_AST_BINARY_OPERATOR_ADD, ///< addition
+    CF_AST_BINARY_OPERATOR_SUB, ///< substraction
+    CF_AST_BINARY_OPERATOR_MUL, ///< multiplication
+    CF_AST_BINARY_OPERATOR_DIV, ///< division
+} CfAstBinaryOperator;
+
 /// @brief expression type (expression union tag)
 typedef enum __CfAstExprType {
-    CF_AST_EXPR_TYPE_INTEGER,  ///< integer constant
-    CF_AST_EXPR_TYPE_FLOATING, ///< float-point constant
-    CF_AST_EXPR_TYPE_IDENT,    ///< ident expression
-    CF_AST_EXPR_TYPE_CALL,     ///< function call
+    CF_AST_EXPR_TYPE_INTEGER,         ///< integer constant
+    CF_AST_EXPR_TYPE_FLOATING,        ///< float-point constant
+    CF_AST_EXPR_TYPE_IDENT,           ///< ident expression
+    CF_AST_EXPR_TYPE_CALL,            ///< function call
+    CF_AST_EXPR_TYPE_ASSIGNMENT,      ///< assignment expression
+    CF_AST_EXPR_TYPE_BINARY_OPERATOR, ///< binary operator expression
 } CfAstExprType;
 
 /// @brief expression representaiton structure
@@ -167,6 +177,12 @@ struct __CfAstExpr {
             size_t       paramArrayLength; ///< parameters function called by
             CfAstExpr ** paramArray;       ///< parameter array
         } call; ///< function call
+
+        struct {
+            CfAstBinaryOperator   op;  ///< operator to perform
+            CfAstExpr           * lhs; ///< left hand side
+            CfAstExpr           * rhs; ///< right hand side
+        } binaryOperator; ///< binary operator
     };
 }; // struct __CfAstExpr
 
@@ -232,6 +248,10 @@ typedef enum __CFAstTokenType {
     CF_AST_TOKEN_TYPE_SEMICOLON,       ///< ';' symbol
     CF_AST_TOKEN_TYPE_COMMA,           ///< ',' symbol
     CF_AST_TOKEN_TYPE_EQUAL,           ///< '=' symbol
+    CF_AST_TOKEN_TYPE_PLUS,            ///< '+' symbol
+    CF_AST_TOKEN_TYPE_MINUS,           ///< '-' symbol
+    CF_AST_TOKEN_TYPE_ASTERISK,        ///< '*' symbol
+    CF_AST_TOKEN_TYPE_SLASH,           ///< '/' symbol
     CF_AST_TOKEN_TYPE_CURLY_BR_OPEN,   ///< '{' symbol
     CF_AST_TOKEN_TYPE_CURLY_BR_CLOSE,  ///< '}' symbol
     CF_AST_TOKEN_TYPE_ROUND_BR_OPEN,   ///< '(' symbol
@@ -263,6 +283,7 @@ typedef enum __CfAstParseStatus {
     CF_AST_PARSE_STATUS_UNEXPECTED_SYMBOL,              ///< unexpected symbol occured (tokenization error)
     CF_AST_PARSE_STATUS_UNEXPECTED_TOKEN_TYPE,          ///< function signature parsing error occured
     CF_AST_PARSE_STATUS_EXPR_BRACKET_INTERNALS_MISSING, ///< no contents in sub-expression
+    CF_AST_PARSE_STATUS_EXPR_RHS_MISSING,               ///< right hand side missing
 
     CF_AST_PARSE_STATUS_VARIABLE_TYPE_MISSING,          ///< no variable type
     CF_AST_PARSE_STATUS_VARIABLE_INIT_MISSING,          ///< variable initailizer missing
@@ -288,6 +309,7 @@ typedef struct __CfAstParseResult {
         CfAstToken variableTypeMissing;
         CfAstToken variableInitMissing;
         CfAstSpan  bracketInternalsMissing;
+        CfAstSpan  rhsMissing;
     };
 } CfAstParseResult;
 

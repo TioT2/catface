@@ -1,4 +1,4 @@
-file(READ example.cf content)
+file(READ example.cf content CONFIGURE_DEPENDS)
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/include/gen/example.cf" "R\"(\n${content}\n)\"")
 
 

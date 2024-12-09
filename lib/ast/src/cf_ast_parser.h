@@ -64,9 +64,9 @@ void cfAstParseTokenList(
 /**
  * @brief type from AST parsing function
  * 
- * @param[in] self         parser pointer
- * @param[in] tokenListPtr token list pointer
- * @param[in] typeDst      token type parsing destination
+ * @param[in]     self         parser pointer
+ * @param[in,out] tokenListPtr token list pointer
+ * @param[out]    typeDst      token type parsing destination
  * 
  * @return true if parsed, false if not
  */
@@ -75,10 +75,10 @@ bool cfAstParseType( CfAstParser *const self, const CfAstToken **tokenListPtr, C
 /**
  * @brief token with certain type parsing function
  * 
- * @param[in] self              parser pointer
- * @param[in] tokenListPtr      token list pointer
- * @param[in] expectedTokenType expected type
- * @param[in] required          if true, function will throw error, if false - return NULL
+ * @param[in]     self              parser pointer
+ * @param[in,out] tokenListPtr      token list pointer
+ * @param[in]     expectedTokenType expected type
+ * @param[in]     required          if true, function will throw error, if false - return NULL
  * 
  * @return token pointer (non-null if required == true)
  */
@@ -92,7 +92,8 @@ const CfAstToken * cfAstParseToken(
 /**
  * @brief block parsing function
  * 
- * @param[in] self self pointer
+ * @param[in] self             self pointer
+ * @param[in,out] tokenListPtr token list pointer
  * 
  * @return parsed block pointer (NULL if parsing failed)
  */
@@ -101,8 +102,8 @@ CfAstBlock * cfAstParseBlock( CfAstParser *const self, const CfAstToken **tokenL
 /**
  * @brief function from token list parsing function
  * 
- * @param[in] self         parser pointer
- * @param[in] tokenListPtr list of tokens to parse function from (non-null)
+ * @param[in]     self         parser pointer
+ * @param[in,out] tokenListPtr list of tokens to parse function from (non-null)
  * 
  * @return parsed function (throws error if failed.)
  * 
@@ -113,20 +114,18 @@ CfAstFunction cfAstParseFunction( CfAstParser *const self, const CfAstToken **to
 /**
  * @brief expression parsing function
  * 
- * @param[in] self      parser pointer
- * @param[in] tokenList token list
+ * @param[in]     self         parser pointer
+ * @param[in,out] tokenListPtr token list pointer
  * 
  * @return parsed expression pointer (may be null)
- * 
- * @note This function assumes, that expression is required
  */
 CfAstExpr * cfAstParseExpr( CfAstParser *const self, const CfAstToken **tokenListPtr );
 
 /**
  * @brief variable declaration parsing function
  * 
- * @param[in] self         parser pointer
- * @param[in] tokenListPtr token list pointer
+ * @param[in]     self         parser pointer
+ * @param[in,out] tokenListPtr token list pointer
  * 
  * @return parsed variable declaration
  */

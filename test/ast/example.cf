@@ -8,11 +8,11 @@ fn func_with_no_args() {
 
 fn main(argc: u32) i32 {
     // no code allowed here
-    47;
-    {
+    let f: f32 = 30 * n + 47 / 80 + 11;
+    let qu: i32 = 0;
+    qu = 40 + 47 / 80 + f;
 
-    }
-    let f: f32 = ((0.47e1))(11, 0, ident);
+    __cfvm_write(qu);
 }
 
 // example.cf

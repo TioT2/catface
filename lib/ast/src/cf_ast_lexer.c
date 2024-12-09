@@ -196,6 +196,10 @@ CfAstTokenParsingResult cfAstTokenParse( CfStr source, CfAstSpan span ) {
     case ';': type = CF_AST_TOKEN_TYPE_SEMICOLON       ; break;
     case ',': type = CF_AST_TOKEN_TYPE_COMMA           ; break;
     case '=': type = CF_AST_TOKEN_TYPE_EQUAL           ; break;
+    case '+': type = CF_AST_TOKEN_TYPE_PLUS            ; break;
+    case '-': type = CF_AST_TOKEN_TYPE_MINUS           ; break;
+    case '*': type = CF_AST_TOKEN_TYPE_ASTERISK        ; break;
+    case '/': type = CF_AST_TOKEN_TYPE_SLASH           ; break;
     case '{': type = CF_AST_TOKEN_TYPE_CURLY_BR_OPEN   ; break;
     case '}': type = CF_AST_TOKEN_TYPE_CURLY_BR_CLOSE  ; break;
     case '(': type = CF_AST_TOKEN_TYPE_ROUND_BR_OPEN   ; break;

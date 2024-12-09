@@ -328,7 +328,6 @@ bool cfExecutableWrite( FILE *file, const CfExecutable *executable );
  */
 void cfExecutableDtor( CfExecutable *executable );
 
-
 /**
  * @brief executable read status corresponding string getting function
  * 
