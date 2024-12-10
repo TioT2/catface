@@ -13,7 +13,7 @@
  * @brief keyword from ident parsing function
  * 
  * @param[in]  ident ident to parse keyword from
- * @param[out] kwDst kryword destination (non-null)
+ * @param[out] kwDst kryword destination (non-null) // TODO: kryword?
  * 
  * @return true if keyword parsed, false if not.
  */
@@ -111,10 +111,12 @@ CfAstTokenParsingResult cfAstTokenParse( CfStr source, CfAstSpan span ) {
     if (isdigit(*str.begin)) {
         const char *start = str.begin;
 
+        // TODO: parse int?
+
         uint32_t base =
               cfStrStartsWith(str, "0x") ? 16
             : cfStrStartsWith(str, "0o") ? 8
-            : cfStrStartsWith(str, "0b") ? 1
+            : cfStrStartsWith(str, "0b") ? 1 // TODO: well tested system (ง'̀-'́)ง
             : 10;
         uint32_t offset = base != 10 ? 2 : 0;
 
@@ -151,6 +153,7 @@ CfAstTokenParsingResult cfAstTokenParse( CfStr source, CfAstSpan span ) {
                 }
             }
 
+            // TODO: I'm not convinced this works (can you believe?), where are unit tests for this??
             if (str.begin < str.end && *str.begin == 'e') {
                 str.begin++;
                 isFloat = true;
@@ -212,7 +215,7 @@ CfAstTokenParsingResult cfAstTokenParse( CfStr source, CfAstSpan span ) {
         uint16_t strPattern = *(const uint16_t *)str.begin;
         size_t tokSpanBegin = str.begin - source.begin;
 
-        for (uint32_t i = 0; i < sizeof(tokens) / sizeof(tokens[0]); i++)
+        for (uint32_t i = 0; i < sizeof(tokens) / sizeof(tokens[0]); i++) // TODO: macro ARRAY_SIZE?
             if (*(const uint16_t *)tokens[i].pattern == strPattern)
                 return (CfAstTokenParsingResult) {
                     .status = CF_AST_TOKEN_PARSING_STATUS_OK,

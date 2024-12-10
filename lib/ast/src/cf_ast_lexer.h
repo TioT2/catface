@@ -29,7 +29,7 @@ typedef struct __CfTokenParsingResult {
             CfAstToken token; ///< parsed token
         } ok;
 
-        char unexpectedSymbol; ///< symbol that theoretically can't be part of any ident
+        char unexpectedSymbol; ///< symbol that theoretically can't be part of any identifier
     };
 } CfAstTokenParsingResult;
 

@@ -13,7 +13,7 @@ extern "C" {
 #endif
 
 /// @brief declcaration forward-declaration
-typedef struct __CfAstDecl CfAstDecl;
+typedef struct __CfAstDecl CfAstDecl; // TODO: __ in _any_ part of the token are reserved for linker, _ is reserved at the beginning, CfAstDecl_ is fine Cf_AstDecl is also fine
 
 /// @brief statement forward-declaration
 typedef struct __CfAstStmt CfAstStmt;
@@ -31,14 +31,14 @@ typedef struct __CfAstSpan {
 } CfAstSpan;
 
 /**
- * @brief substr from string by span getting function
+ * @brief substr from string by span getting function // TODO: ...function ?
  * 
  * @param[in] span span to cut str by
  * @param[in] str  str to cut
  * 
  * @return strnig cut by span
  */
-CfStr cfAstSpanCutStr( CfAstSpan span, CfStr str );
+CfStr cfAstSpanCutStr( CfAstSpan span, CfStr str ); // TODO: better name?
 
 /**
  * @brief span in json format dumping function
@@ -49,7 +49,7 @@ CfStr cfAstSpanCutStr( CfAstSpan span, CfStr str );
 void cfAstSpanDumpJson( FILE *out, CfAstSpan span );
 
 /// @brief primitive (e.g. builtin) type representation enumeration
-/// @note this kind of type declaration is TMP solution
+/// @note this kind of type declaration is TMP solution // TODO: add this convention to docs
 typedef enum __CfAstType {
     CF_AST_TYPE_I32,  ///< 32-bit integer primitive type
     CF_AST_TYPE_U32,  ///< 32-bit unsigned primitive type
@@ -91,6 +91,8 @@ typedef struct __CfAstFunctionParam {
 /// @brief function declaration structure
 typedef struct __CfAstFunction {
     CfStr                name;          ///< name
+
+    // TODO: array?
     CfAstFunctionParam * params;        ///< parameter array (owned)
     size_t               paramCount;    ///< parameter array size
     CfAstType            returnType;    ///< returned function type
@@ -104,13 +106,14 @@ typedef struct __CfAstVariable {
     CfStr       name; ///< name
     CfAstType   type; ///< type
     CfAstExpr * init; ///< initializer expression (may be null)
+
     CfAstSpan   span; ///< span variable declaration located in
 } CfAstVariable;
 
 /// @brief declaration structure
 struct __CfAstDecl {
     CfAstDeclType type; ///< declaration union tag
-    CfAstSpan     span; ///< span declaration located in
+    CfAstSpan     span; ///< span declaration located in // TODO: consistent placement of spans?
 
     union {
         CfAstFunction fn;  ///< function
@@ -125,7 +128,6 @@ typedef enum __CfAstStmtType {
     CF_AST_STMT_TYPE_BLOCK, ///< block statement (curly brace enclosed sequence)
     CF_AST_STMT_TYPE_IF,    ///< if/else statement
     CF_AST_STMT_TYPE_WHILE, ///< while loop statement
-
 } CfAstStmtType;
 
 /// @brief statement repersentation structure
@@ -138,6 +140,7 @@ struct __CfAstStmt {
         CfAstDecl    decl;  ///< declarative expression
         CfAstBlock * block; ///< block expression (non-null)
 
+        // TODO: Why not separate struct for if?
         struct {
             CfAstExpr  * condition; ///< condition (non-null)
             CfAstBlock * codeThen;  ///< code to execute then condition returned true (non-null)
@@ -177,7 +180,7 @@ typedef enum __CfAstBinaryOperator {
 typedef enum __CfAstExprType {
     CF_AST_EXPR_TYPE_INTEGER,         ///< integer constant
     CF_AST_EXPR_TYPE_FLOATING,        ///< float-point constant
-    CF_AST_EXPR_TYPE_IDENT,           ///< ident expression
+    CF_AST_EXPR_TYPE_IDENT,           ///< ident expression // TODO: value?
     CF_AST_EXPR_TYPE_CALL,            ///< function call
     CF_AST_EXPR_TYPE_ASSIGNMENT,      ///< assignment expression
     CF_AST_EXPR_TYPE_BINARY_OPERATOR, ///< binary operator expression
@@ -206,7 +209,7 @@ struct __CfAstExpr {
             CfAstExpr  * callee;           ///< called expression
             size_t       paramArrayLength; ///< parameters function called by
             CfAstExpr ** paramArray;       ///< parameter array
-        } call; ///< function call
+        } call; ///< function call // TODO: separate struct
 
         struct {
             CfAstAssignmentOperator   op;          ///< exact assignment operator
@@ -222,8 +225,8 @@ struct __CfAstExpr {
     };
 }; // struct __CfAstExpr
 
-/// @brief AST handle representation structure
-typedef struct __CfAstImpl * CfAst;
+/// @brief AST handle representation structure // TODO: naming?
+typedef struct __CfAstImpl * CfAst; // TODO: make this explicit pointer?
 
 /**
  * @brief AST destructor
@@ -271,7 +274,7 @@ CfStr cfAstGetSourceFileName( const CfAst ast );
 typedef enum __CFAstTokenType {
     CF_AST_TOKEN_TYPE_INTEGER,         ///< integer constant
     CF_AST_TOKEN_TYPE_FLOATING,        ///< floating-point constant
-    CF_AST_TOKEN_TYPE_IDENT,           ///< ident
+    CF_AST_TOKEN_TYPE_IDENT,           ///< ident // TODO: identifier, id
 
     CF_AST_TOKEN_TYPE_FN,              ///< "fn"    keyword
     CF_AST_TOKEN_TYPE_LET,             ///< "let"   keyword
