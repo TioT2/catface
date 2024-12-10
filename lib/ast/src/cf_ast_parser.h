@@ -117,7 +117,7 @@ CfAstFunction cfAstParseFunction( CfAstParser *const self, const CfAstToken **to
  * @param[in]     self         parser pointer
  * @param[in,out] tokenListPtr token list pointer
  * 
- * @return parsed expression pointer (may be null)
+ * @return parsed expression pointer (may be null in case if *tokenListPtr array does not starts from valid expression)
  */
 CfAstExpr * cfAstParseExpr( CfAstParser *const self, const CfAstToken **tokenListPtr );
 

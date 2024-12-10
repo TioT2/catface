@@ -6,25 +6,31 @@ fn func_with_no_args() {
     31245;
 }
 
-fn main(argc: u32) i32 {
-    // no code allowed here
+fn main(argc: u32, argb: u32, arga: u32) i32 {
     let f: f32 = 30 * n + 47 / 80 + 11;
     let qu: i32 = 0;
     qu = 40 + 47 / 80 + f;
 
+    let arg: u32 = 0;
+    arg += argc;
+    arg -= argb;
+    arg /= arga;
+
     __cfvm_write(qu);
 
-    if qu / ponos {
-        createDescriptorSet();
+    if qu <= 0 {
+        doSmthPeaceful();
     } else {
         openBhuddaFinger();
     }
 
-    while true {
+    while arg + 1 / 2 >= 3 {
         let i: i32;
 
         if qu / 42 {
             let q: i32 = 12;
+
+            q += 20;
 
             q = qu;
             {

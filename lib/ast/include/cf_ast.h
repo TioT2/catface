@@ -164,6 +164,13 @@ typedef enum __CfAstBinaryOperator {
     CF_AST_BINARY_OPERATOR_SUB, ///< substraction
     CF_AST_BINARY_OPERATOR_MUL, ///< multiplication
     CF_AST_BINARY_OPERATOR_DIV, ///< division
+
+    CF_AST_BINARY_OPERATOR_EQ,  ///< equal
+    CF_AST_BINARY_OPERATOR_NE,  ///< not equal
+    CF_AST_BINARY_OPERATOR_LT,  ///< less than
+    CF_AST_BINARY_OPERATOR_GT,  ///< greater than
+    CF_AST_BINARY_OPERATOR_LE,  ///< less equal
+    CF_AST_BINARY_OPERATOR_GE,  ///< greater equal
 } CfAstBinaryOperator;
 
 /// @brief expression type (expression union tag)
@@ -175,6 +182,15 @@ typedef enum __CfAstExprType {
     CF_AST_EXPR_TYPE_ASSIGNMENT,      ///< assignment expression
     CF_AST_EXPR_TYPE_BINARY_OPERATOR, ///< binary operator expression
 } CfAstExprType;
+
+/// @brief binary operator used for assignment
+typedef enum __CfAstAssignmentOperator {
+    CF_AST_ASSIGNMENT_OPERATOR_NONE, ///< do not perform additional actions during assignment
+    CF_AST_ASSIGNMENT_OPERATOR_ADD,  ///< perform addition
+    CF_AST_ASSIGNMENT_OPERATOR_SUB,  ///< perform substraction
+    CF_AST_ASSIGNMENT_OPERATOR_MUL,  ///< perform multiplication
+    CF_AST_ASSIGNMENT_OPERATOR_DIV,  ///< perform division
+} CfAstAssignmentOperator;
 
 /// @brief expression representaiton structure
 struct __CfAstExpr {
@@ -193,8 +209,9 @@ struct __CfAstExpr {
         } call; ///< function call
 
         struct {
-            CfStr       destination; ///< variable to assign to name (variable assignment only is supported at least now)
-            CfAstExpr * value;       ///< value to assign to
+            CfAstAssignmentOperator   op;          ///< exact assignment operator
+            CfStr                     destination; ///< variable to assign to name (variable assignment only is supported at least now)
+            CfAstExpr               * value;       ///< value to assign to
         } assignment; ///< assignment
 
         struct {

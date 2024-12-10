@@ -210,14 +210,18 @@ CfAstTokenParsingResult cfAstTokenParse( CfStr source, CfAstSpan span ) {
             {*(const uint16_t *)"/=", CF_AST_TOKEN_TYPE_SLASH_EQUAL            },
         };
         uint16_t strPattern = *(const uint16_t *)str.begin;
+        size_t tokSpanBegin = str.begin - source.begin;
 
         for (uint32_t i = 0; i < sizeof(tokens) / sizeof(tokens[0]); i++)
             if (tokens[i].pattern == strPattern)
                 return (CfAstTokenParsingResult) {
                     .status = CF_AST_TOKEN_PARSING_STATUS_OK,
                     .ok = {
-                        .rest = (CfAstSpan) { (size_t)(str.end - source.begin), span.end },
-                        .token = tokens[i].type
+                        .rest = (CfAstSpan) { tokSpanBegin + 2, span.end },
+                        .token = (CfAstToken) {
+                            .type = tokens[i].type,
+                            .span = (CfAstSpan) { tokSpanBegin, tokSpanBegin + 2 },
+                        },
                     },
                 };
     }
