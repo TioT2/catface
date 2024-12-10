@@ -124,6 +124,8 @@ typedef enum __CfAstStmtType {
     CF_AST_STMT_TYPE_DECL,  ///< statement that declares something
     CF_AST_STMT_TYPE_BLOCK, ///< block statement (curly brace enclosed sequence)
     CF_AST_STMT_TYPE_IF,    ///< if/else statement
+    CF_AST_STMT_TYPE_WHILE, ///< while loop statement
+
 } CfAstStmtType;
 
 /// @brief statement repersentation structure
@@ -141,6 +143,11 @@ struct __CfAstStmt {
             CfAstBlock * codeThen;  ///< code to execute then condition returned true (non-null)
             CfAstBlock * codeElse;  ///< code to execute then condition returned false (nulllable)
         } if_; ///< if statement
+
+        struct {
+            CfAstExpr  * conditinon; ///< loop condition
+            CfAstBlock * code;       ///< loop code
+        } while_; ///< while statement
     };
 }; // struct __CfAstStmt
 
@@ -249,14 +256,15 @@ typedef enum __CFAstTokenType {
     CF_AST_TOKEN_TYPE_FLOATING,        ///< floating-point constant
     CF_AST_TOKEN_TYPE_IDENT,           ///< ident
 
-    CF_AST_TOKEN_TYPE_FN,              ///< "fn"   keyword
-    CF_AST_TOKEN_TYPE_LET,             ///< "let"  keyword
-    CF_AST_TOKEN_TYPE_I32,             ///< "i32"  keyword
-    CF_AST_TOKEN_TYPE_U32,             ///< "u32"  keyword
-    CF_AST_TOKEN_TYPE_F32,             ///< "f32"  keyword
-    CF_AST_TOKEN_TYPE_VOID,            ///< "void" keyword
-    CF_AST_TOKEN_TYPE_IF,              ///< ident
-    CF_AST_TOKEN_TYPE_ELSE,            ///< ident
+    CF_AST_TOKEN_TYPE_FN,              ///< "fn"    keyword
+    CF_AST_TOKEN_TYPE_LET,             ///< "let"   keyword
+    CF_AST_TOKEN_TYPE_I32,             ///< "i32"   keyword
+    CF_AST_TOKEN_TYPE_U32,             ///< "u32"   keyword
+    CF_AST_TOKEN_TYPE_F32,             ///< "f32"   keyword
+    CF_AST_TOKEN_TYPE_VOID,            ///< "void"  keyword
+    CF_AST_TOKEN_TYPE_IF,              ///< "if"    keyword
+    CF_AST_TOKEN_TYPE_ELSE,            ///< "else"  keyword
+    CF_AST_TOKEN_TYPE_WHILE,           ///< "while" keyword
 
     CF_AST_TOKEN_TYPE_COLON,           ///< ':' symbol
     CF_AST_TOKEN_TYPE_SEMICOLON,       ///< ';' symbol
@@ -304,6 +312,9 @@ typedef enum __CfAstParseStatus {
     CF_AST_PARSE_STATUS_IF_BLOCK_MISSING,               ///< 'if' statement code block is missing
     CF_AST_PARSE_STATUS_ELSE_BLOCK_MISSING,             ///< 'else' code block is missing
 
+    CF_AST_PARSE_STATUS_WHILE_CONDITION_MISSING,        ///< 'while' statement condition missing
+    CF_AST_PARSE_STATUS_WHILE_BLOCK_MISSING,            ///< 'while' statement code block is missing
+
     CF_AST_PARSE_STATUS_VARIABLE_TYPE_MISSING,          ///< no variable type
     CF_AST_PARSE_STATUS_VARIABLE_INIT_MISSING,          ///< variable initailizer missing
 } CfAstParseStatus;
@@ -325,7 +336,7 @@ typedef struct __CfAstParseResult {
             CfAstTokenType expectedType; ///< expected token type
         } unexpectedTokenType;
 
-        // single missing error message?
+        // Do something with this situation...
 
         CfAstSpan variableTypeMissing;     ///< variable type missing
         CfAstSpan variableInitMissing;     ///< variable initializer missing
@@ -335,6 +346,8 @@ typedef struct __CfAstParseResult {
         CfAstSpan ifBlockMissing;          ///< 'if' code block missing
         CfAstSpan elseBlockMissing;        ///< 'else' code block missing
         CfAstSpan assignmentValueMissing;  ///< assignment value missing
+        CfAstSpan whileConditionMissing;   ///< 'if' condition missing
+        CfAstSpan whileBlockMissing;       ///< 'if' code block missing
     };
 } CfAstParseResult;
 

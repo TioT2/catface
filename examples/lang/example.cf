@@ -20,20 +20,25 @@ fn main(argc: u32) i32 {
         openBhuddaFinger();
     }
 
-    if qu / 42 {
-        let q: i32 = 12;
+    while true {
+        let i: i32;
 
-        q = qu;
-        {
+        if qu / 42 {
+            let q: i32 = 12;
 
-        }
+            q = qu;
+            {
 
-        if 11044 {
+            }
 
-        } else {
+            if 11044 {
 
+            } else {
+
+            }
         }
     }
+
 } // main
 
 // example.cf

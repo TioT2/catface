@@ -22,15 +22,15 @@ static bool cfAstTokenKeywordFromIdent( CfStr ident, CfAstTokenType *kwDst ) {
         const char    * text;
         CfAstTokenType  type;
     } table[] = {
-        {"fn",   CF_AST_TOKEN_TYPE_FN   },
-        {"let",  CF_AST_TOKEN_TYPE_LET  },
-        {"i32",  CF_AST_TOKEN_TYPE_I32  },
-        {"u32",  CF_AST_TOKEN_TYPE_U32  },
-        {"f32",  CF_AST_TOKEN_TYPE_F32  },
-        {"void", CF_AST_TOKEN_TYPE_VOID },
-        {"if",   CF_AST_TOKEN_TYPE_IF   },
-        {"else", CF_AST_TOKEN_TYPE_ELSE },
-
+        {"fn",    CF_AST_TOKEN_TYPE_FN    },
+        {"let",   CF_AST_TOKEN_TYPE_LET   },
+        {"i32",   CF_AST_TOKEN_TYPE_I32   },
+        {"u32",   CF_AST_TOKEN_TYPE_U32   },
+        {"f32",   CF_AST_TOKEN_TYPE_F32   },
+        {"void",  CF_AST_TOKEN_TYPE_VOID  },
+        {"if",    CF_AST_TOKEN_TYPE_IF    },
+        {"else",  CF_AST_TOKEN_TYPE_ELSE  },
+        {"while", CF_AST_TOKEN_TYPE_WHILE },
     };
 
     for (size_t i = 0, n = sizeof(table) / sizeof(table[0]); i < n; i++) {

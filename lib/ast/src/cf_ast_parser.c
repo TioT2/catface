@@ -195,9 +195,8 @@ static bool cfAstParseStmt( CfAstParser *const self, const CfAstToken **tokenLis
                 });
         }
 
-        stmtDst->type = CF_AST_STMT_TYPE_IF;
         *stmtDst = (CfAstStmt) {
-            .type = CF_AST_STMT_TYPE_BLOCK,
+            .type = CF_AST_STMT_TYPE_IF,
             .if_ = {
                 .condition = cond,
                 .codeThen  = codeThen,
@@ -205,6 +204,30 @@ static bool cfAstParseStmt( CfAstParser *const self, const CfAstToken **tokenLis
             },
         };
 
+    } else if (cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_WHILE, false) != NULL) {
+        // parse condition
+        CfAstExpr *condition = cfAstParseExpr(self, &tokenList);
+        if (condition == NULL)
+            cfAstParserFinish(self, (CfAstParseResult) {
+                .status = CF_AST_PARSE_STATUS_WHILE_CONDITION_MISSING,
+                .whileConditionMissing = (CfAstSpan) { spanBegin, tokenList->span.begin }
+            });
+
+        // parse code
+        CfAstBlock *code = cfAstParseBlock(self, &tokenList);
+        if (code == NULL)
+            cfAstParserFinish(self, (CfAstParseResult) {
+                .status = CF_AST_PARSE_STATUS_WHILE_BLOCK_MISSING,
+                .whileBlockMissing = (CfAstSpan) { spanBegin, tokenList->span.begin }
+            });
+
+        *stmtDst = (CfAstStmt) {
+            .type = CF_AST_STMT_TYPE_WHILE,
+            .while_ = {
+                .conditinon = condition,
+                .code       = code,
+            },
+        };
     } else if ((block = cfAstParseBlock(self, &tokenList)) != NULL) {
         *stmtDst = (CfAstStmt) {
             .type = CF_AST_STMT_TYPE_BLOCK,
