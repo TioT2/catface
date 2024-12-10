@@ -190,25 +190,60 @@ CfAstTokenParsingResult cfAstTokenParse( CfStr source, CfAstSpan span ) {
         };
     }
 
+    // try to match double-character tokens
+    if (str.end - str.begin >= 2) {
+        bool found = true;
+
+        // switch can't be used here because compile-time string literal
+        // to uint16_t conversion isn't possible within C language.
+        static const struct {
+            uint16_t       pattern; ///< pattern to match
+            CfAstTokenType type;    ///< corresponding token type
+        } tokens[] = {
+            {*(const uint16_t *)"<=", CF_AST_TOKEN_TYPE_ANGULAR_BR_OPEN_EQUAL  },
+            {*(const uint16_t *)">=", CF_AST_TOKEN_TYPE_ANGULAR_BR_CLOSE_EQUAL },
+            {*(const uint16_t *)"==", CF_AST_TOKEN_TYPE_EQUAL_EQUAL            },
+            {*(const uint16_t *)"!=", CF_AST_TOKEN_TYPE_EXCLAMATION_EQUAL      },
+            {*(const uint16_t *)"+=", CF_AST_TOKEN_TYPE_PLUS_EQUAL             },
+            {*(const uint16_t *)"-=", CF_AST_TOKEN_TYPE_MINUS_EQUAL            },
+            {*(const uint16_t *)"*=", CF_AST_TOKEN_TYPE_ASTERISK_EQUAL         },
+            {*(const uint16_t *)"/=", CF_AST_TOKEN_TYPE_SLASH_EQUAL            },
+        };
+        uint16_t strPattern = *(const uint16_t *)str.begin;
+
+        for (uint32_t i = 0; i < sizeof(tokens) / sizeof(tokens[0]); i++)
+            if (tokens[i].pattern == strPattern)
+                return (CfAstTokenParsingResult) {
+                    .status = CF_AST_TOKEN_PARSING_STATUS_OK,
+                    .ok = {
+                        .rest = (CfAstSpan) { (size_t)(str.end - source.begin), span.end },
+                        .token = tokens[i].type
+                    },
+                };
+    }
+
+    // try to match single-character tokens
     bool found = true;
     CfAstTokenType type = CF_AST_TOKEN_TYPE_VOID;
 
     // match single-character token
     switch (*str.begin) {
-    case ':': type = CF_AST_TOKEN_TYPE_COLON           ; break;
-    case ';': type = CF_AST_TOKEN_TYPE_SEMICOLON       ; break;
-    case ',': type = CF_AST_TOKEN_TYPE_COMMA           ; break;
-    case '=': type = CF_AST_TOKEN_TYPE_EQUAL           ; break;
-    case '+': type = CF_AST_TOKEN_TYPE_PLUS            ; break;
-    case '-': type = CF_AST_TOKEN_TYPE_MINUS           ; break;
-    case '*': type = CF_AST_TOKEN_TYPE_ASTERISK        ; break;
-    case '/': type = CF_AST_TOKEN_TYPE_SLASH           ; break;
-    case '{': type = CF_AST_TOKEN_TYPE_CURLY_BR_OPEN   ; break;
-    case '}': type = CF_AST_TOKEN_TYPE_CURLY_BR_CLOSE  ; break;
-    case '(': type = CF_AST_TOKEN_TYPE_ROUND_BR_OPEN   ; break;
-    case ')': type = CF_AST_TOKEN_TYPE_ROUND_BR_CLOSE  ; break;
-    case '[': type = CF_AST_TOKEN_TYPE_SQUARE_BR_OPEN  ; break;
-    case ']': type = CF_AST_TOKEN_TYPE_SQUARE_BR_CLOSE ; break;
+    case '<': type = CF_AST_TOKEN_TYPE_ANGULAR_BR_OPEN  ; break;
+    case '>': type = CF_AST_TOKEN_TYPE_ANGULAR_BR_CLOSE ; break;
+    case ':': type = CF_AST_TOKEN_TYPE_COLON            ; break;
+    case ';': type = CF_AST_TOKEN_TYPE_SEMICOLON        ; break;
+    case ',': type = CF_AST_TOKEN_TYPE_COMMA            ; break;
+    case '=': type = CF_AST_TOKEN_TYPE_EQUAL            ; break;
+    case '+': type = CF_AST_TOKEN_TYPE_PLUS             ; break;
+    case '-': type = CF_AST_TOKEN_TYPE_MINUS            ; break;
+    case '*': type = CF_AST_TOKEN_TYPE_ASTERISK         ; break;
+    case '/': type = CF_AST_TOKEN_TYPE_SLASH            ; break;
+    case '{': type = CF_AST_TOKEN_TYPE_CURLY_BR_OPEN    ; break;
+    case '}': type = CF_AST_TOKEN_TYPE_CURLY_BR_CLOSE   ; break;
+    case '(': type = CF_AST_TOKEN_TYPE_ROUND_BR_OPEN    ; break;
+    case ')': type = CF_AST_TOKEN_TYPE_ROUND_BR_CLOSE   ; break;
+    case '[': type = CF_AST_TOKEN_TYPE_SQUARE_BR_OPEN   ; break;
+    case ']': type = CF_AST_TOKEN_TYPE_SQUARE_BR_CLOSE  ; break;
     default:
         found = false;
     }

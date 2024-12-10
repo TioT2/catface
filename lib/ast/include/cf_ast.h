@@ -266,6 +266,18 @@ typedef enum __CFAstTokenType {
     CF_AST_TOKEN_TYPE_ELSE,            ///< "else"  keyword
     CF_AST_TOKEN_TYPE_WHILE,           ///< "while" keyword
 
+    CF_AST_TOKEN_TYPE_ANGULAR_BR_OPEN_EQUAL,  ///< "<=" character combination
+    CF_AST_TOKEN_TYPE_ANGULAR_BR_CLOSE_EQUAL, ///< ">=" character combination
+    CF_AST_TOKEN_TYPE_EQUAL_EQUAL,            ///< "==" character combination
+    CF_AST_TOKEN_TYPE_EXCLAMATION_EQUAL,      ///< "!=" character combination
+    CF_AST_TOKEN_TYPE_PLUS_EQUAL,             ///< "+=" character combination
+    CF_AST_TOKEN_TYPE_MINUS_EQUAL,            ///< "-=" character combination
+    CF_AST_TOKEN_TYPE_ASTERISK_EQUAL,         ///< "*=" character combination
+    CF_AST_TOKEN_TYPE_SLASH_EQUAL,            ///< "/=" character combination
+
+    CF_AST_TOKEN_TYPE_ANGULAR_BR_OPEN,        ///< '<' symbol
+    CF_AST_TOKEN_TYPE_ANGULAR_BR_CLOSE,       ///< '>' symbol
+
     CF_AST_TOKEN_TYPE_COLON,           ///< ':' symbol
     CF_AST_TOKEN_TYPE_SEMICOLON,       ///< ';' symbol
     CF_AST_TOKEN_TYPE_COMMA,           ///< ',' symbol
