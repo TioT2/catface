@@ -13,19 +13,20 @@
 #include <stdlib.h>
 
 /**
- * @brief text from file reading function
- * 
- * @param[in]  file   file to read pointer
- * @param[out] dst    reading destination, function will allocate space for result (non-null)
- * @param[out] dstLen readed line text (non-null)
- * 
- * @return true if succeeded, false otherwise
+ * @brief text from file reading function // TODO: _READ_ (verb) _TEXT_ (noun) from file, PLEASE
+ *
+ * @param[in]  file   file to read pointer // TODO: (pointer to file to read from)
+ * @param[out] dst    reading destination, function will allocate space for the result (non-null) (TODO: add that it need to be deallocated with free)
+ * @param[out] dstLen read line text (non-null) (TODO: what symbols, is NUL-character included?)
+ *
+ * @return true if succeeded, false otherwise // TODO: what happened if it failed, why?
  */
-bool readFile( FILE *file, char **dst, size_t *dstLen ) {
+// TODO: here?
+bool readFile( FILE *file, char **dst, size_t *dstLen ) { // TODO: static
     assert(dst != NULL);
     assert(dstLen != NULL);
 
-    fseek(file, 0, SEEK_END);
+    fseek(file, 0, SEEK_END); // TODO: extract to a function?
     size_t len = ftell(file);
     fseek(file, 0, SEEK_SET);
 
@@ -34,17 +35,17 @@ bool readFile( FILE *file, char **dst, size_t *dstLen ) {
         return false;
 
     fread(buffer, 1, len, file);
-
+    // FREAD RETURNS ERROR IN ERRNO, DON'T CLOBBER IT
 
     *dst = buffer;
-    if (dstLen != NULL)
+    if (dstLen != NULL) // TODO: non-null you say?
         *dstLen = len;
 
     return true;
 } // readFile
 
 /**
- * @brief help printing function
+ * @brief help printing function // TODO: it's all the same, fix
  */
 void printHelp( void ) {
     puts(
@@ -57,25 +58,70 @@ void printHelp( void ) {
     );
 } // printHelp
 
-int main( const int _argc, const char **_argv ) {
+int main( const int _argc, const char **_argv ) { // TODO: why use underscores before the names?
     // const int argc = 5;
     // const char *argv[] = {
     //     "qq",
     //     "-o",
     //     "examples/sin.cfexe",
     //     "-l",
-    //     "examples/sin.cfasm",
-    // };
+    //     "examples/sin.cfasm", // TODO: make it easier to debug without editing main itself
+    // };                        //       also use stashes for such additions and review your
+    //                           //       patches before you commit them.
     const int argc = _argc;
     const char **argv = _argv;
 
+    // TODO: can you move all stuff that is less important elsewhere?
     // quite strange solution, but it's ok because last argument is treated as input file name.
-    if (argc < 2 || 0 == strcmp(argv[1], "-h")) {
+    if (argc < 2 || 0 == strcmp(argv[1], "-h")) { // TODO: 0 == FOO() why? Why not FOO() == 0 like a normal person
         printHelp();
         return 0;
     }
 
+    //   TODO: imagine «cat» program
+    //
+    //   * What would you prefer?
+    //
+    //   ** This?
+    //   +----+------------------------------------------------------------------+
+    //   | 1  | int main() {                                                     |
+    //   | 2  |     if (argv[0] blah blah) {                                     |
+    //   | 3  |         blah blah                                                |
+    //   | 4  |         if (argv[0][0] whatever is like argv[0][1] blah) {       |
+    //   | 5  |             blah blah                                            |
+    //   | 6  |             blah blah                                            |
+    //   | 7  |         }                                                        |
+    //   | 8  |     }                                                            |
+    //   | 9  |     // ... 2000 YEARS LATER ...                                  |
+    //   | 10 |     file = read_file()              /// <= most important logic  |
+    //   | 11 |     // ... 2000 YEARS LATER ...                                  |
+    //   | 12 |     output_file(file)               /// <= most important logic  |
+    //   | 13 |     // ... 2000 YEARS LATER ...                                  |
+    //   | 14 |     free(buffer0);                                               |
+    //   | 15 |     free(buffer1);                                               |
+    //   | 16 |     extra_shutting_down_logic();                                 |
+    //   | 17 |     if (process blah blah blah) {                                |
+    //   | 18 |         delete blah blah                                         |
+    //   | 19 |         if (argv[0][0] whatever is like argv[0][1] blah) {       |
+    //   | 20 |             perform blah blah                                    |
+    //   | 21 |             blah blah                                            |
+    //   | 22 |         }                                                        |
+    //   | 23 |     }                                                            |
+    //   | 24 | }                                                                |
+    //   +----+------------------------------------------------------------------+
+    //
+    //   ** Or this?
+    //   +----+------------------------------------------------------------------+
+    //   | 1  | int main() {                                                     |
+    //   | 2  |     extracted_out_bullshit();                                    |
+    //   | 3  |     file = read_file()              /// <= most important logic  |
+    //   | 4  |     extracted_out_bullshit();                                    |
+    //   | 5  |     output_file(file)               /// <= most important logic  |
+    //   | 6  |     extracted_out_bullshit();                                    |
+    //   +----+------------------------------------------------------------------+
+
     // it's obviously NOT overengineering
+    // TODO: it's possible, just not this way :)
     const int optionCount = 3;
     CfCommandLineOptionInfo optionInfos[3] = {
         {"o", "output", 1},
@@ -94,7 +140,7 @@ int main( const int _argc, const char **_argv ) {
         return 0;
     }
 
-    struct {
+    struct { // TODO: Huh?
         const char *inputFileName;
         const char *outputFileName;
         bool linkOutput;
@@ -113,11 +159,16 @@ int main( const int _argc, const char **_argv ) {
 
     FILE *input = fopen(options.inputFileName, "r");
     if (input == NULL) {
+        // TODO: perror?
         printf("input file opening error: %s\n", strerror(errno));
         return 0;
     }
     bool readSuccess = readFile(input, &text, &textLen);
+    // TODO: errno?
     fclose(input);
+
+
+    // TODO: I will just say this: refactor this mess, make it bearable.
 
     if (!readSuccess) {
         printf("input file reading error occured\n");

@@ -31,6 +31,7 @@ const char * cfAstTypeStr( CfAstType type ) {
 } // cfAstTypeStr
 
 CfStr cfAstSpanCutStr( CfAstSpan span, CfStr str ) {
+    // TODO: assert(cfAstSpanIsValid(span));
     CfStr result = {
         .begin = str.begin + span.begin,
         .end = str.begin + span.end,
@@ -80,6 +81,7 @@ void cfAstSpanDumpJson( FILE *out, CfAstSpan span ) {
  * @param[in] offset expression offset
  */
 static void cfAstExprDumpJson( FILE *out, const CfAstExpr *expr, size_t offset ) {
+    // TODO: WIP? write your own TODO("This function needs work in particular: ...") macro.
 } // 
 
 void cfAstDumpJson( FILE *out, const CfAst ast ) {

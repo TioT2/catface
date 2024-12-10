@@ -87,6 +87,7 @@ void cfArenaDtor( CfArena arena ) {
     if (arena == NULL)
         return;
 
+    // TODO: if for God's sake
     CfArenaChunk *chunk = arena->firstUsed == NULL
         ? arena->free
         : (arena->lastUsed->next = arena->free, arena->firstUsed) // comma operator usecase!
