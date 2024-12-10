@@ -7,7 +7,38 @@
 
 #include "cf_vm_internal.h"
 
-void cfVmTerminate( CfVm *self, const CfTermReason reason ) {
+/// @brief VM context representation structure
+typedef struct __CfVm {
+    uint8_t *         memory;                  ///< operative memory // TODO: I think «operative» is confusing in English, use RAM (Random Access Memory)
+    size_t            memorySize;              ///< current memory size (1 MB, actually) // TODO: what, if it's 1MB then why is it variable...
+
+    const CfExecutable  *executable;           ///< executed executable
+    const CfSandbox * sandbox;                 ///< execution environment (sandbox, actually)
+    //              ^ TODO: is it a consistent coding style choice? (Even in such case, it's rarely used)
+
+    // registers
+    CfRegisters       registers;               ///< user visible registers
+    const uint8_t    *instructionCounter;      ///< next instruction to execute pointer // TODO: (instruction pointer IP)?
+    // TODO: struct range?
+    const uint8_t    *instructionCounterBegin; ///< pointer to first instruction
+    const uint8_t    *instructionCounterEnd;   ///< pointer to first byte AFTER last instruciton
+
+    // stascks // TODO: spelling?
+    CfStack           operandStack;            ///< function operand stack
+    CfStack           callStack;               ///< call stack (contains previous instructionCounter's)
+
+    /// panic-related fields
+    CfTermInfo        termInfo;                ///< info to give to user if panic occured
+    jmp_buf           panicJumpBuffer;         ///< to panic handler jump buffer
+} CfVm;
+
+/**
+ * @brief execution termination function
+ *
+ * @param[in,out] self   VM pointer
+ * @param[in]     reason termination reason
+ */
+void cfVmTerminate( CfVm *self, const CfTermReason reason ) { // TODO: even for successful?
     assert(self != NULL);
 
     // fill standard termInfo fields
@@ -30,6 +61,12 @@ void cfVmPushOperand( CfVm *const self, const void *const src ) {
         cfVmTerminate(self, CF_TERM_REASON_INTERNAL_ERROR);
 } // cfVmPushOperand
 
+/**
+ * @brief value from operand stack popping function
+ * 
+ * @param[in,out] self virtual machine to perform action in
+ * @param[out]    dst  popping destination destination (non-null, 4 bytes writable) // TODO: destination destination
+ */
 void cfVmPopOperand( CfVm *const self, void *const dst ) {
     switch (cfDarrPop(&self->operandStack, dst)) {
     case CF_DARR_INTERNAL_ERROR : cfVmTerminate(self, CF_TERM_REASON_INTERNAL_ERROR);
@@ -39,10 +76,11 @@ void cfVmPopOperand( CfVm *const self, void *const dst ) {
 } // cfVmPopOperand
 
 void cfVmJump( CfVm *const self, const uint32_t point ) {
+    // TODO: assert(self)?
     self->instructionCounter = self->instructionCounterBegin + point;
 
-    // perform instructionCuonter bound check
-    if (self->instructionCounter >= self->instructionCounterEnd)
+    // perform bound check
+    if (self->instructionCounter >= self->instructionCounterEnd) // TODO: assert-like thing?
         cfVmTerminate(self, CF_TERM_REASON_INVALID_IC);
 } // cfVmJump
 
