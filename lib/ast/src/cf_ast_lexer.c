@@ -197,23 +197,23 @@ CfAstTokenParsingResult cfAstTokenParse( CfStr source, CfAstSpan span ) {
         // switch can't be used here because compile-time string literal
         // to uint16_t conversion isn't possible within C language.
         static const struct {
-            uint16_t       pattern; ///< pattern to match
-            CfAstTokenType type;    ///< corresponding token type
+            const char     * pattern; ///< pattern to match
+            CfAstTokenType   type;    ///< corresponding token type
         } tokens[] = {
-            {*(const uint16_t *)"<=", CF_AST_TOKEN_TYPE_ANGULAR_BR_OPEN_EQUAL  },
-            {*(const uint16_t *)">=", CF_AST_TOKEN_TYPE_ANGULAR_BR_CLOSE_EQUAL },
-            {*(const uint16_t *)"==", CF_AST_TOKEN_TYPE_EQUAL_EQUAL            },
-            {*(const uint16_t *)"!=", CF_AST_TOKEN_TYPE_EXCLAMATION_EQUAL      },
-            {*(const uint16_t *)"+=", CF_AST_TOKEN_TYPE_PLUS_EQUAL             },
-            {*(const uint16_t *)"-=", CF_AST_TOKEN_TYPE_MINUS_EQUAL            },
-            {*(const uint16_t *)"*=", CF_AST_TOKEN_TYPE_ASTERISK_EQUAL         },
-            {*(const uint16_t *)"/=", CF_AST_TOKEN_TYPE_SLASH_EQUAL            },
+            {"<=", CF_AST_TOKEN_TYPE_ANGULAR_BR_OPEN_EQUAL  },
+            {">=", CF_AST_TOKEN_TYPE_ANGULAR_BR_CLOSE_EQUAL },
+            {"==", CF_AST_TOKEN_TYPE_EQUAL_EQUAL            },
+            {"!=", CF_AST_TOKEN_TYPE_EXCLAMATION_EQUAL      },
+            {"+=", CF_AST_TOKEN_TYPE_PLUS_EQUAL             },
+            {"-=", CF_AST_TOKEN_TYPE_MINUS_EQUAL            },
+            {"*=", CF_AST_TOKEN_TYPE_ASTERISK_EQUAL         },
+            {"/=", CF_AST_TOKEN_TYPE_SLASH_EQUAL            },
         };
         uint16_t strPattern = *(const uint16_t *)str.begin;
         size_t tokSpanBegin = str.begin - source.begin;
 
         for (uint32_t i = 0; i < sizeof(tokens) / sizeof(tokens[0]); i++)
-            if (tokens[i].pattern == strPattern)
+            if (*(const uint16_t *)tokens[i].pattern == strPattern)
                 return (CfAstTokenParsingResult) {
                     .status = CF_AST_TOKEN_PARSING_STATUS_OK,
                     .ok = {
