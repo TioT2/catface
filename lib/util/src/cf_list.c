@@ -9,13 +9,13 @@
 #include "cf_list.h"
 
 /// @brief list element links conatainer
-typedef struct __CfListLinks {
+typedef struct CfListLinks_ {
     uint32_t prev; ///< previous element index
     uint32_t next; ///< next element index
 } CfListLinks;
 
 /// @brief list internal representation structure
-typedef struct __CfListImpl {
+typedef struct CfListImpl_ {
     size_t      elementSize;    ///< list element size
     size_t      capacity;       ///< current list capacity
     size_t      length;         ///< list used element count

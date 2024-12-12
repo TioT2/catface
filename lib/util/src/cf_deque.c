@@ -9,10 +9,10 @@
 #include "cf_deque.h"
 
 /// @brief single allocation chunk structure
-typedef struct __CfDequeChunk CfDequeChunk;
+typedef struct CfDequeChunk_ CfDequeChunk;
 
 // chunk structure implemetation
-struct __CfDequeChunk {
+struct CfDequeChunk_ {
     union {
         struct {
             CfDequeChunk * prev;     ///< previous chunk in chunk ring
@@ -23,16 +23,16 @@ struct __CfDequeChunk {
     };
 
     char           data[1]; ///< chunk data array
-}; // struct __CfDequeChunk
+}; // struct CfDequeChunk_
 
 /// @brief pointer to deque edge structure
-typedef struct __CfDequeCursor {
+typedef struct CfDequeCursor_ {
     CfDequeChunk * chunk; ///< chunk cursor points to
     size_t         index; ///< first free index
 } CfDequeCursor;
 
 /// @brief deque internal structure
-typedef struct __CfDequeImpl {
+typedef struct CfDequeImpl_ {
     CfArena       arena;       ///< arena allocator (nullable, if null - all dealocation is handled manually)
     size_t        elementSize; ///< deque element size
     size_t        chunkSize;   ///< deque chunk size

@@ -12,7 +12,7 @@ extern "C" {
 #endif
 
 /// @brief AST main structure
-typedef struct __CfAstImpl {
+typedef struct CfAstImpl_ {
     CfArena      mem;            ///< AST allocation holder
     CfStr        sourceName;     ///< source file name
     CfStr        sourceContents; ///< source file contents

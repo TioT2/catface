@@ -15,7 +15,7 @@ extern "C" {
 #include "cf_vm.h"
 
 /// @brief VM context representation structure
-typedef struct __CfVm {
+typedef struct CfVm_ {
     uint8_t *         ram;                     ///< RAM bytes
     size_t            ramSize;                 ///< RAM size
 

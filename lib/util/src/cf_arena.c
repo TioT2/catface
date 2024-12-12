@@ -10,10 +10,10 @@
 #include "cf_arena.h"
 
 /// @brief arena allocation chunk forward declaration
-typedef struct __CfArenaChunk CfArenaChunk;
+typedef struct CfArenaChunk_ CfArenaChunk;
 
 /// @brief arena chunk structure declaration
-struct __CfArenaChunk {
+struct CfArenaChunk_ {
     // TODO: is it the best solution?
     union {
         struct {
@@ -24,7 +24,7 @@ struct __CfArenaChunk {
     };
 
     uint8_t data[1]; ///< chunk memory (extends behind structure borders by at least size - 1 bytes)
-}; // struct __CfArenaChunk
+}; // struct CfArenaChunk_
 
 /**
  * @brief chunk allocation function
@@ -58,7 +58,7 @@ static size_t cfArenaAlignUp( size_t number, size_t alignment ) {
 } // cfArenaAlignUp
 
 /// @brief arena implementation structure declaration
-typedef struct __CfArenaImpl {
+typedef struct CfArenaImpl_ {
     CfArenaChunk * free;      ///< free stack top
     CfArenaChunk * firstUsed; ///< used stack top
     CfArenaChunk * lastUsed;  ///< used stack bottom (it is ok to read it's value only in case if firstUsed != NULL)

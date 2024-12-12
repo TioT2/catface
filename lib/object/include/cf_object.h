@@ -16,7 +16,8 @@ extern "C" {
 /// @brief maximal length of jump label supported
 #define CF_LABEL_MAX 64
 
-typedef struct __CfLabel {
+/// @brief Label (point to code or just constant)
+typedef struct CfLabel_ {
     uint32_t sourceLine;               ///< source file line label declared at
     uint32_t value;                    ///< label underlying value
     uint32_t isRelative;               ///< should value be corrected during linking process (e.g. is it code offset or not)
@@ -24,14 +25,14 @@ typedef struct __CfLabel {
 } CfLabel;
 
 /// @brief label and link (references to certain code point with different semantics)
-typedef struct __CfLink {
+typedef struct CfLink_ {
     uint32_t sourceLine;               ///< line label declared at
     uint32_t codeOffset;               ///< offset link encodes
     char     label     [CF_LABEL_MAX]; ///< label
 } CfLink;
 
 /// @brief object (single .cfasm compilation result) represetnation structure
-typedef struct __CfObject {
+typedef struct CfObject_ {
     const char * sourceName; ///< name of object source name
     size_t       codeLength; ///< length of bytecode
     uint8_t    * code;       ///< bytecode itself
@@ -42,7 +43,7 @@ typedef struct __CfObject {
 } CfObject;
 
 /// @brief object from file reading status representation enumeration
-typedef enum __CfObjectReadStatus {
+typedef enum CfObjectReadStatus_ {
     CF_OBJECT_READ_STATUS_OK,                   ///< succeeded
     CF_OBJECT_READ_STATUS_INTERNAL_ERROR,       ///< internal error occured
     CF_OBJECT_READ_STATUS_UNEXPECTED_FILE_END,  ///< reading from file failed
@@ -61,7 +62,7 @@ typedef enum __CfObjectReadStatus {
 CfObjectReadStatus cfObjectRead( FILE *file, CfObject *dst );
 
 /// @brief object to file writing status representation enumeration
-typedef enum __CfObjectWriteStatus {
+typedef enum CfObjectWriteStatus_ {
     CF_OBJECT_WRITE_STATUS_OK,          ///< succeeded
     CF_OBJECT_WRITE_STATUS_WRITE_ERROR, ///< writing to file error
 } CfObjectWriteStatus;

@@ -15,10 +15,10 @@ extern "C" {
 #endif
 
 /// @brief bidirectoinal list handle
-typedef struct __CfListImpl * CfList;
+typedef struct CfListImpl_ * CfList;
 
 /// @brief some list operation status
-typedef enum __CfListStatus {
+typedef enum CfListStatus_ {
     CF_LIST_STATUS_OK,             ///< operation succeeded
     CF_LIST_STATUS_INTERNAL_ERROR, ///< list internal error occured
     CF_LIST_STATUS_NO_ELEMENTS,    ///< no elements to pop from
@@ -83,7 +83,7 @@ CfListStatus cfListPopFront( CfList *list, void *data );
 
 /// @brief list iterator container.
 /// @note this structure **must not** be built by user.
-typedef struct __CfListIterator {
+typedef struct CfListIterator_ {
     CfList   list;     ///< iterated list
     uint32_t index;    ///< index
     bool     finished; ///< iteration finished if set to true

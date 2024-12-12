@@ -14,7 +14,7 @@ extern "C" {
 #include <stdio.h>
 
 /// @brief string slice representation structure
-typedef struct __CfStr {
+typedef struct CfStr_ {
     const char *begin; ///< slice begin
     const char *end;   ///< slice end (non-inclusive, may not point on null)
 } CfStr;
@@ -102,7 +102,7 @@ CfStr cfStrParseDecimalInteger( CfStr slice, uint64_t *dst );
 bool cfStrIsSame( CfStr lhs, CfStr rhs );
 
 /// @brief parsed decimal number representation structure
-typedef struct __CfParsedDecimal {
+typedef struct CfParsedDecimal_ {
     uint64_t integer;           ///< intefger part
     bool     fractionalStarted; ///< fractional part started ('.' occured)
     double   fractional;        ///< fractional part (MUST BE zero if not occured, MUST BE < 1.0)

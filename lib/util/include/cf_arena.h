@@ -13,7 +13,7 @@ extern "C" {
 #endif
 
 /// @brief arena allocator handle representation structure
-typedef struct __CfArenaImpl * CfArena;
+typedef struct CfArenaImpl_ * CfArena;
 
 /// @brief value that may be passed to cfArenaCtor value to denote that there is no preferred chunk size
 #define CF_ARENA_CHUNK_SIZE_UNDEFINED (~(size_t)0)

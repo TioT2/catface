@@ -14,10 +14,10 @@ extern "C" {
 
 
 /// @brief dynamic array handle definition
-typedef struct __CfDarrImpl * CfDarr;
+typedef struct CfDarrImpl_ * CfDarr;
 
 /// @brief dynamic array operation status
-typedef enum __CfDarrStatus {
+typedef enum CfDarrStatus_ {
     CF_DARR_OK,             ///< succeeded
     CF_DARR_NO_VALUES,      ///< no values
     CF_DARR_INTERNAL_ERROR, ///< internal error occured

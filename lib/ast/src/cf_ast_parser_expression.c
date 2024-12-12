@@ -21,7 +21,7 @@ static CfAstExpr * cfAstParseExprValue( CfAstParser *const self, const CfAstToke
     CfAstExpr *resultExpr = (CfAstExpr *)cfArenaAlloc(self->dataArena, sizeof(CfAstExpr));
     cfAstParserAssert(self, resultExpr != NULL);
 
-    // try to parse value (ident, literal or expression in '()')
+    // try to parse value (identifier, literal or expression in '()')
     switch (tokenList->type) {
     case CF_AST_TOKEN_TYPE_INTEGER:
         *resultExpr = (CfAstExpr) {
@@ -41,11 +41,11 @@ static CfAstExpr * cfAstParseExprValue( CfAstParser *const self, const CfAstToke
         tokenList++;
         break;
 
-    case CF_AST_TOKEN_TYPE_IDENT:
+    case CF_AST_TOKEN_TYPE_IDENTIFIER:
         *resultExpr = (CfAstExpr) {
-            .type = CF_AST_EXPR_TYPE_IDENT,
-            .span = tokenList->span,
-            .ident = tokenList->ident,
+            .type       = CF_AST_EXPR_TYPE_IDENTIFIER,
+            .span       = tokenList->span,
+            .identifier = tokenList->identifier,
         };
         tokenList++;
         break;
@@ -337,12 +337,12 @@ static CfAstExpr * cfAstParseExprAssignment(
 
     size_t spanBegin = tokenList->span.begin;
 
-    const CfAstToken *destToken = cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_IDENT, false);
+    const CfAstToken *destToken = cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_IDENTIFIER, false);
     CfAstAssignmentOperator op = CF_AST_ASSIGNMENT_OPERATOR_NONE;
 
     if (destToken == NULL || !cfAstParseAssignmentOperator(self, &tokenList, &op))
         return NULL;
-    CfStr destination = destToken->ident;
+    CfStr destination = destToken->identifier;
 
     // parse expression
     CfAstExpr *value = cfAstParseExpr(self, &tokenList);

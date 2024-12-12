@@ -14,12 +14,12 @@ extern "C" {
 #endif
 
 /// @brief SHA256 hash representation structure
-typedef struct __CfHash {
+typedef struct CfHash_ {
     uint32_t hash[8]; ///< hash numbers
 } CfHash;
 
 /// @brief iterative hasher representation structure
-typedef struct __CfHasher {
+typedef struct CfHasher_ {
     CfHash  hash;      ///< hash itself
     uint8_t batch[64]; ///< data buffer
     size_t  batchSize; ///< current batch size

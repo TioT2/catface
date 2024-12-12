@@ -11,7 +11,7 @@
 #include "cf_linker.h"
 
 /// @brief linker internal label representation
-typedef struct __CfLinkerLabel {
+typedef struct CfLinkerLabel_ {
     CfStr    sourceName; ///< file label declared at
     uint32_t sourceLine; ///< line label declared at
     uint32_t value;      ///< label underlying value
@@ -19,7 +19,7 @@ typedef struct __CfLinkerLabel {
 } CfLinkerLabel;
 
 /// @brief linker internal label and link representations
-typedef struct __CfLinkerLabelAndLink {
+typedef struct CfLinkerLabelAndLink_ {
     CfStr    sourceName; ///< file label declared in
     uint32_t sourceLine; ///< line label declared at
     uint32_t codeOffset; ///< (global) offset in linked code
@@ -27,7 +27,7 @@ typedef struct __CfLinkerLabelAndLink {
 } CfLinkerLink;
 
 /// @brief linker representation structure
-typedef struct __CfLinker {
+typedef struct CfLinker_ {
     CfDarr          code;            ///< code array
     CfDarr          links;           ///< links
     CfDarr          labels;          ///< labels

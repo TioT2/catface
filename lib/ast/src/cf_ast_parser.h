@@ -15,7 +15,7 @@ extern "C" {
 #endif
 
 /// @brief AST parsing context
-typedef struct __CfAstParser {
+typedef struct CfAstParser_ {
     CfArena tempArena; ///< arena to allocate temporary data in (such as intermediate arrays)
     CfArena dataArena; ///< arena to allocate actual AST data in
 

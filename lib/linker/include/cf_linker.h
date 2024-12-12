@@ -14,7 +14,7 @@ extern "C" {
 #endif
 
 /// @brief link details
-typedef enum __CfLinkStatus {
+typedef enum CfLinkStatus_ {
     CF_LINK_STATUS_OK,              ///< succeeded
     CF_LINK_STATUS_INTERNAL_ERROR,  ///< internal error
     CF_LINK_STATUS_UNKNOWN_LABEL,   ///< unknown label
@@ -22,7 +22,7 @@ typedef enum __CfLinkStatus {
 } CfLinkStatus;
 
 /// @brief linking process details
-typedef struct __CfLinkDetails {
+typedef struct CfLinkDetails_ {
     struct {
         CfStr    file;  ///< file where label is referenced
         uint32_t line;  ///< line in file where label is referenced

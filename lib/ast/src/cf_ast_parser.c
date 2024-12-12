@@ -108,14 +108,14 @@ static bool cfAstParseFunctionParam(
     CfAstType type;
 
     if (false
-        || tokenList[0].type != CF_AST_TOKEN_TYPE_IDENT
+        || tokenList[0].type != CF_AST_TOKEN_TYPE_IDENTIFIER
         || tokenList[1].type != CF_AST_TOKEN_TYPE_COLON
         || (tokenList += 2, !cfAstParseType(self, &tokenList, &type))
     )
         return false;
 
     *paramDst = (CfAstFunctionParam) {
-        .name = (*tokenListPtr)[0].ident,
+        .name = (*tokenListPtr)[0].identifier,
         .type = type,
         .span = (CfAstSpan) { (*tokenListPtr)[0].span.begin, tokenList->span.begin }
     };
@@ -294,7 +294,7 @@ CfAstFunction cfAstParseFunction( CfAstParser *const self, const CfAstToken **to
     size_t signatureSpanBegin = tokenList[0].span.begin;
 
     cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_FN, true);
-    CfStr name = cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_IDENT, true)->ident;
+    CfStr name = cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_IDENTIFIER, true)->identifier;
     cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_ROUND_BR_OPEN, true);
 
     // create param list
@@ -360,7 +360,7 @@ CfAstVariable cfAstParseVariable( CfAstParser *const self, const CfAstToken **to
     size_t spanBegin = tokenList->span.begin;
 
     cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_LET, true);
-    CfStr name = cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_IDENT, true)->ident;
+    CfStr name = cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_IDENTIFIER, true)->identifier;
     cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_COLON, true);
 
     CfAstType type = CF_AST_TYPE_VOID;

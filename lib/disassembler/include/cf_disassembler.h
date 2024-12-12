@@ -13,7 +13,7 @@ extern "C" {
 #endif
 
 /// @brief general disassembling process status
-typedef enum __CfDisassemblyStatus {
+typedef enum CfDisassemblyStatus_ {
     CF_DISASSEMBLY_STATUS_OK,                  ///< all's ok
     CF_DISASSEMBLY_STATUS_INTERNAL_ERROR,      ///< internal disassembling error occured
     CF_DISASSEMBLY_STATUS_UNKNOWN_OPCODE,      ///< unknown CF opcode
@@ -21,7 +21,7 @@ typedef enum __CfDisassemblyStatus {
 } CfDisassemblyStatus;
 
 /// @brief disassembling process detailed info
-typedef union __CfDisassemblyDetails {
+typedef union CfDisassemblyDetails_ {
     struct {
         uint16_t opcode; ///< the opcode bytes
     } unknownOpcode;

@@ -14,7 +14,7 @@ extern "C" {
 #endif
 
 /// @brief Assembling status
-typedef enum __CfAssemblyStatus {
+typedef enum CfAssemblyStatus_ {
     CF_ASSEMBLY_STATUS_OK,                       ///< all's ok
     CF_ASSEMBLY_STATUS_INTERNAL_ERROR,           ///< internal error (e.g. error that shouldn't occur in normal situation, such as memory allocation failure etc.)
     CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION,      ///< unknown instruction occured
@@ -39,7 +39,7 @@ typedef enum __CfAssemblyStatus {
 } CfAssemblyStatus;
 
 /// @brief detailed info about assembling process
-typedef struct __CfAssemblyDetails {
+typedef struct CfAssemblyDetails_ {
     size_t line;     ///< index of line during parsing of error occured
     CfStr  contents; ///< line error occured at contents
 } CfAssemblyDetails;

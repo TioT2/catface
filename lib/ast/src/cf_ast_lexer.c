@@ -10,14 +10,14 @@
 #include "cf_ast_lexer.h"
 
 /**
- * @brief keyword from ident parsing function
+ * @brief keyword from identifier parsing function
  * 
- * @param[in]  ident ident to parse keyword from
+ * @param[in]  identifier identifier to parse keyword from
  * @param[out] kwDst kryword destination (non-null)
  * 
  * @return true if keyword parsed, false if not.
  */
-static bool cfAstTokenKeywordFromIdent( CfStr ident, CfAstTokenType *kwDst ) {
+static bool cfAstTokenKeywordFromIdent( CfStr identifier, CfAstTokenType *kwDst ) {
     struct {
         const char    * text;
         CfAstTokenType  type;
@@ -34,7 +34,7 @@ static bool cfAstTokenKeywordFromIdent( CfStr ident, CfAstTokenType *kwDst ) {
     };
 
     for (size_t i = 0, n = sizeof(table) / sizeof(table[0]); i < n; i++) {
-        if (cfStrIsSame(ident, CF_STR(table[i].text))) {
+        if (cfStrIsSame(identifier, CF_STR(table[i].text))) {
             *kwDst = table[i].type;
             return true;
         }
@@ -114,7 +114,7 @@ CfAstTokenParsingResult cfAstTokenParse( CfStr source, CfAstSpan span ) {
         uint32_t base =
               cfStrStartsWith(str, "0x") ? 16
             : cfStrStartsWith(str, "0o") ? 8
-            : cfStrStartsWith(str, "0b") ? 1
+            : cfStrStartsWith(str, "0b") ? 2
             : 10;
         uint32_t offset = base != 10 ? 2 : 0;
 
@@ -267,26 +267,29 @@ CfAstTokenParsingResult cfAstTokenParse( CfStr source, CfAstSpan span ) {
         };
     }
 
-    // try to parse ident
+    // try to parse identifier
     if (isalpha(*str.begin) || *str.begin == '_') {
-        CfStr ident = { str.begin, str.begin };
+        CfStr identifier = { str.begin, str.begin };
 
-        while (ident.end < str.end && isalnum(*ident.end) || *ident.end == '_')
-            ident.end++;
+        while (identifier.end < str.end && isalnum(*identifier.end) || *identifier.end == '_')
+            identifier.end++;
 
-        // try to separate keyword from ident
+        // try to separate keyword from identifier
         CfAstTokenType ty = CF_AST_TOKEN_TYPE_VOID;
 
-        CfAstToken token = cfAstTokenKeywordFromIdent(ident, &ty)
+        CfAstToken token = cfAstTokenKeywordFromIdent(identifier, &ty)
             ? (CfAstToken) { .type = ty, }
-            : (CfAstToken) { .type = CF_AST_TOKEN_TYPE_IDENT, .ident = ident, };
+            : (CfAstToken) { .type = CF_AST_TOKEN_TYPE_IDENTIFIER, .identifier = identifier, };
 
-        token.span = (CfAstSpan) { (size_t)(ident.begin - source.begin), (size_t)(ident.end - source.begin) };
+        token.span = (CfAstSpan) {
+            (size_t)(identifier.begin - source.begin),
+            (size_t)(identifier.end   - source.begin)
+        };
 
         return (CfAstTokenParsingResult) {
             .status = CF_AST_TOKEN_PARSING_STATUS_OK,
             .ok = {
-                .rest = (CfAstSpan) { (size_t)(ident.end - source.begin), span.end },
+                .rest = (CfAstSpan) { (size_t)(identifier.end - source.begin), span.end },
                 .token = token,
             },
         };

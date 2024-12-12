@@ -39,7 +39,7 @@ extern "C" {
 #define CF_VIDEO_TEXT_HEIGHT (CF_VIDEO_SCREEN_HEIGHT / CF_VIDEO_FONT_HEIGHT)
 
 /// @brief flag register layout
-typedef struct __CfRegisterFlags {
+typedef struct CfRegisterFlags_ {
     // comparison flag family
     uint8_t cmpIsLt            : 1; ///< is less in last comparison
     uint8_t cmpIsEq            : 1; ///< is equal in last comparison
@@ -55,7 +55,7 @@ typedef struct __CfRegisterFlags {
 } CfRegisterFlags;
 
 /// @brief video mode representation enumeration
-typedef enum __CfVideoStorageFormat {
+typedef enum CfVideoStorageFormat_ {
     CF_VIDEO_STORAGE_FORMAT_TEXT          = 0, ///< (default) just black text
     CF_VIDEO_STORAGE_FORMAT_COLORED_TEXT  = 1, ///< text with 16 colors
     CF_VIDEO_STORAGE_FORMAT_COLOR_PALETTE = 2, ///< colored, with 256-color palette
@@ -63,13 +63,13 @@ typedef enum __CfVideoStorageFormat {
 } CfVideoStorageFormat;
 
 /// @brief video update mode representation enumeration
-typedef enum __CfVideoUpdateMode {
+typedef enum CfVideoUpdateMode_ {
     CF_VIDEO_UPDATE_MODE_IMMEDIATE = 0, ///< (default) update image on screen immediately
     CF_VIDEO_UPDATE_MODE_MANUAL    = 1, ///< update image on screen after certain only instruction call. During video memory update it's ok for image in actual window to change.
 } CfVideoUpdateMode;
 
 /// @brief register set representation structure
-typedef union __CfRegisters {
+typedef union CfRegisters_ {
     uint32_t indexed[8];    ///< registers as array
 
     struct {
@@ -88,14 +88,14 @@ typedef union __CfRegisters {
 } CfRegisters;
 
 /// @brief pushpop instruciton additional data layout
-typedef struct __CfInstructionPushPop {
+typedef struct CfInstructionPushPop_ {
     uint8_t isMemoryAccess : 1; ///< do access memory
     uint8_t regIndex       : 3; ///< register index
     uint8_t useImm         : 1; ///< add 4-byte immediate after number
 } CfInstructionPushPop;
 
 /// @brief keycode representatiton enumeration
-typedef enum __CfKey {
+typedef enum CfKey_ {
     // keys that can be represented as ASCII characters.
     CF_KEY_NULL = 0, ///< 'null', don't represents any key actually key
 
@@ -180,7 +180,7 @@ typedef enum __CfKey {
 CfKey cfKeyFromUint32( uint32_t num );
 
 /// @brief instruction header representation enumeration
-typedef enum __CfOpcode {
+typedef enum CfOpcode_ {
     // system instructions
     CF_OPCODE_UNREACHABLE, ///< unreachable instruction, calls panic
     CF_OPCODE_SYSCALL,     ///< function by pre-defined index from without of sandbox calling function
@@ -254,7 +254,7 @@ typedef enum __CfOpcode {
 } CfOpcode;
 
 /// @brief colored character representation structure (used in coloredText video mode)
-typedef struct __CfColoredCharacter {
+typedef struct CfColoredCharacter_ {
     uint8_t character;               ///< character itself
     struct {
         uint8_t foregroundColor : 4; ///< character color
@@ -263,7 +263,7 @@ typedef struct __CfColoredCharacter {
 } CfColoredCharacter;
 
 /// @brief video memory layout in different modes representation union
-typedef union __CfVideoMemory {
+typedef union CfVideoMemory_ {
     uint32_t           trueColor  [CF_VIDEO_SCREEN_WIDTH * CF_VIDEO_SCREEN_HEIGHT]; ///< trueColor pixels
     uint8_t            text       [CF_VIDEO_TEXT_WIDTH   * CF_VIDEO_TEXT_HEIGHT  ]; ///< text characters
 
@@ -280,13 +280,13 @@ typedef union __CfVideoMemory {
 } CfVideoMemory;
 
 /// @brief bytecode executable represetnation structure
-typedef struct __CfExecutable {
+typedef struct CfExecutable_ {
     void    *code;       ///< executable bytecode
     size_t   codeLength; ///< executable bytecode length
 } CfExecutable;
 
 /// @brief executable reading status
-typedef enum __CfExecutableReadStatus {
+typedef enum CfExecutableReadStatus_ {
     CF_EXECUTABLE_READ_STATUS_OK,                       ///< succeeded
     CF_EXECUTABLE_READ_STATUS_INTERNAL_ERROR,           ///< some internal error occured
     CF_EXECUTABLE_READ_STATUS_UNEXPECTED_FILE_END,      ///< unexpected end of file
@@ -295,7 +295,7 @@ typedef enum __CfExecutableReadStatus {
 } CfExecutableReadStatus;
 
 /// @brief push and pop instruction additional data
-typedef struct __CfPushPopInfo {
+typedef struct CfPushPopInfo_ {
     uint8_t registerIndex   : 3; ///< index of register to get value from
     uint8_t isMemoryAccess  : 1; ///< true if destination is placed in memory
     uint8_t doReadImmediate : 1; ///< is this instruction followed by 4-byte immediate

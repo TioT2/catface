@@ -12,7 +12,7 @@ extern "C" {
 #endif
 
 /// @brief arena-located list representaiton structure
-typedef struct __CfDequeImpl * CfDeque;
+typedef struct CfDequeImpl_ * CfDeque;
 
 /// @brief undefined chunk size
 #define CF_DEQUE_CHUNK_SIZE_UNDEFINED (~(size_t)0)

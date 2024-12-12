@@ -14,13 +14,13 @@ extern "C" {
 // quite good example of brain Rust
 
 /// @brief token parsing status
-typedef enum __CfAstTokenParsingStatus {
+typedef enum CfAstTokenParsingStatus_ {
     CF_AST_TOKEN_PARSING_STATUS_OK,                ///< parsing succeeded
     CF_AST_TOKEN_PARSING_STATUS_UNEXPECTED_SYMBOL, ///< symbol that can't be part of any token
 } CfAstTokenParsingStatus;
 
 /// @brief token parsing result tagged union
-typedef struct __CfTokenParsingResult {
+typedef struct CfTokenParsingResult_ {
     CfAstTokenParsingStatus status; ///< operation status
 
     union {
@@ -29,7 +29,7 @@ typedef struct __CfTokenParsingResult {
             CfAstToken token; ///< parsed token
         } ok;
 
-        char unexpectedSymbol; ///< symbol that theoretically can't be part of any ident
+        char unexpectedSymbol; ///< symbol that theoretically can't be part of any identifier
     };
 } CfAstTokenParsingResult;
 

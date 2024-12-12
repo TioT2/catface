@@ -8,7 +8,7 @@
 const uint64_t CF_EXECUTABLE_MAGIC = 0x0045434146544143; // "CATFACE\0" as char
 
 /// @brief executable file header representation structure
-typedef struct __CfExecutableHeader {
+typedef struct CfExecutableHeader_ {
     uint64_t magic;      ///< executable magic number
     uint64_t codeLength; ///< executable length
     CfHash   codeHash;   ///< executable bytecode hash

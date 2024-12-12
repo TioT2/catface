@@ -10,7 +10,7 @@
 const uint64_t CF_OBJECT_MAGIC = 0x00004A424F544143;
 
 /// @brief object file representation structure
-typedef struct __CfObjectFileHeader {
+typedef struct CfObjectFileHeader_ {
     uint64_t magic;            ///< magic value
     uint32_t sourceNameLength; ///< length of object source file path
     uint32_t codeLength;       ///< code section length

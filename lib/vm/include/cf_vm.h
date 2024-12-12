@@ -16,7 +16,7 @@ extern "C" {
 #endif
 
 /// @brief reason of program termination
-typedef enum __CfTermReason {
+typedef enum CfTermReason_ {
     // sef of reasons that are executable-independent
     CF_TERM_REASON_HALT,                 ///< program finished without errors
     CF_TERM_REASON_SANDBOX_ERROR,        ///< sandbox function call failed
@@ -40,7 +40,7 @@ typedef enum __CfTermReason {
 } CfTermReason;
 
 /// @brief description of program termination reason
-typedef struct __CfTermInfo {
+typedef struct CfTermInfo_ {
     CfTermReason  reason; ///< panic reason
     size_t        offset; ///< offset of code then execution stopped
 
@@ -63,13 +63,13 @@ typedef struct __CfTermInfo {
 } CfTermInfo;
 
 /// @brief virtual machine context representation sturcture (passed from VM to user during sandbox initialization)
-typedef struct __CfExecContext {
+typedef struct CfExecContext_ {
     void   * memory;     ///< VM memory
     size_t   memorySize; ///< memory size (usually 1 MB)
 } CfExecContext;
 
 /// @brief sandbox description structure.
-typedef struct __CfSandbox {
+typedef struct CfSandbox_ {
     void *userContext; ///< some pointer user may pass into this structure
 
     /**
@@ -164,7 +164,7 @@ typedef struct __CfSandbox {
 } CfSandbox;
 
 /// @brief execution info
-typedef struct __CfExecuteInfo {
+typedef struct CfExecuteInfo_ {
     const CfExecutable * executable; ///< executable
     const CfSandbox    * sandbox;    ///< sandbox pointer
     size_t               ramSize;    ///< required RAM size

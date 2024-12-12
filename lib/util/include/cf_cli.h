@@ -13,7 +13,8 @@
 extern "C" {
 #endif
 
-typedef struct __CfCommandLineOptionInfo {
+/// @brief Info about command line option
+typedef struct CfCommandLineOptionInfo_ {
     const char * shortName;  ///< short command name (used starting with '-', nullable)
     const char * longName;   ///< long command name (used starting with '--', nullable)
     uint8_t      paramCount; ///< consumed command parameter count

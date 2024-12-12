@@ -16,7 +16,7 @@ fn main(argc: u32, argb: u32, arga: u32) i32 {
     arg -= argb;
     arg /= arga;
 
-    __cfvm_write(qu);
+    _cfvm_write(qu);
 
     if qu <= 0 {
         doSmthPeaceful();

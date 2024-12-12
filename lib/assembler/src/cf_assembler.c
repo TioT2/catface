@@ -12,7 +12,7 @@
 #include "cf_assembler.h"
 
 /// @brief assembler representation structure
-typedef struct __CfAssembler {
+typedef struct CfAssembler_ {
     CfStr             textRest;     ///< rest of text to be processed
     CfStr             lineRest;     ///< rest of line to be processed
 
@@ -29,25 +29,25 @@ typedef struct __CfAssembler {
 } CfAssembler;
 
 /// @brief token type (actually, token tag)
-typedef enum __CfAssemblerTokenType {
+typedef enum CfAssemblerTokenType_ {
     CF_ASSEMBLER_TOKEN_TYPE_LEFT_SQUARE_BRACKET,  ///< '['
     CF_ASSEMBLER_TOKEN_TYPE_RIGHT_SQUARE_BRACKET, ///< ']'
     CF_ASSEMBLER_TOKEN_TYPE_PLUS,                 ///< '+'
     CF_ASSEMBLER_TOKEN_TYPE_COLON,                ///< ':'
     CF_ASSEMBLER_TOKEN_TYPE_EQUAL,                ///< '='
-    CF_ASSEMBLER_TOKEN_TYPE_IDENT,                ///< ident
+    CF_ASSEMBLER_TOKEN_TYPE_IDENTIFIER,           ///< identifier
     CF_ASSEMBLER_TOKEN_TYPE_FLOATING,             ///< floating point number
     CF_ASSEMBLER_TOKEN_TYPE_INTEGER,              ///< integer number
 } CfAssemblerTokenType;
 
 /// @brief assembler single token representation tagged union
-typedef struct __CfAssemblerToken {
+typedef struct CfAssemblerToken_ {
     CfAssemblerTokenType type; ///< token type
 
     union {
-        CfStr   ident;    ///< ident
-        double  floating; ///< floating point number
-        int64_t integer;  ///< integer number
+        CfStr   identifier; ///< identifier
+        double  floating;   ///< floating point number
+        int64_t integer;    ///< integer number
     };
 } CfAssemblerToken;
 
@@ -132,20 +132,20 @@ void cfAssemblerNextLine( CfAssembler *const self ) {
 } // cfAssemblerNextLine
 
 /**
- * @brief check if character can belong to ident
+ * @brief check if character can belong to identifier
  * 
  * @param[in] ch character to check
  * 
  * @return true if can, false otherwise
  */
-static bool cfAssemblerIsIdentCharacter( const char ch ) {
+static bool cfAssemblerIsIdentifierCharacter( const char ch ) {
     return
         (ch >= 'a' && ch <= 'z') ||
         (ch >= 'A' && ch <= 'Z') ||
         (ch >= '0' && ch <= '9') ||
         (ch == '_')
     ;
-} // cfAssemblerIsIdentCharacter
+} // cfAssemblerIsIdentifierCharacter
 
 /**
  * @brief next token from line parsing function
@@ -213,14 +213,14 @@ bool cfAssemblerNextToken( CfAssembler *const self, CfAssemblerToken *const dst 
     }
 
     if (first >= 'a' && first <= 'z' || first >= 'A' && first <= 'Z' || first == '_') {
-        CfStr ident = {self->lineRest.begin, self->lineRest.begin};
+        CfStr identifier = {self->lineRest.begin, self->lineRest.begin};
 
-        while (ident.end < self->lineRest.end && cfAssemblerIsIdentCharacter(*ident.end))
-            ident.end++;
+        while (identifier.end < self->lineRest.end && cfAssemblerIsIdentifierCharacter(*identifier.end))
+            identifier.end++;
 
-        dst->type = CF_ASSEMBLER_TOKEN_TYPE_IDENT;
-        dst->ident = ident;
-        self->lineRest.begin = ident.end;
+        dst->type = CF_ASSEMBLER_TOKEN_TYPE_IDENTIFIER;
+        dst->identifier = identifier;
+        self->lineRest.begin = identifier.end;
 
         goto cfAssemblerNextToken__ok;
     }
@@ -245,12 +245,12 @@ bool cfAssemblerNextToken( CfAssembler *const self, CfAssemblerToken *const dst 
 /**
  * @brief assembler opcode getting function
  * 
- * @param[in]     ident ident to parse opcode from
- * @param[out]    dst   opcode parsing destination (non-null)
+ * @param[in]     identifier identifier to parse opcode from
+ * @param[out]    dst        opcode parsing destination (non-null)
  * 
  * @return true if parsed, false if not
  */
-static bool cfAssemblerParseOpcode( CfStr ident, CfOpcode *dst ) {
+static bool cfAssemblerParseOpcode( CfStr identifier, CfOpcode *dst ) {
     assert(dst != NULL);
 
 #define OPCODE_HASH(name) (0        \
@@ -261,7 +261,7 @@ static bool cfAssemblerParseOpcode( CfStr ident, CfOpcode *dst ) {
     )
 
     // 'switch' refactored to set of stuctures because by portability reasons
-    static const struct __CfOpcodeTableElement {
+    static const struct CfOpcodeTableElement_ {
         uint32_t opcodeHash; ///< hash that corresponds to some opcode
         CfOpcode opcode;     ///< opcode itself
     } opcodeHashTable[] = {
@@ -315,11 +315,11 @@ static bool cfAssemblerParseOpcode( CfStr ident, CfOpcode *dst ) {
     static const size_t opcodeHashTableSize = sizeof(opcodeHashTable) / sizeof(opcodeHashTable[0]);
 
     // TODO: a bit messy solution, because it's assumed that it's ok
-    // to read 4 bytes from ident, that technically MAY BE incorrect.
+    // to read 4 bytes from identifier, that technically MAY BE incorrect.
 
     // calculate opcode hash
-    const uint32_t opcodeHash = OPCODE_HASH(ident.begin)
-        & (uint32_t)~((~(uint64_t)0) << ((ident.end - ident.begin) * 8))
+    const uint32_t opcodeHash = OPCODE_HASH(identifier.begin)
+        & (uint32_t)~((~(uint64_t)0) << ((identifier.end - identifier.begin) * 8))
     ;
 
     for (uint32_t i = 0; i < opcodeHashTableSize; i++)
@@ -346,19 +346,19 @@ static void cfAssemblerWriteOutput( CfAssembler *const self, const void *data, c
 } // cfAssemblerWriteOutput
 
 /**
- * @brief register from ident parsing function
+ * @brief register from identifier parsing function
  * 
- * @param[in,out] self   assembler pointer
- * @param[in]     ident  ident to parse register from
- * @param[out]    regDst register parsing destination
+ * @param[in,out] self       assembler pointer
+ * @param[in]     identifier identifier to parse register from
+ * @param[out]    regDst     register parsing destination
  * 
  * @return true if parsed, false if not
  */
-static bool cfAssemblerParseRegister( CfAssembler *const self, CfStr ident, uint8_t *const regDst ) {
-    if (ident.end - ident.begin != 2)
+static bool cfAssemblerParseRegister( CfAssembler *const self, CfStr identifier, uint8_t *const regDst ) {
+    if (identifier.end - identifier.begin != 2)
         return false;
 
-    const uint16_t regHash = *(const uint16_t *)ident.begin;
+    const uint16_t regHash = *(const uint16_t *)identifier.begin;
 
 #define _REG_CASE(name, value) \
     do { if (regHash == *(const uint16_t *)(name)) { *regDst = (value); return true; } } while (false)
@@ -378,7 +378,7 @@ static bool cfAssemblerParseRegister( CfAssembler *const self, CfStr ident, uint
 } // cfAssemblerParseRegister
 
 /// @brief pushPopInfo full description
-typedef struct __CfAssemblerPushPopInfoData {
+typedef struct CfAssemblerPushPopInfoData_ {
     CfPushPopInfo info; ///< pushPopInfo
 
     ///< true if 'literal' value is valid in immediate, false if 'label'.
@@ -420,15 +420,15 @@ static bool cfAssemblerParsePushPopInfoImmediate(
         return true;
     }
 
-    case CF_ASSEMBLER_TOKEN_TYPE_IDENT: {
-        const size_t length = cfStrLength(token->ident);
+    case CF_ASSEMBLER_TOKEN_TYPE_IDENTIFIER: {
+        const size_t length = cfStrLength(token->identifier);
 
         if (length >= CF_LABEL_MAX)
             cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_TOO_LONG_LABEL);
 
         data->immediateIsLiteral = false;
 
-        memcpy(data->immediate.label, token->ident.begin, length);
+        memcpy(data->immediate.label, token->identifier.begin, length);
         memset(data->immediate.label + length, 0, CF_LABEL_MAX - length);
 
         return true;
@@ -454,8 +454,8 @@ static void cfAssemblerParsePushPopInfoImmediateOrRegister(
     uint8_t registerIndex = 0;
 
     if (true
-        && token->type == CF_ASSEMBLER_TOKEN_TYPE_IDENT
-        && cfAssemblerParseRegister(self, token->ident, &registerIndex)
+        && token->type == CF_ASSEMBLER_TOKEN_TYPE_IDENTIFIER
+        && cfAssemblerParseRegister(self, token->identifier, &registerIndex)
     ) {
         data->info.doReadImmediate = false;
         data->info.registerIndex = registerIndex;
@@ -490,7 +490,7 @@ static void cfAssemblerParsePushPopInfo2(
         // validate token types
         if (false
             || tokens[0].type != CF_ASSEMBLER_TOKEN_TYPE_LEFT_SQUARE_BRACKET
-            || tokens[1].type != CF_ASSEMBLER_TOKEN_TYPE_IDENT
+            || tokens[1].type != CF_ASSEMBLER_TOKEN_TYPE_IDENTIFIER
             || tokens[2].type != CF_ASSEMBLER_TOKEN_TYPE_PLUS
             || !cfAssemblerParsePushPopInfoImmediate(self, &tokens[3], data)
             || tokens[4].type != CF_ASSEMBLER_TOKEN_TYPE_RIGHT_SQUARE_BRACKET
@@ -499,7 +499,7 @@ static void cfAssemblerParsePushPopInfo2(
         }
 
         uint8_t regNum = 0;
-        if (!cfAssemblerParseRegister(self, tokens[1].ident, &regNum))
+        if (!cfAssemblerParseRegister(self, tokens[1].identifier, &regNum))
             cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_UNKNOWN_REGISTER);
 
         data->info.isMemoryAccess = true;
@@ -517,13 +517,13 @@ static void cfAssemblerParsePushPopInfo2(
             data->info.isMemoryAccess = true;
             cfAssemblerParsePushPopInfoImmediateOrRegister(self, &tokens[1], data);
         } else if (true
-            && tokens[0].type == CF_ASSEMBLER_TOKEN_TYPE_IDENT
+            && tokens[0].type == CF_ASSEMBLER_TOKEN_TYPE_IDENTIFIER
             && tokens[1].type == CF_ASSEMBLER_TOKEN_TYPE_PLUS
             && cfAssemblerParsePushPopInfoImmediate(self, &tokens[2], data)
         ) {
             uint8_t registerIndex = 0;
 
-            if (!cfAssemblerParseRegister(self, tokens[0].ident, &registerIndex))
+            if (!cfAssemblerParseRegister(self, tokens[0].identifier, &registerIndex))
                 cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_UNKNOWN_REGISTER);
 
             data->info.isMemoryAccess = false;
@@ -570,7 +570,7 @@ static void cfAssemblerParsePushPopInfo(
         // validate token types
         if (false
             || tokens[0].type != CF_ASSEMBLER_TOKEN_TYPE_LEFT_SQUARE_BRACKET
-            || tokens[1].type != CF_ASSEMBLER_TOKEN_TYPE_IDENT
+            || tokens[1].type != CF_ASSEMBLER_TOKEN_TYPE_IDENTIFIER
             || tokens[2].type != CF_ASSEMBLER_TOKEN_TYPE_PLUS
             || tokens[3].type != CF_ASSEMBLER_TOKEN_TYPE_INTEGER
             || tokens[4].type != CF_ASSEMBLER_TOKEN_TYPE_RIGHT_SQUARE_BRACKET
@@ -579,7 +579,7 @@ static void cfAssemblerParsePushPopInfo(
         }
 
         uint8_t regNum = 0;
-        if (!cfAssemblerParseRegister(self, tokens[1].ident, &regNum))
+        if (!cfAssemblerParseRegister(self, tokens[1].identifier, &regNum))
             cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_UNKNOWN_REGISTER);
 
         dstInfo->isMemoryAccess = true;
@@ -599,10 +599,10 @@ static void cfAssemblerParsePushPopInfo(
             dstInfo->isMemoryAccess = true;
 
             switch (tokens[1].type) {
-            case CF_ASSEMBLER_TOKEN_TYPE_IDENT: {
+            case CF_ASSEMBLER_TOKEN_TYPE_IDENTIFIER: {
                 uint8_t registerIndex = 0;
 
-                if (!cfAssemblerParseRegister(self, tokens[1].ident, &registerIndex))
+                if (!cfAssemblerParseRegister(self, tokens[1].identifier, &registerIndex))
                     cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_UNKNOWN_REGISTER);
                 
                 dstInfo->registerIndex = registerIndex;
@@ -623,13 +623,13 @@ static void cfAssemblerParsePushPopInfo(
             }
             }
         } else if (true
-            && tokens[0].type == CF_ASSEMBLER_TOKEN_TYPE_IDENT
+            && tokens[0].type == CF_ASSEMBLER_TOKEN_TYPE_IDENTIFIER
             && tokens[1].type == CF_ASSEMBLER_TOKEN_TYPE_PLUS
             && tokens[2].type == CF_ASSEMBLER_TOKEN_TYPE_INTEGER
         ) {
             uint8_t registerIndex = 0;
 
-            if (!cfAssemblerParseRegister(self, tokens[0].ident, &registerIndex))
+            if (!cfAssemblerParseRegister(self, tokens[0].identifier, &registerIndex))
                 cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_UNKNOWN_REGISTER);
 
             dstInfo->isMemoryAccess = false;
@@ -648,10 +648,10 @@ static void cfAssemblerParsePushPopInfo(
         dstInfo->isMemoryAccess = false;
 
         switch (tokens[0].type) {
-        case CF_ASSEMBLER_TOKEN_TYPE_IDENT: {
+        case CF_ASSEMBLER_TOKEN_TYPE_IDENTIFIER: {
             uint8_t registerIndex = 0;
 
-            if (!cfAssemblerParseRegister(self, tokens[0].ident, &registerIndex))
+            if (!cfAssemblerParseRegister(self, tokens[0].identifier, &registerIndex))
                 cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_UNKNOWN_REGISTER);
             
             dstInfo->registerIndex = registerIndex;
@@ -708,7 +708,7 @@ void cfAssemblerRun( CfAssembler *const self ) {
 
         CfOpcode opcode = CF_OPCODE_UNREACHABLE;
 
-        if (cfAssemblerParseOpcode(opcodeToken.ident, &opcode)) {
+        if (cfAssemblerParseOpcode(opcodeToken.identifier, &opcode)) {
             uint8_t instructionData[32] = {0};
             uint32_t instructionSize = 0;
 
@@ -775,17 +775,17 @@ void cfAssemblerRun( CfAssembler *const self ) {
                 if (!cfAssemblerNextToken(self, &labelToken))
                     cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_JUMP_ARGUMENT_MISSING);
                 
-                if (labelToken.type != CF_ASSEMBLER_TOKEN_TYPE_IDENT)
+                if (labelToken.type != CF_ASSEMBLER_TOKEN_TYPE_IDENTIFIER)
                     cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_INVALID_JUMP_ARGUMENT);
 
                 // separate in function?
-                if (cfStrLength(labelToken.ident) >= CF_LABEL_MAX)
+                if (cfStrLength(labelToken.identifier) >= CF_LABEL_MAX)
                     cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_TOO_LONG_LABEL);
                 CfLink link = {
                     .sourceLine = (uint32_t)self->lineIndex,
                     .codeOffset = (uint32_t)cfDarrLength(self->output) + 1,
                 };
-                memcpy(link.label, labelToken.ident.begin, cfStrLength(labelToken.ident));
+                memcpy(link.label, labelToken.identifier.begin, cfStrLength(labelToken.identifier));
 
                 if (cfDarrPush(&self->links, &link) != CF_DARR_OK)
                     cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_INTERNAL_ERROR);
@@ -849,7 +849,7 @@ void cfAssemblerRun( CfAssembler *const self ) {
             if (!cfAssemblerNextToken(self, &colonToken))
                 cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION);
 
-            if (cfStrLength(opcodeToken.ident) >= CF_LABEL_MAX)
+            if (cfStrLength(opcodeToken.identifier) >= CF_LABEL_MAX)
                 cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_TOO_LONG_LABEL);
 
             switch (colonToken.type) {
@@ -862,7 +862,7 @@ void cfAssemblerRun( CfAssembler *const self ) {
                     .isRelative = true,
                 };
 
-                memcpy(label.label, opcodeToken.ident.begin, cfStrLength(opcodeToken.ident));
+                memcpy(label.label, opcodeToken.identifier.begin, cfStrLength(opcodeToken.identifier));
 
                 if (cfDarrPush(&self->labels, &label) != CF_DARR_OK)
                     cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_INTERNAL_ERROR);
@@ -898,7 +898,7 @@ void cfAssemblerRun( CfAssembler *const self ) {
                     .isRelative = false,
                 };
 
-                memcpy(label.label, opcodeToken.ident.begin, cfStrLength(opcodeToken.ident));
+                memcpy(label.label, opcodeToken.identifier.begin, cfStrLength(opcodeToken.identifier));
 
                 if (cfDarrPush(&self->labels, &label) != CF_DARR_OK)
                     cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_INTERNAL_ERROR);
