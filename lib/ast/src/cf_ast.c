@@ -30,23 +30,6 @@ const char * cfAstTypeStr( CfAstType type ) {
     return NULL;
 } // cfAstTypeStr
 
-CfStr cfAstSpanCutStr( CfAstSpan span, CfStr str ) {
-    CfStr result = {
-        .begin = str.begin + span.begin,
-        .end = str.begin + span.end,
-    };
-
-    return (CfStr) {
-        .begin = result.begin < str.end
-            ? result.begin
-            : str.end,
-
-        .end = result.end < str.end
-            ? result.end
-            : str.end,
-    };
-} // cfAstSpanCutStr
-
 void cfAstDtor( CfAst ast ) {
     // AST allocation is located in corresponding arena
     if (ast != NULL)
@@ -68,8 +51,8 @@ CfStr cfAstGetSourceFileName( const CfAst ast ) {
     return ast->sourceName;
 } // cfAstGetSourceFileName
 
-void cfAstSpanDumpJson( FILE *out, CfAstSpan span ) {
-    fprintf(out, "[%zu, %zu]", span.begin, span.end);
+void cfAstSpanDumpJson( FILE *out, CfStrSpan span ) {
+    fprintf(out, "[%u, %u]", span.begin, span.end);
 } // cfAstSpanDumpJson
 
 /**

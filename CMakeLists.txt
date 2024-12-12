@@ -13,28 +13,36 @@ set(CF_LANGUAGE CXX)
 # set preferred C++ standard
 set(CMAKE_CXX_STANDARD 20)
 
-# compile libraries
+# utils
 add_subdirectory(lib/util)
+add_subdirectory(lib/linker)
+
+# core libraries
 add_subdirectory(lib/executable)
 add_subdirectory(lib/object)
-add_subdirectory(lib/assembler)
-add_subdirectory(lib/disassembler)
-add_subdirectory(lib/linker)
+
+# vm
 add_subdirectory(lib/vm)
 
+# cfasm language libraries
+add_subdirectory(lib/assembler)
+add_subdirectory(lib/disassembler)
+
+# cf language libraries
+add_subdirectory(lib/lexer)
 add_subdirectory(lib/ast)
 add_subdirectory(lib/tir)
 
-# add implementation librariess
+# 'implementation' librariess
 add_subdirectory(impl/sandbox_sdl2)
 
-# compile applications
+# applications
 add_subdirectory(app/executor)
 add_subdirectory(app/assembler)
 add_subdirectory(app/disassembler)
 add_subdirectory(app/linker)
 
-# compile tests (debug-only)
+# tests (debug-only)
 if (CMAKE_BUILD_TYPE MATCHES Debug)
     add_subdirectory(test/ast)
     add_subdirectory(test/deque)

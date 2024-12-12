@@ -14,8 +14,8 @@
  * 
  * @return parsed expression (NULL if parsing failed)
  */
-static CfAstExpr * cfAstParseExprValue( CfAstParser *const self, const CfAstToken **tokenListPtr ) {
-    const CfAstToken *tokenList = *tokenListPtr;
+static CfAstExpr * cfAstParseExprValue( CfAstParser *const self, const CfLexerToken **tokenListPtr ) {
+    const CfLexerToken *tokenList = *tokenListPtr;
 
     // FIXME Arena memory leaks in 'default' case.
     CfAstExpr *resultExpr = (CfAstExpr *)cfArenaAlloc(self->dataArena, sizeof(CfAstExpr));
@@ -23,7 +23,7 @@ static CfAstExpr * cfAstParseExprValue( CfAstParser *const self, const CfAstToke
 
     // try to parse value (identifier, literal or expression in '()')
     switch (tokenList->type) {
-    case CF_AST_TOKEN_TYPE_INTEGER:
+    case CF_LEXER_TOKEN_TYPE_INTEGER:
         *resultExpr = (CfAstExpr) {
             .type = CF_AST_EXPR_TYPE_INTEGER,
             .span = tokenList->span,
@@ -32,7 +32,7 @@ static CfAstExpr * cfAstParseExprValue( CfAstParser *const self, const CfAstToke
         tokenList++;
         break;
 
-    case CF_AST_TOKEN_TYPE_FLOATING:
+    case CF_LEXER_TOKEN_TYPE_FLOATING:
         *resultExpr = (CfAstExpr) {
             .type = CF_AST_EXPR_TYPE_FLOATING,
             .span = tokenList->span,
@@ -41,7 +41,7 @@ static CfAstExpr * cfAstParseExprValue( CfAstParser *const self, const CfAstToke
         tokenList++;
         break;
 
-    case CF_AST_TOKEN_TYPE_IDENTIFIER:
+    case CF_LEXER_TOKEN_TYPE_IDENTIFIER:
         *resultExpr = (CfAstExpr) {
             .type       = CF_AST_EXPR_TYPE_IDENTIFIER,
             .span       = tokenList->span,
@@ -50,12 +50,12 @@ static CfAstExpr * cfAstParseExprValue( CfAstParser *const self, const CfAstToke
         tokenList++;
         break;
 
-    case CF_AST_TOKEN_TYPE_ROUND_BR_OPEN: {
-        size_t spanStart = tokenList->span.begin;
+    case CF_LEXER_TOKEN_TYPE_ROUND_BR_OPEN: {
+        uint32_t spanStart = tokenList->span.begin;
         tokenList++;
 
         CfAstExpr *expr = cfAstParseExpr(self, &tokenList);
-        cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_ROUND_BR_CLOSE, true);
+        cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_ROUND_BR_CLOSE, true);
 
         if (expr == NULL)
             // commit error if cannot parse expression in brackets
@@ -74,7 +74,7 @@ static CfAstExpr * cfAstParseExprValue( CfAstParser *const self, const CfAstToke
     }
 
     // try to parse function call
-    if (tokenList->type == CF_AST_TOKEN_TYPE_ROUND_BR_OPEN) {
+    if (tokenList->type == CF_LEXER_TOKEN_TYPE_ROUND_BR_OPEN) {
         tokenList++;
 
         // create parameter list
@@ -92,7 +92,7 @@ static CfAstExpr * cfAstParseExprValue( CfAstParser *const self, const CfAstToke
             cfAstParserAssert(self, cfDequePushBack(paramDeque, &param));
 
             // try to parse comma
-            if (cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_COMMA, false) == NULL)
+            if (cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_COMMA, false) == NULL)
                 break;
         }
 
@@ -103,18 +103,18 @@ static CfAstExpr * cfAstParseExprValue( CfAstParser *const self, const CfAstToke
         cfDequeWrite(paramDeque, paramArray);
 
         // parse closing bracket
-        size_t callSpanEnd = cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_ROUND_BR_CLOSE, true)->span.end;
+        uint32_t callSpanEnd = cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_ROUND_BR_CLOSE, true)->span.end;
 
         // apply call expression
         CfAstExpr *callExpr = (CfAstExpr *)cfArenaAlloc(self->dataArena, sizeof(CfAstExpr));
         cfAstParserAssert(self, callExpr != NULL);
         *callExpr = (CfAstExpr) {
             .type = CF_AST_EXPR_TYPE_CALL,
-            .span = (CfAstSpan) { resultExpr->span.begin, callSpanEnd },
+            .span = (CfStrSpan) { resultExpr->span.begin, callSpanEnd },
             .call = {
                 .callee           = resultExpr,
-                .paramArrayLength = paramArrayLength,
-                .paramArray       = paramArray,
+                .argumentArrayLength = paramArrayLength,
+                .argumentArray       = paramArray,
             },
         };
 
@@ -135,9 +135,9 @@ static CfAstExpr * cfAstParseExprValue( CfAstParser *const self, const CfAstToke
  */
 static CfAstExpr * cfAstParseExprProduct(
     CfAstParser       *const self,
-    const CfAstToken **      tokenListPtr
+    const CfLexerToken **      tokenListPtr
 ) {
-    const CfAstToken *tokenList = *tokenListPtr;
+    const CfLexerToken *tokenList = *tokenListPtr;
 
     CfAstExpr *root = cfAstParseExprValue(self, &tokenList);
     if (root == NULL)
@@ -146,11 +146,11 @@ static CfAstExpr * cfAstParseExprProduct(
     for (;;) {
         // try to parse parse binary operator (multiplication/division)
         CfAstBinaryOperator op = CF_AST_BINARY_OPERATOR_MUL;
-        const CfAstToken *opToken = NULL;
+        const CfLexerToken *opToken = NULL;
 
-        if ((opToken = cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_ASTERISK, false)) != NULL) {
+        if ((opToken = cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_ASTERISK, false)) != NULL) {
             op = CF_AST_BINARY_OPERATOR_MUL;
-        } else if ((opToken = cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_SLASH, false)) != NULL) {
+        } else if ((opToken = cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_SLASH, false)) != NULL) {
             op = CF_AST_BINARY_OPERATOR_DIV;
         } else {
             break;
@@ -160,7 +160,7 @@ static CfAstExpr * cfAstParseExprProduct(
         if (rhs == NULL)
             cfAstParserFinish(self, (CfAstParseResult) {
                 .status = CF_AST_PARSE_STATUS_EXPR_RHS_MISSING,
-                .rhsMissing = (CfAstSpan) { root->span.begin, opToken->span.end },
+                .rhsMissing = (CfStrSpan) { root->span.begin, opToken->span.end },
             });
 
         CfAstExpr *newRoot = (CfAstExpr *)cfArenaAlloc(self->dataArena, sizeof(CfAstExpr));
@@ -168,7 +168,7 @@ static CfAstExpr * cfAstParseExprProduct(
 
         *newRoot = (CfAstExpr) {
             .type = CF_AST_EXPR_TYPE_BINARY_OPERATOR,
-            .span = (CfAstSpan) { root->span.begin, rhs->span.end },
+            .span = (CfStrSpan) { root->span.begin, rhs->span.end },
             .binaryOperator = { .op = op, .lhs = root, .rhs = rhs },
         };
 
@@ -189,9 +189,9 @@ static CfAstExpr * cfAstParseExprProduct(
  */
 static CfAstExpr * cfAstParseExprSum(
     CfAstParser       *const self,
-    const CfAstToken **      tokenListPtr
+    const CfLexerToken **      tokenListPtr
 ) {
-    const CfAstToken *tokenList = *tokenListPtr;
+    const CfLexerToken *tokenList = *tokenListPtr;
 
     CfAstExpr *root = cfAstParseExprProduct(self, &tokenList);
     if (root == NULL)
@@ -200,11 +200,11 @@ static CfAstExpr * cfAstParseExprSum(
     for (;;) {
         // try to parse parse binary operator (addition/substraction)
         CfAstBinaryOperator op = CF_AST_BINARY_OPERATOR_ADD;
-        const CfAstToken *opToken = NULL;
+        const CfLexerToken *opToken = NULL;
 
-        if ((opToken = cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_PLUS, false)) != NULL) {
+        if ((opToken = cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_PLUS, false)) != NULL) {
             op = CF_AST_BINARY_OPERATOR_ADD;
-        } else if ((opToken = cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_MINUS, false)) != NULL) {
+        } else if ((opToken = cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_MINUS, false)) != NULL) {
             op = CF_AST_BINARY_OPERATOR_SUB;
         } else {
             break;
@@ -214,7 +214,7 @@ static CfAstExpr * cfAstParseExprSum(
         if (rhs == NULL)
             cfAstParserFinish(self, (CfAstParseResult) {
                 .status = CF_AST_PARSE_STATUS_EXPR_RHS_MISSING,
-                .rhsMissing = (CfAstSpan) { root->span.begin, opToken->span.end },
+                .rhsMissing = (CfStrSpan) { root->span.begin, opToken->span.end },
             });
 
         CfAstExpr *newRoot = (CfAstExpr *)cfArenaAlloc(self->dataArena, sizeof(CfAstExpr));
@@ -222,7 +222,7 @@ static CfAstExpr * cfAstParseExprSum(
 
         *newRoot = (CfAstExpr) {
             .type = CF_AST_EXPR_TYPE_BINARY_OPERATOR,
-            .span = (CfAstSpan) { root->span.begin, rhs->span.end },
+            .span = (CfStrSpan) { root->span.begin, rhs->span.end },
             .binaryOperator = { .op = op, .lhs = root, .rhs = rhs },
         };
 
@@ -240,9 +240,9 @@ static CfAstExpr * cfAstParseExprSum(
  */
 static CfAstExpr * cfAstParseExprComparison(
     CfAstParser      *const self,
-    const CfAstToken **     tokenListPtr
+    const CfLexerToken **     tokenListPtr
 ) {
-    const CfAstToken *tokenList = *tokenListPtr;
+    const CfLexerToken *tokenList = *tokenListPtr;
 
     CfAstExpr *root = cfAstParseExprSum(self, &tokenList);
     if (root == NULL)
@@ -251,15 +251,15 @@ static CfAstExpr * cfAstParseExprComparison(
     for (;;) {
         // try to parse parse binary operator (addition/substraction)
         CfAstBinaryOperator op = CF_AST_BINARY_OPERATOR_ADD;
-        const CfAstToken *opToken = tokenList;
+        const CfLexerToken *opToken = tokenList;
 
         switch (opToken->type) {
-        case CF_AST_TOKEN_TYPE_EQUAL_EQUAL            : op = CF_AST_BINARY_OPERATOR_EQ; break;
-        case CF_AST_TOKEN_TYPE_EXCLAMATION_EQUAL      : op = CF_AST_BINARY_OPERATOR_NE; break;
-        case CF_AST_TOKEN_TYPE_ANGULAR_BR_OPEN        : op = CF_AST_BINARY_OPERATOR_LT; break;
-        case CF_AST_TOKEN_TYPE_ANGULAR_BR_OPEN_EQUAL  : op = CF_AST_BINARY_OPERATOR_LE; break;
-        case CF_AST_TOKEN_TYPE_ANGULAR_BR_CLOSE       : op = CF_AST_BINARY_OPERATOR_GT; break;
-        case CF_AST_TOKEN_TYPE_ANGULAR_BR_CLOSE_EQUAL : op = CF_AST_BINARY_OPERATOR_GE; break;
+        case CF_LEXER_TOKEN_TYPE_EQUAL_EQUAL            : op = CF_AST_BINARY_OPERATOR_EQ; break;
+        case CF_LEXER_TOKEN_TYPE_EXCLAMATION_EQUAL      : op = CF_AST_BINARY_OPERATOR_NE; break;
+        case CF_LEXER_TOKEN_TYPE_ANGULAR_BR_OPEN        : op = CF_AST_BINARY_OPERATOR_LT; break;
+        case CF_LEXER_TOKEN_TYPE_ANGULAR_BR_OPEN_EQUAL  : op = CF_AST_BINARY_OPERATOR_LE; break;
+        case CF_LEXER_TOKEN_TYPE_ANGULAR_BR_CLOSE       : op = CF_AST_BINARY_OPERATOR_GT; break;
+        case CF_LEXER_TOKEN_TYPE_ANGULAR_BR_CLOSE_EQUAL : op = CF_AST_BINARY_OPERATOR_GE; break;
 
         default:
             opToken = NULL;
@@ -274,7 +274,7 @@ static CfAstExpr * cfAstParseExprComparison(
         if (rhs == NULL)
             cfAstParserFinish(self, (CfAstParseResult) {
                 .status = CF_AST_PARSE_STATUS_EXPR_RHS_MISSING,
-                .rhsMissing = (CfAstSpan) { root->span.begin, opToken->span.end },
+                .rhsMissing = (CfStrSpan) { root->span.begin, opToken->span.end },
             });
 
         CfAstExpr *newRoot = (CfAstExpr *)cfArenaAlloc(self->dataArena, sizeof(CfAstExpr));
@@ -282,7 +282,7 @@ static CfAstExpr * cfAstParseExprComparison(
 
         *newRoot = (CfAstExpr) {
             .type = CF_AST_EXPR_TYPE_BINARY_OPERATOR,
-            .span = (CfAstSpan) { root->span.begin, rhs->span.end },
+            .span = (CfStrSpan) { root->span.begin, rhs->span.end },
             .binaryOperator = { .op = op, .lhs = root, .rhs = rhs },
         };
 
@@ -304,15 +304,15 @@ static CfAstExpr * cfAstParseExprComparison(
  */
 static bool cfAstParseAssignmentOperator(
     CfAstParser             *const self,
-    const CfAstToken       **      tokenListPtr,
+    const CfLexerToken       **      tokenListPtr,
     CfAstAssignmentOperator *      opDst
 ) {
     switch ((*tokenListPtr)->type) {
-    case CF_AST_TOKEN_TYPE_EQUAL             : *opDst = CF_AST_ASSIGNMENT_OPERATOR_NONE; break;
-    case CF_AST_TOKEN_TYPE_PLUS_EQUAL        : *opDst = CF_AST_ASSIGNMENT_OPERATOR_ADD;  break;
-    case CF_AST_TOKEN_TYPE_MINUS_EQUAL       : *opDst = CF_AST_ASSIGNMENT_OPERATOR_SUB;  break;
-    case CF_AST_TOKEN_TYPE_ASTERISK_EQUAL    : *opDst = CF_AST_ASSIGNMENT_OPERATOR_MUL;  break;
-    case CF_AST_TOKEN_TYPE_SLASH_EQUAL       : *opDst = CF_AST_ASSIGNMENT_OPERATOR_DIV;  break;
+    case CF_LEXER_TOKEN_TYPE_EQUAL             : *opDst = CF_AST_ASSIGNMENT_OPERATOR_NONE; break;
+    case CF_LEXER_TOKEN_TYPE_PLUS_EQUAL        : *opDst = CF_AST_ASSIGNMENT_OPERATOR_ADD;  break;
+    case CF_LEXER_TOKEN_TYPE_MINUS_EQUAL       : *opDst = CF_AST_ASSIGNMENT_OPERATOR_SUB;  break;
+    case CF_LEXER_TOKEN_TYPE_ASTERISK_EQUAL    : *opDst = CF_AST_ASSIGNMENT_OPERATOR_MUL;  break;
+    case CF_LEXER_TOKEN_TYPE_SLASH_EQUAL       : *opDst = CF_AST_ASSIGNMENT_OPERATOR_DIV;  break;
     default:
         return false;
     }
@@ -331,13 +331,13 @@ static bool cfAstParseAssignmentOperator(
  */
 static CfAstExpr * cfAstParseExprAssignment(
     CfAstParser       *const self,
-    const CfAstToken **      tokenListPtr
+    const CfLexerToken **      tokenListPtr
 ) {
-    const CfAstToken *tokenList = *tokenListPtr;
+    const CfLexerToken *tokenList = *tokenListPtr;
 
-    size_t spanBegin = tokenList->span.begin;
+    uint32_t spanBegin = tokenList->span.begin;
 
-    const CfAstToken *destToken = cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_IDENTIFIER, false);
+    const CfLexerToken *destToken = cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_IDENTIFIER, false);
     CfAstAssignmentOperator op = CF_AST_ASSIGNMENT_OPERATOR_NONE;
 
     if (destToken == NULL || !cfAstParseAssignmentOperator(self, &tokenList, &op))
@@ -350,7 +350,7 @@ static CfAstExpr * cfAstParseExprAssignment(
     if (value == NULL)
         cfAstParserFinish(self, (CfAstParseResult) {
             .status                 = CF_AST_PARSE_STATUS_EXPR_ASSIGNMENT_VALUE_MISSING,
-            .assignmentValueMissing = (CfAstSpan) { spanBegin, tokenList->span.begin },
+            .assignmentValueMissing = (CfStrSpan) { spanBegin, tokenList->span.begin },
         });
 
     CfAstExpr *resultExpr = (CfAstExpr *)cfArenaAlloc(self->dataArena, sizeof(CfAstExpr));
@@ -358,7 +358,7 @@ static CfAstExpr * cfAstParseExprAssignment(
 
     *resultExpr = (CfAstExpr) {
         .type = CF_AST_EXPR_TYPE_ASSIGNMENT,
-        .span = (CfAstSpan) { spanBegin, tokenList->span.begin },
+        .span = (CfStrSpan) { spanBegin, tokenList->span.begin },
         .assignment = {
             .op          = op,
             .destination = destination,
@@ -370,7 +370,7 @@ static CfAstExpr * cfAstParseExprAssignment(
     return resultExpr;
 } // cfAstParseExprAssignment
 
-CfAstExpr * cfAstParseExpr( CfAstParser *const self, const CfAstToken **tokenListPtr ) {
+CfAstExpr * cfAstParseExpr( CfAstParser *const self, const CfLexerToken **tokenListPtr ) {
     CfAstExpr *result = NULL;
 
     if ((result = cfAstParseExprAssignment(self, tokenListPtr)) != NULL)

@@ -22,50 +22,44 @@ void cfAstParserAssert( CfAstParser *const self, bool condition ) {
 void cfAstParseTokenList(
     CfAstParser *const self,
     CfStr              fileContents,
-    CfAstToken **      tokenArrayDst,
+    CfLexerToken **      tokenArrayDst,
     size_t      *      tokenArrayLenDst
 ) {
     assert(tokenArrayDst != NULL);
     assert(tokenArrayLenDst != NULL);
 
-    CfDeque tokenList = cfDequeCtor(sizeof(CfAstToken), CF_DEQUE_CHUNK_SIZE_UNDEFINED, self->tempArena);
+    CfDeque tokenList = cfDequeCtor(sizeof(CfLexerToken), CF_DEQUE_CHUNK_SIZE_UNDEFINED, self->tempArena);
 
     cfAstParserAssert(self, tokenList != NULL);
 
-    CfAstSpan restSpan = { 0, cfStrLength(fileContents) };
+    CfStrSpan restSpan = { 0, (uint32_t)cfStrLength(fileContents) };
 
     bool endParsed = false;
 
     while (!endParsed) {
-        CfAstTokenParsingResult result = cfAstTokenParse(fileContents, restSpan);
+        CfLexerToken token = {};
+        bool parsed = cfLexerParseToken(fileContents, restSpan, &token);
 
-        switch (result.status) {
-        case CF_AST_TOKEN_PARSING_STATUS_OK: {
-            endParsed = (result.ok.token.type == CF_AST_TOKEN_TYPE_END);
-
-            // ignore comments
-            if (result.ok.token.type != CF_AST_TOKEN_TYPE_COMMENT)
-                cfAstParserAssert(self, cfDequePushBack(tokenList, &result.ok.token));
-
-            restSpan = result.ok.rest;
-            break;
-        }
-
-        case CF_AST_TOKEN_PARSING_STATUS_UNEXPECTED_SYMBOL: {
+        if (!parsed)
             cfAstParserFinish(self, (CfAstParseResult) {
                 .status = CF_AST_PARSE_STATUS_UNEXPECTED_SYMBOL,
                 .unexpectedSymbol = {
-                    .symbol = result.unexpectedSymbol,
+                    .symbol = fileContents.begin[restSpan.begin],
                     .offset = restSpan.begin,
                 },
             });
-            break;
-        }
-        }
+
+        endParsed = (token.type == CF_LEXER_TOKEN_TYPE_END);
+
+        // ignore comments
+        if (token.type != CF_LEXER_TOKEN_TYPE_COMMENT)
+            cfAstParserAssert(self, cfDequePushBack(tokenList, &token));
+
+        restSpan.begin = token.span.end;
     }
 
     // allocate 'final' token array
-    CfAstToken *tokenArray = (CfAstToken *)cfArenaAlloc(self->tempArena, sizeof(CfAstToken) * cfDequeLength(tokenList));
+    CfLexerToken *tokenArray = (CfLexerToken *)cfArenaAlloc(self->tempArena, sizeof(CfLexerToken) * cfDequeLength(tokenList));
 
     cfAstParserAssert(self, tokenArray != NULL);
 
@@ -75,12 +69,12 @@ void cfAstParseTokenList(
     *tokenArrayLenDst = cfDequeLength(tokenList);
 } // cfAstParseTokenList
 
-bool cfAstParseType( CfAstParser *const self, const CfAstToken **tokenListPtr, CfAstType *typeDst ) {
+bool cfAstParseType( CfAstParser *const self, const CfLexerToken **tokenListPtr, CfAstType *typeDst ) {
     switch ((*tokenListPtr)->type) {
-    case CF_AST_TOKEN_TYPE_I32  : *typeDst = CF_AST_TYPE_I32;  break;
-    case CF_AST_TOKEN_TYPE_U32  : *typeDst = CF_AST_TYPE_U32;  break;
-    case CF_AST_TOKEN_TYPE_F32  : *typeDst = CF_AST_TYPE_F32;  break;
-    case CF_AST_TOKEN_TYPE_VOID : *typeDst = CF_AST_TYPE_VOID; break;
+    case CF_LEXER_TOKEN_TYPE_I32  : *typeDst = CF_AST_TYPE_I32;  break;
+    case CF_LEXER_TOKEN_TYPE_U32  : *typeDst = CF_AST_TYPE_U32;  break;
+    case CF_LEXER_TOKEN_TYPE_F32  : *typeDst = CF_AST_TYPE_F32;  break;
+    case CF_LEXER_TOKEN_TYPE_VOID : *typeDst = CF_AST_TYPE_VOID; break;
 
     default:
         return false;
@@ -101,15 +95,15 @@ bool cfAstParseType( CfAstParser *const self, const CfAstToken **tokenListPtr, C
  */
 static bool cfAstParseFunctionParam(
     CfAstParser         *const self,
-    const CfAstToken   **      tokenListPtr,
+    const CfLexerToken   **      tokenListPtr,
     CfAstFunctionParam  *      paramDst
 ) {
-    const CfAstToken *tokenList = *tokenListPtr;
+    const CfLexerToken *tokenList = *tokenListPtr;
     CfAstType type;
 
     if (false
-        || tokenList[0].type != CF_AST_TOKEN_TYPE_IDENTIFIER
-        || tokenList[1].type != CF_AST_TOKEN_TYPE_COLON
+        || tokenList[0].type != CF_LEXER_TOKEN_TYPE_IDENTIFIER
+        || tokenList[1].type != CF_LEXER_TOKEN_TYPE_COLON
         || (tokenList += 2, !cfAstParseType(self, &tokenList, &type))
     )
         return false;
@@ -117,17 +111,17 @@ static bool cfAstParseFunctionParam(
     *paramDst = (CfAstFunctionParam) {
         .name = (*tokenListPtr)[0].identifier,
         .type = type,
-        .span = (CfAstSpan) { (*tokenListPtr)[0].span.begin, tokenList->span.begin }
+        .span = (CfStrSpan) { (*tokenListPtr)[0].span.begin, tokenList->span.begin }
     };
 
     *tokenListPtr = tokenList;
     return true;
 } // cfAstParseFunctionParam
 
-const CfAstToken * cfAstParseToken(
+const CfLexerToken * cfAstParseToken(
     CfAstParser       *const self,
-    const CfAstToken **      tokenListPtr,
-    CfAstTokenType           expectedType,
+    const CfLexerToken **      tokenListPtr,
+    CfLexerTokenType           expectedType,
     bool                     required
 ) {
     if ((*tokenListPtr)->type == expectedType)
@@ -154,24 +148,24 @@ const CfAstToken * cfAstParseToken(
  * 
  * @return true if parsed, false if not.
  */
-static bool cfAstParseStmt( CfAstParser *const self, const CfAstToken **tokenListPtr, CfAstStmt *stmtDst ) {
-    const CfAstToken *tokenList = *tokenListPtr;
+static bool cfAstParseStmt( CfAstParser *const self, const CfLexerToken **tokenListPtr, CfAstStmt *stmtDst ) {
+    const CfLexerToken *tokenList = *tokenListPtr;
 
     CfAstBlock *block = NULL;
     CfAstExpr *expr = NULL;
     CfAstDecl decl = {};
 
-    size_t spanBegin = tokenList->span.begin;
+    uint32_t spanBegin = tokenList->span.begin;
 
     // try to parse new block
-    if (cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_IF, false) != NULL) {
+    if (cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_IF, false) != NULL) {
         // parse condition and corresponding block
         CfAstExpr *cond = cfAstParseExpr(self, &tokenList);
 
         if (cond == NULL)
             cfAstParserFinish(self, (CfAstParseResult) {
                 .status = CF_AST_PARSE_STATUS_IF_CONDITION_MISSING,
-                .ifConditionMissing = (CfAstSpan) { spanBegin, tokenList->span.begin },
+                .ifConditionMissing = (CfStrSpan) { spanBegin, tokenList->span.begin },
             });
 
         CfAstBlock *codeThen = cfAstParseBlock(self, &tokenList);
@@ -179,12 +173,12 @@ static bool cfAstParseStmt( CfAstParser *const self, const CfAstToken **tokenLis
         if (codeThen == NULL)
             cfAstParserFinish(self, (CfAstParseResult) {
                 .status = CF_AST_PARSE_STATUS_IF_BLOCK_MISSING,
-                .ifBlockMissing = (CfAstSpan) { spanBegin, tokenList->span.begin },
+                .ifBlockMissing = (CfStrSpan) { spanBegin, tokenList->span.begin },
             });
 
         CfAstBlock *codeElse = NULL;
-        const CfAstToken *elseToken = NULL;
-        if ((elseToken = cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_ELSE, false)) != NULL) {
+        const CfLexerToken *elseToken = NULL;
+        if ((elseToken = cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_ELSE, false)) != NULL) {
             // parse else block
             codeElse = cfAstParseBlock(self, &tokenList);
 
@@ -204,13 +198,13 @@ static bool cfAstParseStmt( CfAstParser *const self, const CfAstToken **tokenLis
             },
         };
 
-    } else if (cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_WHILE, false) != NULL) {
+    } else if (cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_WHILE, false) != NULL) {
         // parse condition
         CfAstExpr *condition = cfAstParseExpr(self, &tokenList);
         if (condition == NULL)
             cfAstParserFinish(self, (CfAstParseResult) {
                 .status = CF_AST_PARSE_STATUS_WHILE_CONDITION_MISSING,
-                .whileConditionMissing = (CfAstSpan) { spanBegin, tokenList->span.begin }
+                .whileConditionMissing = (CfStrSpan) { spanBegin, tokenList->span.begin }
             });
 
         // parse code
@@ -218,7 +212,7 @@ static bool cfAstParseStmt( CfAstParser *const self, const CfAstToken **tokenLis
         if (code == NULL)
             cfAstParserFinish(self, (CfAstParseResult) {
                 .status = CF_AST_PARSE_STATUS_WHILE_BLOCK_MISSING,
-                .whileBlockMissing = (CfAstSpan) { spanBegin, tokenList->span.begin }
+                .whileBlockMissing = (CfStrSpan) { spanBegin, tokenList->span.begin }
             });
 
         *stmtDst = (CfAstStmt) {
@@ -242,7 +236,7 @@ static bool cfAstParseStmt( CfAstParser *const self, const CfAstToken **tokenLis
         };
     } else if ((expr = cfAstParseExpr(self, &tokenList)) != NULL) {
         // parse semicolon after expression
-        cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_SEMICOLON, true);
+        cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_SEMICOLON, true);
 
         *stmtDst = (CfAstStmt) {
             .type = CF_AST_STMT_TYPE_EXPR,
@@ -257,10 +251,10 @@ static bool cfAstParseStmt( CfAstParser *const self, const CfAstToken **tokenLis
     return true;
 } // cfAstParseStmt
 
-CfAstBlock * cfAstParseBlock( CfAstParser *const self, const CfAstToken **tokenListPtr ) {
-    const CfAstToken *tokenList = *tokenListPtr;
+CfAstBlock * cfAstParseBlock( CfAstParser *const self, const CfLexerToken **tokenListPtr ) {
+    const CfLexerToken *tokenList = *tokenListPtr;
 
-    if (cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_CURLY_BR_OPEN, false) == NULL)
+    if (cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_CURLY_BR_OPEN, false) == NULL)
         return NULL;
 
     // parse statements
@@ -282,20 +276,20 @@ CfAstBlock * cfAstParseBlock( CfAstParser *const self, const CfAstToken **tokenL
     block->stmtCount = cfDequeLength(stmtDeque);
     cfDequeWrite(stmtDeque, block->stmts);
 
-    cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_CURLY_BR_CLOSE, true);
+    cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_CURLY_BR_CLOSE, true);
 
     *tokenListPtr = tokenList;
 
     return block;
 } // cfAstParseBlock
 
-CfAstFunction cfAstParseFunction( CfAstParser *const self, const CfAstToken **tokenListPtr ) {
-    const CfAstToken *tokenList = *tokenListPtr;
-    size_t signatureSpanBegin = tokenList[0].span.begin;
+CfAstFunction cfAstParseFunction( CfAstParser *const self, const CfLexerToken **tokenListPtr ) {
+    const CfLexerToken *tokenList = *tokenListPtr;
+    uint32_t signatureSpanBegin = tokenList[0].span.begin;
 
-    cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_FN, true);
-    CfStr name = cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_IDENTIFIER, true)->identifier;
-    cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_ROUND_BR_OPEN, true);
+    cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_FN, true);
+    CfStr name = cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_IDENTIFIER, true)->identifier;
+    cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_ROUND_BR_OPEN, true);
 
     // create param list
     CfDeque paramDeque = cfDequeCtor(sizeof(CfAstFunctionParam), CF_DEQUE_CHUNK_SIZE_UNDEFINED, self->tempArena);
@@ -311,12 +305,12 @@ CfAstFunction cfAstParseFunction( CfAstParser *const self, const CfAstToken **to
         cfAstParserAssert(self, cfDequePushBack(paramDeque, &param));
 
         // (try to) parse comma. in case if comma isn't parsed, stop parsing parameters
-        if (cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_COMMA, false) == NULL)
+        if (cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_COMMA, false) == NULL)
             break;
     }
 
     // parse closing bracket
-    cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_ROUND_BR_CLOSE, true);
+    cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_ROUND_BR_CLOSE, true);
 
     // parameter array
     size_t paramArrayLength = cfDequeLength(paramDeque);
@@ -332,15 +326,15 @@ CfAstFunction cfAstParseFunction( CfAstParser *const self, const CfAstToken **to
     if (!cfAstParseType(self, &tokenList, &returnType))
         returnType = CF_AST_TYPE_VOID;
 
-    size_t signatureSpanEnd = tokenList[0].span.begin;
+    uint32_t signatureSpanEnd = tokenList[0].span.begin;
 
     CfAstBlock *impl = cfAstParseBlock(self, &tokenList);
 
     // parse block
     if (impl == NULL)
-        cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_SEMICOLON, true);
+        cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_SEMICOLON, true);
 
-    size_t spanEnd = tokenList[0].span.end;
+    uint32_t spanEnd = tokenList[0].span.end;
 
     *tokenListPtr = tokenList;
 
@@ -349,42 +343,42 @@ CfAstFunction cfAstParseFunction( CfAstParser *const self, const CfAstToken **to
         .params        = paramArray,
         .paramCount    = paramArrayLength,
         .returnType    = returnType,
-        .signatureSpan = (CfAstSpan) { signatureSpanBegin, signatureSpanEnd },
-        .span          = (CfAstSpan) { signatureSpanBegin, spanEnd },
+        .signatureSpan = (CfStrSpan) { signatureSpanBegin, signatureSpanEnd },
+        .span          = (CfStrSpan) { signatureSpanBegin, spanEnd },
         .impl          = impl,
     };
 } // cfAstParseFunction
 
-CfAstVariable cfAstParseVariable( CfAstParser *const self, const CfAstToken **tokenListPtr ) {
-    const CfAstToken *tokenList = *tokenListPtr;
-    size_t spanBegin = tokenList->span.begin;
+CfAstVariable cfAstParseVariable( CfAstParser *const self, const CfLexerToken **tokenListPtr ) {
+    const CfLexerToken *tokenList = *tokenListPtr;
+    uint32_t spanBegin = tokenList->span.begin;
 
-    cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_LET, true);
-    CfStr name = cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_IDENTIFIER, true)->identifier;
-    cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_COLON, true);
+    cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_LET, true);
+    CfStr name = cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_IDENTIFIER, true)->identifier;
+    cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_COLON, true);
 
     CfAstType type = CF_AST_TYPE_VOID;
     if (!cfAstParseType(self, &tokenList, &type))
         cfAstParserFinish(self, (CfAstParseResult) {
             .status = CF_AST_PARSE_STATUS_VARIABLE_TYPE_MISSING,
-            .variableTypeMissing = (CfAstSpan) { spanBegin, tokenList->span.begin },
+            .variableTypeMissing = (CfStrSpan) { spanBegin, tokenList->span.begin },
         });
 
     CfAstExpr *init = NULL;
-    if (cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_EQUAL, false) != NULL) {
+    if (cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_EQUAL, false) != NULL) {
         init = cfAstParseExpr(self, &tokenList);
 
         if (init == NULL)
             cfAstParserFinish(self, (CfAstParseResult) {
                 .status = CF_AST_PARSE_STATUS_VARIABLE_INIT_MISSING,
-                .variableInitMissing = (CfAstSpan) { spanBegin, tokenList->span.begin },
+                .variableInitMissing = (CfStrSpan) { spanBegin, tokenList->span.begin },
             });
     }
 
     // semicolon required
-    cfAstParseToken(self, &tokenList, CF_AST_TOKEN_TYPE_SEMICOLON, true);
+    cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_SEMICOLON, true);
 
-    size_t spanEnd = tokenList->span.begin;
+    uint32_t spanEnd = tokenList->span.begin;
 
     *tokenListPtr = tokenList;
 
@@ -392,19 +386,19 @@ CfAstVariable cfAstParseVariable( CfAstParser *const self, const CfAstToken **to
         .name = name,
         .type = type,
         .init = init,
-        .span = (CfAstSpan) { spanBegin, spanEnd },
+        .span = (CfStrSpan) { spanBegin, spanEnd },
     };
 } // cfAstParseVariable
 
-bool cfAstParseDecl( CfAstParser *const self, const CfAstToken **tokenListPtr, CfAstDecl *dst ) {
+bool cfAstParseDecl( CfAstParser *const self, const CfLexerToken **tokenListPtr, CfAstDecl *dst ) {
     assert(tokenListPtr != NULL);
     assert(dst != NULL);
 
-    const CfAstToken *tokenList = *tokenListPtr;
+    const CfLexerToken *tokenList = *tokenListPtr;
 
     // it's possible to find out declaraion type by first token
     switch (tokenList[0].type) {
-    case CF_AST_TOKEN_TYPE_FN: {
+    case CF_LEXER_TOKEN_TYPE_FN: {
         CfAstFunction function = cfAstParseFunction(self, &tokenList);
 
         *dst = (CfAstDecl) {
@@ -417,7 +411,7 @@ bool cfAstParseDecl( CfAstParser *const self, const CfAstToken **tokenListPtr, C
         return true;
     }
 
-    case CF_AST_TOKEN_TYPE_LET: {
+    case CF_LEXER_TOKEN_TYPE_LET: {
         CfAstVariable variable = cfAstParseVariable(self, &tokenList);
 
         *dst = (CfAstDecl) {
@@ -441,7 +435,7 @@ void cfAstParseDecls(
     CfAstDecl   **      declArrayDst,
     size_t       *      declArrayLenDst
 ) {
-    CfAstToken *tokenArray = NULL;
+    CfLexerToken *tokenArray = NULL;
     size_t tokenArrayLength = 0;
 
     // tokenize file contents
@@ -452,7 +446,7 @@ void cfAstParseDecls(
 
     cfAstParserAssert(self, declList != NULL);
 
-    const CfAstToken *restTokens = tokenArray;
+    const CfLexerToken *restTokens = tokenArray;
 
     for (;;) {
         CfAstDecl decl = {};
@@ -461,7 +455,7 @@ void cfAstParseDecls(
         cfAstParserAssert(self, cfDequePushBack(declList, &decl));
     }
 
-    cfAstParseToken(self, &restTokens, CF_AST_TOKEN_TYPE_END, true);
+    cfAstParseToken(self, &restTokens, CF_LEXER_TOKEN_TYPE_END, true);
 
     CfAstDecl *declArray = (CfAstDecl *)cfArenaAlloc(self->dataArena, sizeof(CfAstDecl) * cfDequeLength(declList));
     cfAstParserAssert(self, declArray != NULL);

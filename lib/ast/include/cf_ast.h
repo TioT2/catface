@@ -7,6 +7,7 @@
 
 #include <cf_string.h>
 #include <cf_arena.h>
+#include <cf_lexer.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,29 +25,13 @@ typedef struct CfAstExpr_ CfAstExpr;
 /// @brief block forward-declaration
 typedef struct CfAstBlock_ CfAstBlock;
 
-/// @brief source text region representaiton structure
-typedef struct CfAstSpan_ {
-    size_t begin; ///< offset from file start (in characters) to span start
-    size_t end;   ///< offset from file start (in characters) to span end (exclusive)
-} CfAstSpan;
-
-/**
- * @brief substr from string by span getting function
- * 
- * @param[in] span span to cut str by
- * @param[in] str  str to cut
- * 
- * @return strnig cut by span
- */
-CfStr cfAstSpanCutStr( CfAstSpan span, CfStr str );
-
 /**
  * @brief span in json format dumping function
  * 
  * @param[in] out  destination file
  * @param[in] span span to dump
  */
-void cfAstSpanDumpJson( FILE *out, CfAstSpan span );
+void cfAstSpanDumpJson( FILE *out, CfStrSpan span );
 
 /// @brief primitive (e.g. builtin) type representation enumeration
 /// @note this kind of type declaration is TMP solution
@@ -85,7 +70,7 @@ const char * cfAstDeclTypeStr( CfAstDeclType declType );
 typedef struct CfAstFunctionParam_ {
     CfStr     name; ///< parameter name
     CfAstType type; ///< parameter type
-    CfAstSpan span; ///< span function param located in
+    CfStrSpan span; ///< span function param located in
 } CfAstFunctionParam;
 
 /// @brief function declaration structure
@@ -94,8 +79,8 @@ typedef struct CfAstFunction_ {
     CfAstFunctionParam * params;        ///< parameter array (owned)
     size_t               paramCount;    ///< parameter array size
     CfAstType            returnType;    ///< returned function type
-    CfAstSpan            signatureSpan; ///< signature span
-    CfAstSpan            span;          ///< span function located in
+    CfStrSpan            signatureSpan; ///< signature span
+    CfStrSpan            span;          ///< span function located in
     CfAstBlock         * impl;          ///< implementation
 } CfAstFunction;
 
@@ -104,13 +89,13 @@ typedef struct CfAstVariable_ {
     CfStr       name; ///< name
     CfAstType   type; ///< type
     CfAstExpr * init; ///< initializer expression (may be null)
-    CfAstSpan   span; ///< span variable declaration located in
+    CfStrSpan   span; ///< span variable declaration located in
 } CfAstVariable;
 
 /// @brief declaration structure
 struct CfAstDecl_ {
     CfAstDeclType type; ///< declaration union tag
-    CfAstSpan     span; ///< span declaration located in
+    CfStrSpan     span; ///< span declaration located in
 
     union {
         CfAstFunction fn;  ///< function
@@ -131,7 +116,7 @@ typedef enum CfAstStmtType_ {
 /// @brief statement repersentation structure
 struct CfAstStmt_ {
     CfAstStmtType type; ///< statement type
-    CfAstSpan     span; ///< span statement located in
+    CfStrSpan     span; ///< span statement located in
 
     union {
         CfAstExpr  * expr;  ///< expression statament (non-null)
@@ -153,10 +138,43 @@ struct CfAstStmt_ {
 
 /// @brief block (curly brace enclosed statement sequence) representation structure
 struct CfAstBlock_ {
-    CfAstSpan   span;      ///< span block located in
+    CfStrSpan   span;      ///< span block located in
     size_t      stmtCount; ///< statement array size
     CfAstStmt   stmts[1];  ///< statement array (extends beyond struct memory for stmtCount - 1 elements)
 }; // struct CfAstBlock_
+
+/// @brief expression type (expression union tag)
+typedef enum CfAstExprType_ {
+    CF_AST_EXPR_TYPE_INTEGER,         ///< integer constant
+    CF_AST_EXPR_TYPE_FLOATING,        ///< float-point constant
+    CF_AST_EXPR_TYPE_IDENTIFIER,      ///< identifier
+    CF_AST_EXPR_TYPE_CALL,            ///< function call
+    CF_AST_EXPR_TYPE_ASSIGNMENT,      ///< assignment expression
+    CF_AST_EXPR_TYPE_BINARY_OPERATOR, ///< binary operator expression
+} CfAstExprType;
+
+/// @brief call expression
+typedef struct CfAstExprCall_ {
+    CfAstExpr *  callee;              ///< called object
+    size_t       argumentArrayLength; ///< argArrayLength length
+    CfAstExpr ** argumentArray;       ///< arguments function called with
+} CfAstExprCall;
+
+/// @brief binary operator used for assignment
+typedef enum CfAstAssignmentOperator_ {
+    CF_AST_ASSIGNMENT_OPERATOR_NONE, ///< do not perform additional actions during assignment
+    CF_AST_ASSIGNMENT_OPERATOR_ADD,  ///< perform addition
+    CF_AST_ASSIGNMENT_OPERATOR_SUB,  ///< perform substraction
+    CF_AST_ASSIGNMENT_OPERATOR_MUL,  ///< perform multiplication
+    CF_AST_ASSIGNMENT_OPERATOR_DIV,  ///< perform division
+} CfAstAssignmentOperator;
+
+/// @brief assignment expression
+typedef struct CfAstExprAssignment_ {
+    CfAstAssignmentOperator   op;          ///< exact assignment operator
+    CfStr                     destination; ///< variable to assign to name (variable assignment only is supported at least now)
+    CfAstExpr               * value;       ///< value to assign to
+} CfAstExprAssignment;
 
 /// @brief binary operator enumeration
 typedef enum CfAstBinaryOperator_ {
@@ -173,59 +191,25 @@ typedef enum CfAstBinaryOperator_ {
     CF_AST_BINARY_OPERATOR_GE,  ///< greater equal
 } CfAstBinaryOperator;
 
-/// @brief expression type (expression union tag)
-typedef enum CfAstExprType_ {
-    CF_AST_EXPR_TYPE_INTEGER,         ///< integer constant
-    CF_AST_EXPR_TYPE_FLOATING,        ///< float-point constant
-    CF_AST_EXPR_TYPE_IDENTIFIER,      ///< identifier
-    CF_AST_EXPR_TYPE_CALL,            ///< function call
-    CF_AST_EXPR_TYPE_ASSIGNMENT,      ///< assignment expression
-    CF_AST_EXPR_TYPE_BINARY_OPERATOR, ///< binary operator expression
-} CfAstExprType;
-
-/// @brief binary operator used for assignment
-typedef enum CfAstAssignmentOperator_ {
-    CF_AST_ASSIGNMENT_OPERATOR_NONE, ///< do not perform additional actions during assignment
-    CF_AST_ASSIGNMENT_OPERATOR_ADD,  ///< perform addition
-    CF_AST_ASSIGNMENT_OPERATOR_SUB,  ///< perform substraction
-    CF_AST_ASSIGNMENT_OPERATOR_MUL,  ///< perform multiplication
-    CF_AST_ASSIGNMENT_OPERATOR_DIV,  ///< perform division
-} CfAstAssignmentOperator;
-
-// /// @brief call expression
-// typedef struct CfAstExprCall_ {
-//     CfAstExpr *  callee;              ///< called object
-//     size_t       argumentArrayLength; ///< argArrayLength length
-//     CfAstExpr ** argumentArray;       ///< arguments function called with
-// } CfAstExprCall;
+/// @brief binary operator expression
+typedef struct CfAstExprBinaryOperator_ {
+    CfAstBinaryOperator   op;  ///< operator to perform
+    CfAstExpr           * lhs; ///< left hand side
+    CfAstExpr           * rhs; ///< right hand side
+} CfAstExprBinaryOperator;
 
 /// @brief expression representaiton structure
 struct CfAstExpr_ {
     CfAstExprType type; ///< expression type
-    CfAstSpan     span; ///< span expression piece located in
+    CfStrSpan     span; ///< span expression piece located in
 
     union {
-        uint64_t integer;    ///< integer expression
-        double   floating;   ///< floating-point expression
-        CfStr    identifier; ///< identifier
-
-        struct {
-            CfAstExpr  * callee;           ///< called expression
-            size_t       paramArrayLength; ///< parameters function called by
-            CfAstExpr ** paramArray;       ///< parameter array
-        } call; ///< function call
-
-        struct {
-            CfAstAssignmentOperator   op;          ///< exact assignment operator
-            CfStr                     destination; ///< variable to assign to name (variable assignment only is supported at least now)
-            CfAstExpr               * value;       ///< value to assign to
-        } assignment; ///< assignment
-
-        struct {
-            CfAstBinaryOperator   op;  ///< operator to perform
-            CfAstExpr           * lhs; ///< left hand side
-            CfAstExpr           * rhs; ///< right hand side
-        } binaryOperator; ///< binary operator
+        uint64_t                integer;        ///< integer expression
+        double                  floating;       ///< floating-point expression
+        CfStr                   identifier;     ///< identifier
+        CfAstExprCall           call;           ///< function call
+        CfAstExprAssignment     assignment;     ///< assignment
+        CfAstExprBinaryOperator binaryOperator; ///< binary operator
     };
 }; // struct CfAstExpr_
 
@@ -274,66 +258,6 @@ size_t cfAstGetDeclCount( const CfAst ast );
  */
 CfStr cfAstGetSourceFileName( const CfAst ast );
 
-/// @brief token type (union tag)
-typedef enum CFAstTokenType_ {
-    CF_AST_TOKEN_TYPE_INTEGER,         ///< integer constant
-    CF_AST_TOKEN_TYPE_FLOATING,        ///< floating-point constant
-    CF_AST_TOKEN_TYPE_IDENTIFIER,      ///< identifier
-
-    CF_AST_TOKEN_TYPE_FN,              ///< "fn"    keyword
-    CF_AST_TOKEN_TYPE_LET,             ///< "let"   keyword
-    CF_AST_TOKEN_TYPE_I32,             ///< "i32"   keyword
-    CF_AST_TOKEN_TYPE_U32,             ///< "u32"   keyword
-    CF_AST_TOKEN_TYPE_F32,             ///< "f32"   keyword
-    CF_AST_TOKEN_TYPE_VOID,            ///< "void"  keyword
-    CF_AST_TOKEN_TYPE_IF,              ///< "if"    keyword
-    CF_AST_TOKEN_TYPE_ELSE,            ///< "else"  keyword
-    CF_AST_TOKEN_TYPE_WHILE,           ///< "while" keyword
-
-    CF_AST_TOKEN_TYPE_ANGULAR_BR_OPEN_EQUAL,  ///< "<=" character combination
-    CF_AST_TOKEN_TYPE_ANGULAR_BR_CLOSE_EQUAL, ///< ">=" character combination
-    CF_AST_TOKEN_TYPE_EQUAL_EQUAL,            ///< "==" character combination
-    CF_AST_TOKEN_TYPE_EXCLAMATION_EQUAL,      ///< "!=" character combination
-    CF_AST_TOKEN_TYPE_PLUS_EQUAL,             ///< "+=" character combination
-    CF_AST_TOKEN_TYPE_MINUS_EQUAL,            ///< "-=" character combination
-    CF_AST_TOKEN_TYPE_ASTERISK_EQUAL,         ///< "*=" character combination
-    CF_AST_TOKEN_TYPE_SLASH_EQUAL,            ///< "/=" character combination
-
-    CF_AST_TOKEN_TYPE_ANGULAR_BR_OPEN,        ///< '<' symbol
-    CF_AST_TOKEN_TYPE_ANGULAR_BR_CLOSE,       ///< '>' symbol
-
-    CF_AST_TOKEN_TYPE_COLON,           ///< ':' symbol
-    CF_AST_TOKEN_TYPE_SEMICOLON,       ///< ';' symbol
-    CF_AST_TOKEN_TYPE_COMMA,           ///< ',' symbol
-    CF_AST_TOKEN_TYPE_EQUAL,           ///< '=' symbol
-    CF_AST_TOKEN_TYPE_PLUS,            ///< '+' symbol
-    CF_AST_TOKEN_TYPE_MINUS,           ///< '-' symbol
-    CF_AST_TOKEN_TYPE_ASTERISK,        ///< '*' symbol
-    CF_AST_TOKEN_TYPE_SLASH,           ///< '/' symbol
-    CF_AST_TOKEN_TYPE_CURLY_BR_OPEN,   ///< '{' symbol
-    CF_AST_TOKEN_TYPE_CURLY_BR_CLOSE,  ///< '}' symbol
-    CF_AST_TOKEN_TYPE_ROUND_BR_OPEN,   ///< '(' symbol
-    CF_AST_TOKEN_TYPE_ROUND_BR_CLOSE,  ///< ')' symbol
-    CF_AST_TOKEN_TYPE_SQUARE_BR_OPEN,  ///< '[' symbol
-    CF_AST_TOKEN_TYPE_SQUARE_BR_CLOSE, ///< ']' symbol
-
-    CF_AST_TOKEN_TYPE_COMMENT,         ///< comment
-    CF_AST_TOKEN_TYPE_END,             ///< text ending token
-} CfAstTokenType;
-
-/// @brief token representation structure (tagged union, actually)
-typedef struct CfAstToken_ {
-    CfAstTokenType type; ///< token kind
-    CfAstSpan      span; ///< span this token occupies
-
-    union {
-        CfStr    identifier; ///< identifier
-        uint64_t integer;    ///< integer constant
-        double   floating;   ///< floating-point constant
-        CfStr    comment;    ///< comment token
-    };
-} CfAstToken;
-
 /// @brief AST parsing status
 typedef enum CfAstParseStatus_ {
     CF_AST_PARSE_STATUS_OK,                             ///< parsing succeeded
@@ -368,22 +292,22 @@ typedef struct CfAstParseResult_ {
         } unexpectedSymbol;
 
         struct {
-            CfAstToken     actualToken;  ///< actual token
-            CfAstTokenType expectedType; ///< expected token type
+            CfLexerToken     actualToken;  ///< actual token
+            CfLexerTokenType expectedType; ///< expected token type
         } unexpectedTokenType;
 
         // Do something with this situation...
 
-        CfAstSpan variableTypeMissing;     ///< variable type missing
-        CfAstSpan variableInitMissing;     ///< variable initializer missing
-        CfAstSpan bracketInternalsMissing; ///< bracket internals missing
-        CfAstSpan rhsMissing;              ///< right hand side missing
-        CfAstSpan ifConditionMissing;      ///< 'if' condition missing
-        CfAstSpan ifBlockMissing;          ///< 'if' code block missing
-        CfAstSpan elseBlockMissing;        ///< 'else' code block missing
-        CfAstSpan assignmentValueMissing;  ///< assignment value missing
-        CfAstSpan whileConditionMissing;   ///< 'if' condition missing
-        CfAstSpan whileBlockMissing;       ///< 'if' code block missing
+        CfStrSpan variableTypeMissing;     ///< variable type missing
+        CfStrSpan variableInitMissing;     ///< variable initializer missing
+        CfStrSpan bracketInternalsMissing; ///< bracket internals missing
+        CfStrSpan rhsMissing;              ///< right hand side missing
+        CfStrSpan ifConditionMissing;      ///< 'if' condition missing
+        CfStrSpan ifBlockMissing;          ///< 'if' code block missing
+        CfStrSpan elseBlockMissing;        ///< 'else' code block missing
+        CfStrSpan assignmentValueMissing;  ///< assignment value missing
+        CfStrSpan whileConditionMissing;   ///< 'if' condition missing
+        CfStrSpan whileBlockMissing;       ///< 'if' code block missing
     };
 } CfAstParseResult;
 

@@ -141,6 +141,22 @@ double cfParsedDecimalCompose( const CfParsedDecimal *decimal );
  */
 char * cfStrOwnedCopy( CfStr str );
 
+/// @brief string span representation structure
+typedef struct __CfStrSpan {
+    uint32_t begin; ///< start index
+    uint32_t end;   ///< end index
+} CfStrSpan;
+
+/**
+ * @brief get substring from string by span
+ * 
+ * @param[in] str  string to get substring from
+ * @param[in] span span to get substring by
+ * 
+ * @return substring
+ */
+CfStr cfStrSubstr( CfStr str, CfStrSpan span );
+
 #ifdef __cplusplus
 }
 #endif

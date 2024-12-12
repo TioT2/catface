@@ -6,7 +6,6 @@
 #define CF_AST_PARSER_H_
 
 #include "cf_ast_internal.h"
-#include "cf_ast_lexer.h"
 
 #include <setjmp.h>
 
@@ -52,12 +51,12 @@ void cfAstParserAssert( CfAstParser *const self, bool condition );
  * @note
  * - Token array is allocated from temporary arena.
  * 
- * - Token array **is** terminated by token with CF_AST_TOKEN_TYPE_END type
+ * - Token array **is** terminated by token with CF_LEXER_TOKEN_TYPE_END type
  */
 void cfAstParseTokenList(
     CfAstParser *const self,
     CfStr              fileContents,
-    CfAstToken **      tokenArrayDst,
+    CfLexerToken **      tokenArrayDst,
     size_t      *      tokenArrayLenDst
 );
 
@@ -70,7 +69,7 @@ void cfAstParseTokenList(
  * 
  * @return true if parsed, false if not
  */
-bool cfAstParseType( CfAstParser *const self, const CfAstToken **tokenListPtr, CfAstType *typeDst );
+bool cfAstParseType( CfAstParser *const self, const CfLexerToken **tokenListPtr, CfAstType *typeDst );
 
 /**
  * @brief token with certain type parsing function
@@ -82,10 +81,10 @@ bool cfAstParseType( CfAstParser *const self, const CfAstToken **tokenListPtr, C
  * 
  * @return token pointer (non-null if required == true)
  */
-const CfAstToken * cfAstParseToken(
+const CfLexerToken * cfAstParseToken(
     CfAstParser       *const self,
-    const CfAstToken **      tokenListPtr,
-    CfAstTokenType           expectedType,
+    const CfLexerToken **      tokenListPtr,
+    CfLexerTokenType           expectedType,
     bool                     required
 );
 
@@ -97,7 +96,7 @@ const CfAstToken * cfAstParseToken(
  * 
  * @return parsed block pointer (NULL if parsing failed)
  */
-CfAstBlock * cfAstParseBlock( CfAstParser *const self, const CfAstToken **tokenListPtr );
+CfAstBlock * cfAstParseBlock( CfAstParser *const self, const CfLexerToken **tokenListPtr );
 
 /**
  * @brief function from token list parsing function
@@ -107,9 +106,9 @@ CfAstBlock * cfAstParseBlock( CfAstParser *const self, const CfAstToken **tokenL
  * 
  * @return parsed function (throws error if failed.)
  * 
- * @note Token list **must** start from CF_AST_TOKEN_TYPE_FN token.
+ * @note Token list **must** start from CF_LEXER_TOKEN_TYPE_FN token.
  */
-CfAstFunction cfAstParseFunction( CfAstParser *const self, const CfAstToken **tokenListPtr );
+CfAstFunction cfAstParseFunction( CfAstParser *const self, const CfLexerToken **tokenListPtr );
 
 /**
  * @brief expression parsing function
@@ -119,7 +118,7 @@ CfAstFunction cfAstParseFunction( CfAstParser *const self, const CfAstToken **to
  * 
  * @return parsed expression pointer (may be null in case if *tokenListPtr array does not starts from valid expression)
  */
-CfAstExpr * cfAstParseExpr( CfAstParser *const self, const CfAstToken **tokenListPtr );
+CfAstExpr * cfAstParseExpr( CfAstParser *const self, const CfLexerToken **tokenListPtr );
 
 /**
  * @brief variable declaration parsing function
@@ -129,7 +128,7 @@ CfAstExpr * cfAstParseExpr( CfAstParser *const self, const CfAstToken **tokenLis
  * 
  * @return parsed variable declaration
  */
-CfAstVariable cfAstParseVariable( CfAstParser *const self, const CfAstToken **tokenListPtr );
+CfAstVariable cfAstParseVariable( CfAstParser *const self, const CfLexerToken **tokenListPtr );
 
 /**
  * @brief declaration parsing function
@@ -140,7 +139,7 @@ CfAstVariable cfAstParseVariable( CfAstParser *const self, const CfAstToken **to
  * 
  * @return true if parsed, false if end reached.
  */
-bool cfAstParseDecl( CfAstParser *const self, const CfAstToken **tokenListPtr, CfAstDecl *dst );
+bool cfAstParseDecl( CfAstParser *const self, const CfLexerToken **tokenListPtr, CfAstDecl *dst );
 
 /**
  * @brief declaration array parsing function

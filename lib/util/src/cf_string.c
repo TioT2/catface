@@ -196,4 +196,21 @@ char * cfStrOwnedCopy( CfStr str ) {
     return buffer;
 } // strOwnedCopy
 
+CfStr cfStrSubstr( CfStr str, CfStrSpan span ) {
+    CfStr result = {
+        .begin = str.begin + span.begin,
+        .end = str.begin + span.end,
+    };
+
+    return (CfStr) {
+        .begin = result.begin < str.end
+            ? result.begin
+            : str.end,
+
+        .end = result.end < str.end
+            ? result.end
+            : str.end,
+    };
+} // cfStrSubstr
+
 // cf_string.cpp
