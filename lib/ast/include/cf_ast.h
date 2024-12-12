@@ -214,14 +214,14 @@ struct CfAstExpr_ {
 }; // struct CfAstExpr_
 
 /// @brief AST handle representation structure
-typedef struct CfAstImpl_ * CfAst;
+typedef struct CfAst_ CfAst;
 
 /**
  * @brief AST destructor
  * 
  * @param[in] ast AST to destroy (nullable)
  */
-void cfAstDtor( CfAst ast );
+void cfAstDtor( CfAst *ast );
 
 /**
  * @brief AST in JSON format writing function
@@ -229,7 +229,7 @@ void cfAstDtor( CfAst ast );
  * @param[in] out output file to write ast to
  * @param[in] ast ast to write
  */
-void cfAstDumpJson( FILE *out, const CfAst ast );
+void cfAstDumpJson( FILE *out, const CfAst *ast );
 
 /**
  * @brief AST declarations getting function
@@ -238,7 +238,7 @@ void cfAstDumpJson( FILE *out, const CfAst ast );
  * 
  * @return AST declaration array pointer
  */
-const CfAstDecl * cfAstGetDecls( const CfAst ast );
+const CfAstDecl * cfAstGetDecls( const CfAst *ast );
 
 /**
  * @brief AST declaration count getting function
@@ -247,7 +247,7 @@ const CfAstDecl * cfAstGetDecls( const CfAst ast );
  * 
  * @return AST declaration count
  */
-size_t cfAstGetDeclCount( const CfAst ast );
+size_t cfAstGetDeclCount( const CfAst *ast );
 
 /**
  * @brief AST source file name getting function
@@ -256,7 +256,7 @@ size_t cfAstGetDeclCount( const CfAst ast );
  * 
  * @return AST source file name slice
  */
-CfStr cfAstGetSourceFileName( const CfAst ast );
+CfStr cfAstGetSourceFileName( const CfAst *ast );
 
 /// @brief AST parsing status
 typedef enum CfAstParseStatus_ {
@@ -284,7 +284,7 @@ typedef struct CfAstParseResult_ {
     CfAstParseStatus status; ///< operation status
 
     union {
-        CfAst ok; ///< success case
+        CfAst *ok; ///< success case
 
         struct {
             char   symbol; ///< unexpected symbol itself

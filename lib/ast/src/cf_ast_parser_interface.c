@@ -7,11 +7,11 @@
 CfAstParseResult cfAstParse( CfStr fileName, CfStr fileContents, CfArena tempArena ) {
     // arena that contains actual AST data
     CfArena dataArena = NULL;
-    CfAst ast = NULL;
+    CfAst *ast = NULL;
 
     if (false
         || (dataArena = cfArenaCtor(CF_ARENA_CHUNK_SIZE_UNDEFINED)) == NULL
-        || (ast = (CfAst)cfArenaAlloc(dataArena, sizeof(CfAstImpl))) == NULL
+        || (ast = (CfAst *)cfArenaAlloc(dataArena, sizeof(CfAst))) == NULL
     ) {
         cfArenaDtor(dataArena);
         return (CfAstParseResult) { .status = CF_AST_PARSE_STATUS_INTERNAL_ERROR };
@@ -56,7 +56,7 @@ CfAstParseResult cfAstParse( CfStr fileName, CfStr fileContents, CfArena tempAre
         cfArenaDtor(tempArena);
 
     // assemble AST from parts.
-    *ast = (CfAstImpl) {
+    *ast = (CfAst) {
         .mem            = dataArena,
         .sourceName     = fileName,
         .sourceContents = fileContents,

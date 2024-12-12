@@ -11,14 +11,14 @@
 extern "C" {
 #endif
 
-/// @brief AST main structure
-typedef struct CfAstImpl_ {
+/// @brief AST structure declaration
+struct CfAst_ {
     CfArena      mem;            ///< AST allocation holder
     CfStr        sourceName;     ///< source file name
     CfStr        sourceContents; ///< source file contents
     CfAstDecl  * declArray;      ///< declaration array (extends beyond structure memory for declCount - 1 elements)
     size_t       declArrayLen;   ///< declaration array length
-} CfAstImpl;
+}; // struct CfAst_
 
 #ifdef __cplusplus
 }

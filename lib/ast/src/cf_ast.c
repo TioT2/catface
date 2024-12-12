@@ -30,23 +30,23 @@ const char * cfAstTypeStr( CfAstType type ) {
     return NULL;
 } // cfAstTypeStr
 
-void cfAstDtor( CfAst ast ) {
+void cfAstDtor( CfAst *ast ) {
     // AST allocation is located in corresponding arena
     if (ast != NULL)
         cfArenaDtor(ast->mem);
 } // cfAstDtor
 
-const CfAstDecl * cfAstGetDecls( const CfAst ast ) {
+const CfAstDecl * cfAstGetDecls( const CfAst *ast ) {
     assert(ast != NULL);
     return ast->declArray;
 } // cfAstGetDecls
 
-size_t cfAstGetDeclCount( const CfAst ast ) {
+size_t cfAstGetDeclCount( const CfAst *ast ) {
     assert(ast != NULL);
     return ast->declArrayLen;
 } // cfAstGetDeclCount
 
-CfStr cfAstGetSourceFileName( const CfAst ast ) {
+CfStr cfAstGetSourceFileName( const CfAst *ast ) {
     assert(ast != NULL);
     return ast->sourceName;
 } // cfAstGetSourceFileName
@@ -65,7 +65,7 @@ void cfAstSpanDumpJson( FILE *out, CfStrSpan span ) {
 static void cfAstExprDumpJson( FILE *out, const CfAstExpr *expr, size_t offset ) {
 } // 
 
-void cfAstDumpJson( FILE *out, const CfAst ast ) {
+void cfAstDumpJson( FILE *out, const CfAst *ast ) {
     fprintf(out, "{\n");
 
     fprintf(out, "    \"sourceName\": \"");

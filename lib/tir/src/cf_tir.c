@@ -4,4 +4,9 @@
 
 #include "cf_tir.h"
 
+/// @brief TIR, actually
+struct CfTir_ {
+
+}; // struct CfTir
+
 // cf_tir.c
