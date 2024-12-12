@@ -32,6 +32,7 @@ add_subdirectory(lib/disassembler)
 add_subdirectory(lib/lexer)
 add_subdirectory(lib/ast)
 add_subdirectory(lib/tir)
+add_subdirectory(lib/codegen)
 
 # 'implementation' librariess
 add_subdirectory(impl/sandbox_sdl2)

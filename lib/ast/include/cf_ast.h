@@ -149,9 +149,16 @@ typedef enum CfAstExprType_ {
     CF_AST_EXPR_TYPE_FLOATING,        ///< float-point constant
     CF_AST_EXPR_TYPE_IDENTIFIER,      ///< identifier
     CF_AST_EXPR_TYPE_CALL,            ///< function call
+    CF_AST_EXPR_TYPE_CONVERSION,      ///< type conversion
     CF_AST_EXPR_TYPE_ASSIGNMENT,      ///< assignment expression
     CF_AST_EXPR_TYPE_BINARY_OPERATOR, ///< binary operator expression
 } CfAstExprType;
+
+/// @brief type conversion expression
+typedef struct CfAstExprConversion_ {
+    CfAstExpr * expr; ///< expression convert
+    CfAstType   type; ///< type to convert expression to
+} CfAstExprConversion;
 
 /// @brief call expression
 typedef struct CfAstExprCall_ {
@@ -208,6 +215,7 @@ struct CfAstExpr_ {
         double                  floating;       ///< floating-point expression
         CfStr                   identifier;     ///< identifier
         CfAstExprCall           call;           ///< function call
+        CfAstExprConversion     conversion;     ///< type conversion
         CfAstExprAssignment     assignment;     ///< assignment
         CfAstExprBinaryOperator binaryOperator; ///< binary operator
     };
@@ -249,7 +257,7 @@ const CfAstDecl * cfAstGetDecls( const CfAst *ast );
  */
 size_t cfAstGetDeclCount( const CfAst *ast );
 
-/**
+/**resultingType
  * @brief AST source file name getting function
  * 
  * @param[in] ast AST to get source file name of (non-null)

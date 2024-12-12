@@ -73,52 +73,83 @@ static CfAstExpr * cfAstParseExprValue( CfAstParser *const self, const CfLexerTo
         return NULL;
     }
 
-    // try to parse function call
-    if (tokenList->type == CF_LEXER_TOKEN_TYPE_ROUND_BR_OPEN) {
-        tokenList++;
+    // parse postifx operator sequence
+    for (;;) {
+        // try to parse function call
+        if (tokenList->type == CF_LEXER_TOKEN_TYPE_ROUND_BR_OPEN) {
+            tokenList++;
 
-        // create parameter list
-        CfDeque paramDeque = cfDequeCtor(sizeof(CfAstExpr *), CF_DEQUE_CHUNK_SIZE_UNDEFINED, self->tempArena);
-        cfAstParserAssert(self, paramDeque != NULL);
+            // create parameter list
+            CfDeque paramDeque = cfDequeCtor(sizeof(CfAstExpr *), CF_DEQUE_CHUNK_SIZE_UNDEFINED, self->tempArena);
+            cfAstParserAssert(self, paramDeque != NULL);
 
-        // parse arguments
-        for (;;) {
-            // try to parse parameter expression
-            CfAstExpr *param = cfAstParseExpr(self, &tokenList);
-            if (param == NULL)
-                break;
+            // parse arguments
+            for (;;) {
+                // try to parse parameter expression
+                CfAstExpr *param = cfAstParseExpr(self, &tokenList);
+                if (param == NULL)
+                    break;
 
-            // insert expression to queue
-            cfAstParserAssert(self, cfDequePushBack(paramDeque, &param));
+                // insert expression to queue
+                cfAstParserAssert(self, cfDequePushBack(paramDeque, &param));
 
-            // try to parse comma
-            if (cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_COMMA, false) == NULL)
-                break;
+                // try to parse comma
+                if (cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_COMMA, false) == NULL)
+                    break;
+            }
+
+            // move params from deque to array
+            size_t paramArrayLength = cfDequeLength(paramDeque);
+            CfAstExpr **paramArray = (CfAstExpr **)cfArenaAlloc(self->dataArena, sizeof(CfAstExpr *) * paramArrayLength);
+            cfAstParserAssert(self, paramArray != NULL);
+            cfDequeWrite(paramDeque, paramArray);
+
+            // parse closing bracket
+            uint32_t callSpanEnd = cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_ROUND_BR_CLOSE, true)->span.end;
+
+            // apply call expression
+            CfAstExpr *callExpr = (CfAstExpr *)cfArenaAlloc(self->dataArena, sizeof(CfAstExpr));
+            cfAstParserAssert(self, callExpr != NULL);
+            *callExpr = (CfAstExpr) {
+                .type = CF_AST_EXPR_TYPE_CALL,
+                .span = (CfStrSpan) { resultExpr->span.begin, callSpanEnd },
+                .call = {
+                    .callee           = resultExpr,
+                    .argumentArrayLength = paramArrayLength,
+                    .argumentArray       = paramArray,
+                },
+            };
+
+            resultExpr = callExpr;
+
+            continue;
         }
 
-        // move params from deque to array
-        size_t paramArrayLength = cfDequeLength(paramDeque);
-        CfAstExpr **paramArray = (CfAstExpr **)cfArenaAlloc(self->dataArena, sizeof(CfAstExpr *) * paramArrayLength);
-        cfAstParserAssert(self, paramArray != NULL);
-        cfDequeWrite(paramDeque, paramArray);
+        // try to parse conversion
+        if (tokenList->type == CF_LEXER_TOKEN_TYPE_AS) {
+            tokenList++;
 
-        // parse closing bracket
-        uint32_t callSpanEnd = cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_ROUND_BR_CLOSE, true)->span.end;
+            // parse type
+            CfAstType type = CF_AST_TYPE_VOID;
+            cfAstParseType(self, &tokenList, &type);
 
-        // apply call expression
-        CfAstExpr *callExpr = (CfAstExpr *)cfArenaAlloc(self->dataArena, sizeof(CfAstExpr));
-        cfAstParserAssert(self, callExpr != NULL);
-        *callExpr = (CfAstExpr) {
-            .type = CF_AST_EXPR_TYPE_CALL,
-            .span = (CfStrSpan) { resultExpr->span.begin, callSpanEnd },
-            .call = {
-                .callee           = resultExpr,
-                .argumentArrayLength = paramArrayLength,
-                .argumentArray       = paramArray,
-            },
-        };
+            // apply call expression
+            CfAstExpr *convExpr = (CfAstExpr *)cfArenaAlloc(self->dataArena, sizeof(CfAstExpr));
+            cfAstParserAssert(self, convExpr != NULL);
+            *convExpr = (CfAstExpr) {
+                .type = CF_AST_EXPR_TYPE_CONVERSION,
+                .span = (CfStrSpan) { resultExpr->span.begin, tokenList->span.begin },
+                .conversion = {
+                    .expr = resultExpr,
+                    .type = type,
+                },
+            };
 
-        resultExpr = callExpr;
+            resultExpr = convExpr;
+
+            continue;
+        }
+        break;
     }
 
     *tokenListPtr = tokenList;

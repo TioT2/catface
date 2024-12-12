@@ -30,6 +30,7 @@ static bool cfLexerTokenKeywordFromIdent( CfStr identifier, CfLexerTokenType *kw
         {"if",    CF_LEXER_TOKEN_TYPE_IF    },
         {"else",  CF_LEXER_TOKEN_TYPE_ELSE  },
         {"while", CF_LEXER_TOKEN_TYPE_WHILE },
+        {"as",    CF_LEXER_TOKEN_TYPE_AS    },
     };
 
     for (size_t i = 0, n = sizeof(table) / sizeof(table[0]); i < n; i++) {

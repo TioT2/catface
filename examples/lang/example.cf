@@ -7,7 +7,7 @@ fn func_with_no_args() {
 }
 
 fn main(argc: u32, argb: u32, arga: u32) i32 {
-    let f: f32 = 30 * n + 47 / 80 + 11;
+    let f: f32 = 30 * n + 47 as f32 / 80 + 11;
     let qu: i32 = 0;
     qu = 40 + 47 / 80 + f;
 
@@ -28,7 +28,7 @@ fn main(argc: u32, argb: u32, arga: u32) i32 {
         let i: i32;
 
         if qu / 42 {
-            let q: i32 = 12;
+            let q: i32 = 12 as u32 as i32;
 
             q += 20;
 
@@ -37,7 +37,7 @@ fn main(argc: u32, argb: u32, arga: u32) i32 {
 
             }
 
-            if 11044 {
+            if 11044 as i32 {
 
             } else {
 

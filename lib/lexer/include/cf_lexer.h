@@ -26,6 +26,7 @@ typedef enum CfLexerTokenType_ {
     CF_LEXER_TOKEN_TYPE_IF,              ///< "if"    keyword
     CF_LEXER_TOKEN_TYPE_ELSE,            ///< "else"  keyword
     CF_LEXER_TOKEN_TYPE_WHILE,           ///< "while" keyword
+    CF_LEXER_TOKEN_TYPE_AS,              ///< "as"    keyword
 
     CF_LEXER_TOKEN_TYPE_ANGULAR_BR_OPEN_EQUAL,  ///< "<=" character combination
     CF_LEXER_TOKEN_TYPE_ANGULAR_BR_CLOSE_EQUAL, ///< ">=" character combination
