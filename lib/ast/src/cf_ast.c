@@ -33,18 +33,18 @@ const char * cfAstTypeStr( CfAstType type ) {
 void cfAstDtor( CfAst *ast ) {
     // AST allocation is located in corresponding arena
     if (ast != NULL)
-        cfArenaDtor(ast->mem);
+        cfArenaDtor(ast->dataArena);
 } // cfAstDtor
 
-const CfAstDecl * cfAstGetDecls( const CfAst *ast ) {
+const CfAstDeclaration * cfAstGetDeclarations( const CfAst *ast ) {
     assert(ast != NULL);
     return ast->declArray;
-} // cfAstGetDecls
+} // cfAstGetDeclarations
 
-size_t cfAstGetDeclCount( const CfAst *ast ) {
+size_t cfAstGetDeclarationCount( const CfAst *ast ) {
     assert(ast != NULL);
     return ast->declArrayLen;
-} // cfAstGetDeclCount
+} // cfAstGetDeclarationCount
 
 CfStr cfAstGetSourceFileName( const CfAst *ast ) {
     assert(ast != NULL);
@@ -62,7 +62,7 @@ void cfAstSpanDumpJson( FILE *out, CfStrSpan span ) {
  * @param[in] expr   expression to dump
  * @param[in] offset expression offset
  */
-static void cfAstExprDumpJson( FILE *out, const CfAstExpr *expr, size_t offset ) {
+static void cfAstExprDumpJson( FILE *out, const CfAstExpression *expr, size_t offset ) {
 } // 
 
 void cfAstDumpJson( FILE *out, const CfAst *ast ) {
@@ -78,7 +78,7 @@ void cfAstDumpJson( FILE *out, const CfAst *ast ) {
 
     fprintf(out, "    \"declarations\": [\n");
     for (size_t i = 0; i < ast->declArrayLen; i++) {
-        const CfAstDecl *decl = &ast->declArray[i];
+        const CfAstDeclaration *decl = &ast->declArray[i];
         fprintf(out, "%*s{\n", 8, "");
 
         // display type

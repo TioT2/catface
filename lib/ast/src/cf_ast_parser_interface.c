@@ -46,7 +46,7 @@ CfAstParseResult cfAstParse( CfStr fileName, CfStr fileContents, CfArena tempAre
         return parser.parseResult;
     }
 
-    CfAstDecl *declArray = NULL;
+    CfAstDeclaration *declArray = NULL;
     size_t declArrayLen = 0;
 
     cfAstParseDecls(&parser, fileContents, &declArray, &declArrayLen);
@@ -57,7 +57,7 @@ CfAstParseResult cfAstParse( CfStr fileName, CfStr fileContents, CfArena tempAre
 
     // assemble AST from parts.
     *ast = (CfAst) {
-        .mem            = dataArena,
+        .dataArena            = dataArena,
         .sourceName     = fileName,
         .sourceContents = fileContents,
         .declArray      = declArray,

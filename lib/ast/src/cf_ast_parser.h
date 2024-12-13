@@ -118,7 +118,7 @@ CfAstFunction cfAstParseFunction( CfAstParser *const self, const CfLexerToken **
  * 
  * @return parsed expression pointer (may be null in case if *tokenListPtr array does not starts from valid expression)
  */
-CfAstExpr * cfAstParseExpr( CfAstParser *const self, const CfLexerToken **tokenListPtr );
+CfAstExpression * cfAstParseExpr( CfAstParser *const self, const CfLexerToken **tokenListPtr );
 
 /**
  * @brief variable declaration parsing function
@@ -139,7 +139,7 @@ CfAstVariable cfAstParseVariable( CfAstParser *const self, const CfLexerToken **
  * 
  * @return true if parsed, false if end reached.
  */
-bool cfAstParseDecl( CfAstParser *const self, const CfLexerToken **tokenListPtr, CfAstDecl *dst );
+bool cfAstParseDecl( CfAstParser *const self, const CfLexerToken **tokenListPtr, CfAstDeclaration *dst );
 
 /**
  * @brief declaration array parsing function
@@ -152,7 +152,7 @@ bool cfAstParseDecl( CfAstParser *const self, const CfLexerToken **tokenListPtr,
 void cfAstParseDecls(
     CfAstParser  *const self,
     CfStr               fileContents,
-    CfAstDecl   **      declArrayDst,
+    CfAstDeclaration   **      declArrayDst,
     size_t       *      declArrayLenDst
 );
 
