@@ -80,7 +80,7 @@ static CfAstExpression * cfAstParseExprValue( CfAstParser *const self, const CfL
             tokenList++;
 
             // create parameter list
-            CfDeque paramDeque = cfDequeCtor(sizeof(CfAstExpression *), CF_DEQUE_CHUNK_SIZE_UNDEFINED, self->tempArena);
+            CfDeque *paramDeque = cfDequeCtor(sizeof(CfAstExpression *), CF_DEQUE_CHUNK_SIZE_UNDEFINED, self->tempArena);
             cfAstParserAssert(self, paramDeque != NULL);
 
             // parse arguments
@@ -98,7 +98,7 @@ static CfAstExpression * cfAstParseExprValue( CfAstParser *const self, const CfL
                     break;
             }
 
-            // move params from deque to array
+            // move inputs from deque to array
             size_t paramArrayLength = cfDequeLength(paramDeque);
             CfAstExpression **paramArray = (CfAstExpression **)cfArenaAlloc(self->dataArena, sizeof(CfAstExpression *) * paramArrayLength);
             cfAstParserAssert(self, paramArray != NULL);

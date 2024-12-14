@@ -213,4 +213,26 @@ CfStr cfStrSubstr( CfStr str, CfStrSpan span ) {
     };
 } // cfStrSubstr
 
-// cf_string.cpp
+CfOrdering cfStrComparator( const void *lhsPtr, const void *rhsPtr ) {
+    CfStr lhs = *(const CfStr *)lhsPtr;
+    CfStr rhs = *(const CfStr *)rhsPtr;
+
+    while (lhs.begin < lhs.end && rhs.begin < rhs.end) {
+        if (*lhs.begin != *rhs.begin)
+            return *lhs.begin < *rhs.begin
+                ? CF_ORDERING_LESS
+                : CF_ORDERING_GREATER;
+
+        lhs.begin += 1;
+        rhs.begin += 1;
+    }
+
+    return lhs.begin == lhs.end
+        ? CF_ORDERING_LESS
+        : rhs.begin == rhs.end
+            ? CF_ORDERING_EQUAL
+            : CF_ORDERING_GREATER
+    ;
+} // cfStrComparator
+
+// cf_string.c

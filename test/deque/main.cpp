@@ -7,13 +7,14 @@
 #include <iostream>
 #include <format>
 
+#include <csetjmp>
 #include <cstdint>
 #include <cstdlib>
 #include <cassert>
 
 #include <cf_deque.h>
 
-int testDeque( uint32_t seed, CfDeque deque ) {
+int testDeque( uint32_t seed, CfDeque *deque ) {
     srand(seed);
 
     std::vector<uint64_t> cDequeData;
@@ -148,14 +149,14 @@ int testDeque( uint32_t seed, CfDeque deque ) {
 int main( void ) {
     CfArena arena = cfArenaCtor(CF_ARENA_CHUNK_SIZE_UNDEFINED);
     assert(arena != NULL);
-    CfDeque arenaDeque = cfDequeCtor(sizeof(uint64_t), CF_DEQUE_CHUNK_SIZE_UNDEFINED, arena);
+    CfDeque *arenaDeque = cfDequeCtor(sizeof(uint64_t), CF_DEQUE_CHUNK_SIZE_UNDEFINED, arena);
 
     testDeque(42, arenaDeque);
 
     cfDequeDtor(arenaDeque);
     cfArenaDtor(arena);
 
-    CfDeque manualDeque = cfDequeCtor(sizeof(uint64_t), CF_DEQUE_CHUNK_SIZE_UNDEFINED, NULL);
+    CfDeque *manualDeque = cfDequeCtor(sizeof(uint64_t), CF_DEQUE_CHUNK_SIZE_UNDEFINED, NULL);
 
     testDeque(42, manualDeque);
 

@@ -13,6 +13,8 @@ extern "C" {
 #include <stdint.h>
 #include <stdio.h>
 
+#include <cf_ordering.h>
+
 /// @brief string slice representation structure
 typedef struct CfStr_ {
     const char *begin; ///< slice begin
@@ -156,6 +158,14 @@ typedef struct __CfStrSpan {
  * @return substring
  */
 CfStr cfStrSubstr( CfStr str, CfStrSpan span );
+
+/**
+ * @brief str comparator
+ * 
+ * @param[in] lhs left hand side (non-null)
+ * @param[in] rhs right hand side (non-null)
+ */
+CfOrdering cfStrComparator( const void *lhs, const void *rhs );
 
 #ifdef __cplusplus
 }

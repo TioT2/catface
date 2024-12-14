@@ -28,7 +28,7 @@ void cfAstParseTokenList(
     assert(tokenArrayDst != NULL);
     assert(tokenArrayLenDst != NULL);
 
-    CfDeque tokenList = cfDequeCtor(sizeof(CfLexerToken), CF_DEQUE_CHUNK_SIZE_UNDEFINED, self->tempArena);
+    CfDeque *tokenList = cfDequeCtor(sizeof(CfLexerToken), CF_DEQUE_CHUNK_SIZE_UNDEFINED, self->tempArena);
 
     cfAstParserAssert(self, tokenList != NULL);
 
@@ -230,18 +230,18 @@ static bool cfAstParseStmt( CfAstParser *const self, const CfLexerToken **tokenL
         };
     } else if (cfAstParseDecl(self, &tokenList, &decl)) {
         *stmtDst = (CfAstStatement) {
-            .type = CF_AST_STATEMENT_TYPE_DECLARATION,
-            .span = decl.span,
-            .decl = decl,
+            .type        = CF_AST_STATEMENT_TYPE_DECLARATION,
+            .span        = decl.span,
+            .declaration = decl,
         };
     } else if ((expr = cfAstParseExpr(self, &tokenList)) != NULL) {
         // parse semicolon after expression
         cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_SEMICOLON, true);
 
         *stmtDst = (CfAstStatement) {
-            .type = CF_AST_STATEMENT_TYPE_EXPRESSION,
-            .span = expr->span,
-            .expr = expr,
+            .type       = CF_AST_STATEMENT_TYPE_EXPRESSION,
+            .span       = expr->span,
+            .expression = expr,
         };
     } else {
         return false;
@@ -258,7 +258,7 @@ CfAstBlock * cfAstParseBlock( CfAstParser *const self, const CfLexerToken **toke
         return NULL;
 
     // parse statements
-    CfDeque stmtDeque = cfDequeCtor(sizeof(CfAstStatement), CF_DEQUE_CHUNK_SIZE_UNDEFINED, self->tempArena);
+    CfDeque *stmtDeque = cfDequeCtor(sizeof(CfAstStatement), CF_DEQUE_CHUNK_SIZE_UNDEFINED, self->tempArena);
 
     for (;;) {
         CfAstStatement stmt = {};
@@ -292,7 +292,7 @@ CfAstFunction cfAstParseFunction( CfAstParser *const self, const CfLexerToken **
     cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_ROUND_BR_OPEN, true);
 
     // create param list
-    CfDeque paramDeque = cfDequeCtor(sizeof(CfAstFunctionParam), CF_DEQUE_CHUNK_SIZE_UNDEFINED, self->tempArena);
+    CfDeque *paramDeque = cfDequeCtor(sizeof(CfAstFunctionParam), CF_DEQUE_CHUNK_SIZE_UNDEFINED, self->tempArena);
 
     for (;;) {
         CfAstFunctionParam param = {};
@@ -322,9 +322,9 @@ CfAstFunction cfAstParseFunction( CfAstParser *const self, const CfLexerToken **
     cfDequeWrite(paramDeque, paramArray);
 
     // parse return type
-    CfAstType returnType = CF_AST_TYPE_VOID;
-    if (!cfAstParseType(self, &tokenList, &returnType))
-        returnType = CF_AST_TYPE_VOID;
+    CfAstType outputType = CF_AST_TYPE_VOID;
+    if (!cfAstParseType(self, &tokenList, &outputType))
+        outputType = CF_AST_TYPE_VOID;
 
     uint32_t signatureSpanEnd = tokenList[0].span.begin;
 
@@ -340,9 +340,9 @@ CfAstFunction cfAstParseFunction( CfAstParser *const self, const CfLexerToken **
 
     return (CfAstFunction) {
         .name          = name,
-        .params        = paramArray,
-        .paramCount    = paramArrayLength,
-        .returnType    = returnType,
+        .inputs        = paramArray,
+        .inputCount    = paramArrayLength,
+        .outputType    = outputType,
         .signatureSpan = (CfStrSpan) { signatureSpanBegin, signatureSpanEnd },
         .span          = (CfStrSpan) { signatureSpanBegin, spanEnd },
         .impl          = impl,
@@ -402,7 +402,7 @@ bool cfAstParseDecl( CfAstParser *const self, const CfLexerToken **tokenListPtr,
         CfAstFunction function = cfAstParseFunction(self, &tokenList);
 
         *dst = (CfAstDeclaration) {
-            .type = CF_AST_DECL_TYPE_FN,
+            .type = CF_AST_DECLARATION_TYPE_FN,
             .span = function.span,
             .fn = function,
         };
@@ -415,7 +415,7 @@ bool cfAstParseDecl( CfAstParser *const self, const CfLexerToken **tokenListPtr,
         CfAstVariable variable = cfAstParseVariable(self, &tokenList);
 
         *dst = (CfAstDeclaration) {
-            .type = CF_AST_DECL_TYPE_LET,
+            .type = CF_AST_DECLARATION_TYPE_LET,
             .span = variable.span,
             .let = variable,
         };
@@ -442,7 +442,7 @@ void cfAstParseDecls(
     cfAstParseTokenList(self, fileContents, &tokenArray, &tokenArrayLength);
 
     // parse declcarations from tokens
-    CfDeque declList = cfDequeCtor(sizeof(CfAstDeclaration), CF_DEQUE_CHUNK_SIZE_UNDEFINED, self->tempArena);
+    CfDeque *declList = cfDequeCtor(sizeof(CfAstDeclaration), CF_DEQUE_CHUNK_SIZE_UNDEFINED, self->tempArena);
 
     cfAstParserAssert(self, declList != NULL);
 

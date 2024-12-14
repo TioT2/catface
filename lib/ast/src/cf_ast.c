@@ -8,15 +8,15 @@
 
 #include "cf_ast_internal.h"
 
-const char * cfAstDeclTypeStr( CfAstDeclType declType ) {
+const char * cfAstDeclarationTypeStr( CfAstDeclarationType declType ) {
     switch (declType) {
-    case CF_AST_DECL_TYPE_FN  : return "fn";
-    case CF_AST_DECL_TYPE_LET : return "let";
+    case CF_AST_DECLARATION_TYPE_FN  : return "fn";
+    case CF_AST_DECLARATION_TYPE_LET : return "let";
     }
 
     assert(false && "Invalid 'declType' parameter passed");
     return NULL;
-} // cfAstDeclTypeStr
+} // cfAstDeclarationTypeStr
 
 const char * cfAstTypeStr( CfAstType type ) {
     switch (type) {
@@ -83,7 +83,7 @@ void cfAstDumpJson( FILE *out, const CfAst *ast ) {
 
         // display type
         fprintf(out, "%*s\"type\": \"", 12, "");
-        cfStrWriteShielded(out, CF_STR(cfAstDeclTypeStr(decl->type)));
+        cfStrWriteShielded(out, CF_STR(cfAstDeclarationTypeStr(decl->type)));
         fprintf(out, "\",\n");
 
         fprintf(out, "%*s\"span\": ", 12, "");
@@ -91,12 +91,12 @@ void cfAstDumpJson( FILE *out, const CfAst *ast ) {
         fprintf(out, ",\n");
 
         switch (decl->type) {
-        case CF_AST_DECL_TYPE_FN: {
+        case CF_AST_DECLARATION_TYPE_FN: {
             // don't dump function additional content))
             break;
         }
 
-        case CF_AST_DECL_TYPE_LET: {
+        case CF_AST_DECLARATION_TYPE_LET: {
             fprintf(out, "%*s\"name\": \"", 12, "");
             cfStrWriteShielded(out, decl->let.name);
             fprintf(out, "\",\n");

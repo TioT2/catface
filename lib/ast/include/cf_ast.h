@@ -52,10 +52,10 @@ typedef enum CfAstType_ {
 const char * cfAstTypeStr( CfAstType type );
 
 /// @brief declaration union tag
-typedef enum CfAstDeclType_ {
-    CF_AST_DECL_TYPE_FN,  ///< function declaration
-    CF_AST_DECL_TYPE_LET, ///< variable declaration
-} CfAstDeclType;
+typedef enum CfAstDeclarationType_ {
+    CF_AST_DECLARATION_TYPE_FN,  ///< function declaration
+    CF_AST_DECLARATION_TYPE_LET, ///< variable declaration
+} CfAstDeclarationType;
 
 /**
  * @brief declaration type name getting function
@@ -64,7 +64,7 @@ typedef enum CfAstDeclType_ {
  * 
  * @return declaration type name
  */
-const char * cfAstDeclTypeStr( CfAstDeclType declType );
+const char * cfAstDeclarationTypeStr( CfAstDeclarationType declType );
 
 /// @brief function parameter representation structure
 typedef struct CfAstFunctionParam_ {
@@ -76,9 +76,9 @@ typedef struct CfAstFunctionParam_ {
 /// @brief function declaration structure
 typedef struct CfAstFunction_ {
     CfStr                name;          ///< name
-    CfAstFunctionParam * params;        ///< parameter array (owned)
-    size_t               paramCount;    ///< parameter array size
-    CfAstType            returnType;    ///< returned function type
+    CfAstFunctionParam * inputs;        ///< parameter array (owned)
+    size_t               inputCount;    ///< parameter array size
+    CfAstType            outputType;    ///< returned function type
     CfStrSpan            signatureSpan; ///< signature span
     CfStrSpan            span;          ///< span function located in
     CfAstBlock         * impl;          ///< implementation
@@ -94,7 +94,7 @@ typedef struct CfAstVariable_ {
 
 /// @brief declaration structure
 struct CfAstDeclaration_ {
-    CfAstDeclType type; ///< declaration union tag
+    CfAstDeclarationType type; ///< declaration union tag
     CfStrSpan     span; ///< span declaration located in
 
     union {

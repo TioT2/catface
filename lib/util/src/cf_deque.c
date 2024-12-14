@@ -26,21 +26,21 @@ struct CfDequeChunk_ {
 }; // struct CfDequeChunk_
 
 /// @brief pointer to deque edge structure
-typedef struct CfDequeCursor_ {
+typedef struct CfDequeBorderCursor_ {
     CfDequeChunk * chunk; ///< chunk cursor points to
     size_t         index; ///< first free index
-} CfDequeCursor;
+} CfDequeBorderCursor;
 
 /// @brief deque internal structure
-typedef struct CfDequeImpl_ {
-    CfArena       arena;       ///< arena allocator (nullable, if null - all dealocation is handled manually)
-    size_t        elementSize; ///< deque element size
-    size_t        chunkSize;   ///< deque chunk size
+struct CfDeque_ {
+    CfArena             arena;       ///< arena allocator (nullable, if null - all dealocation is handled manually)
+    size_t              elementSize; ///< deque element size
+    size_t              chunkSize;   ///< deque chunk size
 
-    size_t        size;        ///< current deque size (in elements)
-    CfDequeCursor front;       ///< cursor to deque front
-    CfDequeCursor back;        ///< cursor to deque back
-} CfDequeImpl;
+    size_t              size;        ///< current deque size (in elements)
+    CfDequeBorderCursor front;       ///< cursor to deque front
+    CfDequeBorderCursor back;        ///< cursor to deque back
+};
 
 /**
  * @brief deque chunk allocation function
@@ -51,7 +51,7 @@ typedef struct CfDequeImpl_ {
  * 
  * @note it's ok to free chunk by 'free' standard function in case if deque->arena == NULL.
  */
-static CfDequeChunk * cfDequeAllocChunk( CfDeque deque ) {
+static CfDequeChunk * cfDequeAllocChunk( CfDeque *deque ) {
     assert(deque != NULL);
 
     size_t allocSize = sizeof(CfDequeChunk) + deque->chunkSize * deque->elementSize;
@@ -61,19 +61,19 @@ static CfDequeChunk * cfDequeAllocChunk( CfDeque deque ) {
         : (CfDequeChunk *)cfArenaAlloc(deque->arena, allocSize);
 } // cfDequeAllocChunk
 
-CfDeque cfDequeCtor( size_t elementSize, size_t chunkSize, CfArena arena ) {
+CfDeque *cfDequeCtor( size_t elementSize, size_t chunkSize, CfArena arena ) {
     assert(elementSize > 0);
     assert(chunkSize > 0);
 
     // allocate deque
-    CfDequeImpl *deque = arena == NULL
-        ? (CfDequeImpl *)calloc(1, sizeof(CfDequeImpl))
-        : (CfDequeImpl *)cfArenaAlloc(arena, sizeof(CfDequeImpl));
+    CfDeque *deque = arena == NULL
+        ? (CfDeque *)calloc(1, sizeof(CfDeque))
+        : (CfDeque *)cfArenaAlloc(arena, sizeof(CfDeque));
 
     if (deque == NULL)
         return NULL;
 
-    *deque = (CfDequeImpl) {
+    *deque = (CfDeque) {
         .arena = arena,
         .elementSize = elementSize,
         .chunkSize = chunkSize == CF_DEQUE_CHUNK_SIZE_UNDEFINED
@@ -92,13 +92,13 @@ CfDeque cfDequeCtor( size_t elementSize, size_t chunkSize, CfArena arena ) {
     // bad practice, but IntelliSense is dying if I use names in this case
     *chunk = (CfDequeChunk) { chunk, chunk, true, };
 
-    deque->front = (CfDequeCursor) { .chunk = chunk, .index = 0 };
-    deque->back  = (CfDequeCursor) { .chunk = chunk, .index = 0 };
+    deque->front = (CfDequeBorderCursor) { .chunk = chunk, .index = 0 };
+    deque->back  = (CfDequeBorderCursor) { .chunk = chunk, .index = 0 };
 
     return deque;
 } // cfDequeCtor
 
-void cfDequeDtor( CfDeque deque ) {
+void cfDequeDtor( CfDeque *deque ) {
     // check for NULL
     if (deque == NULL)
         return;
@@ -122,12 +122,12 @@ void cfDequeDtor( CfDeque deque ) {
     free(deque);
 } // cfDequeDtor
 
-size_t cfDequeLength( const CfDeque deque ) {
+size_t cfDequeLength( const CfDeque *deque ) {
     assert(deque != NULL);
     return deque->size;
 } // cfDequeLength
 
-void cfDequeWrite( const CfDeque deque, void *dst ) {
+void cfDequeWrite( const CfDeque *deque, void *dst ) {
     assert(deque != NULL);
     assert(dst != NULL);
 
@@ -174,7 +174,7 @@ void cfDequeWrite( const CfDeque deque, void *dst ) {
     );
 } // cfDequeWrite
 
-bool cfDequePushBack( CfDeque deque, const void *data ) {
+bool cfDequePushBack( CfDeque *deque, const void *data ) {
     assert(deque != NULL);
     assert(data != NULL);
 
@@ -221,7 +221,7 @@ bool cfDequePushBack( CfDeque deque, const void *data ) {
     return true;
 } // cfDequePushBack
 
-bool cfDequePopBack( CfDeque deque, void *data ) {
+bool cfDequePopBack( CfDeque *deque, void *data ) {
     assert(deque != NULL);
 
     // check case where this is no elements to pop
@@ -249,7 +249,7 @@ bool cfDequePopBack( CfDeque deque, void *data ) {
     return true;
 } // cfDequePopBack
 
-bool cfDequePushFront( CfDeque deque, const void *data ) {
+bool cfDequePushFront( CfDeque *deque, const void *data ) {
     assert(deque != NULL);
     assert(data != NULL);
 
@@ -296,7 +296,7 @@ bool cfDequePushFront( CfDeque deque, const void *data ) {
     return true;
 } // cfDequePushFront
 
-bool cfDequePopFront( CfDeque deque, void *data ) {
+bool cfDequePopFront( CfDeque *deque, void *data ) {
     assert(deque != NULL);
 
     // check case where this is no elements to pop
@@ -323,5 +323,88 @@ bool cfDequePopFront( CfDeque deque, void *data ) {
     deque->size--;
     return true;
 } // cfDequePopFront
+
+
+bool cfDequeFrontCursor( CfDeque *deque, CfDequeCursor *cursor ) {
+    assert(deque != NULL);
+    assert(cursor != NULL);
+
+    if (deque->size == 0)
+        return false;
+
+    *cursor = (CfDequeCursor) {
+        .deque = deque,
+        .chunk = deque->front.chunk,
+        .index = deque->front.index,
+    };
+
+    return true;
+} // cfDequeFrontCursor
+
+bool cfDequeBackCursor( CfDeque *deque, CfDequeCursor *cursor ) {
+    assert(deque != NULL);
+    assert(cursor != NULL);
+
+    if (deque->size == 0)
+        return false;
+
+    cursor->deque = deque;
+
+    *cursor = deque->back.index == 0
+        ? (CfDequeCursor) {
+            .deque = deque,
+            .chunk = deque->back.chunk->prev,
+            .index = deque->chunkSize - 1,
+        }
+        : (CfDequeCursor) {
+            .deque = deque,
+            .chunk = deque->back.chunk,
+            .index = deque->back.index - 1,
+        }
+    ;
+
+    return true;
+} // cfDequeBackCursor
+
+void * cfDequeCursorGet( CfDequeCursor *cursor ) {
+    assert(cursor != NULL);
+
+    return cursor->chunk->data + cursor->index * cursor->deque->elementSize;
+} // cfDequeCursorGet
+
+bool cfDequeCursorAdvance( CfDequeCursor *cursor, ptrdiff_t offset ) {
+    assert(cursor != NULL);
+
+    ptrdiff_t totalOffset = offset + cursor->index;
+    CfDequeChunk *current = cursor->chunk;
+
+    if (totalOffset > 0)
+        while (totalOffset >= cursor->deque->chunkSize) {
+            if (current->isPinned)
+                return false;
+
+            current = current->next;
+            totalOffset -= cursor->deque->chunkSize;
+        }
+    else
+        while (totalOffset < 0) {
+            if (current->isPinned)
+                return false;
+
+            current = current->prev;
+            totalOffset += cursor->deque->chunkSize;
+        }
+
+    cursor->chunk = current;
+    cursor->index = totalOffset;
+
+    return true;
+} // cfDequeCursorAdvance
+
+void cfDequeCursorDtor( CfDequeCursor *cursor ) {
+    assert(cursor != NULL);
+
+    // currently, does nothing
+} // cfDequeCursorDtor
 
 // cf_deque.c
