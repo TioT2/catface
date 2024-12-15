@@ -23,10 +23,13 @@ typedef struct CfCodeGenerator {
     CfDeque         * codeDeque;         ///< code destination
     CfDeque         * linkDeque;         ///< link deque
     CfDeque         * labelDeque;        ///< label deque
-    jmp_buf           finishBuffer;      ///< finishing buffer
+
+    const CfTir     * tir;               ///< TIR
     CfStr             currentFunction;   ///< current function name
     uint32_t          conditionCounter;  ///< counter for generating condition labels
     uint32_t          loopCounter;       ///< counter for generating loop labels
+
+    jmp_buf           finishBuffer;      ///< finishing buffer
     CfCodegenResult   result;            ///< result
 } CfCodeGenerator;
 

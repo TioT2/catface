@@ -135,7 +135,203 @@ void cfCodeGeneratorWriteOpcode( CfCodeGenerator *const self, CfOpcode opcode ) 
 } // cfCodeGeneratorWriteOpcode
 
 void cfCodeGeneratorGenExpression( CfCodeGenerator *const self, const CfTirExpression *expression ) {
+    switch (expression->type) {
+    case CF_TIR_EXPRESSION_TYPE_CONST_I32: {
+        if (expression->constI32 == 0)
+            cfCodeGeneratorWritePushPop(self,
+                CF_OPCODE_PUSH,
+                (CfPushPopInfo) { CF_REGISTER_CZ },
+                0
+            );
+        else
+            cfCodeGeneratorWritePushPop(self,
+                CF_OPCODE_PUSH,
+                (CfPushPopInfo) {
+                    .registerIndex   = CF_REGISTER_CZ,
+                    .doReadImmediate = true
+                },
+                expression->constI32
+            );
+        break;
+    }
+    case CF_TIR_EXPRESSION_TYPE_CONST_F32: {
+        cfCodeGeneratorWritePushPop(self,
+            CF_OPCODE_PUSH,
+            (CfPushPopInfo) {
+                .registerIndex   = CF_REGISTER_CZ,
+                .doReadImmediate = true
+            },
+            *(const float *)&expression->constF32
+        );
+        break;
+    }
+    case CF_TIR_EXPRESSION_TYPE_CONST_U32: {
+        cfCodeGeneratorWritePushPop(self,
+            CF_OPCODE_PUSH,
+            (CfPushPopInfo) {
+                .registerIndex   = CF_REGISTER_CZ,
+                .doReadImmediate = true
+            },
+            *(const int32_t *)&expression->constU32
+        );
+        break;
+    }
+    case CF_TIR_EXPRESSION_TYPE_VOID: {
+        // nice solution))) (no)
+        cfCodeGeneratorWritePushPop(self,
+            CF_OPCODE_PUSH,
+            (CfPushPopInfo) { CF_REGISTER_CZ },
+            0
+        );
+        break;
+    }
+    case CF_TIR_EXPRESSION_TYPE_BINARY_OPERATOR: {
+        // generate operands
+        cfCodeGeneratorGenExpression(self, expression->binaryOperator.lhs);
+        cfCodeGeneratorGenExpression(self, expression->binaryOperator.rhs);
 
+        CfOpcode binaryOperatorOpcodes[][4] = {
+            {CF_OPCODE_ADD , CF_OPCODE_ADD, CF_OPCODE_FADD}, // for add
+            {CF_OPCODE_SUB , CF_OPCODE_SUB, CF_OPCODE_FSUB}, // for sub
+            {CF_OPCODE_IMUL, CF_OPCODE_MUL, CF_OPCODE_FMUL}, // for mul
+            {CF_OPCODE_IDIV, CF_OPCODE_DIV, CF_OPCODE_FDIV}, // for div
+        };
+
+        uint32_t firstIndex = ~0U;
+        switch (expression->binaryOperator.op) {
+        case CF_TIR_BINARY_OPERATOR_ADD: firstIndex = 0; break;
+        case CF_TIR_BINARY_OPERATOR_SUB: firstIndex = 1; break;
+        case CF_TIR_BINARY_OPERATOR_MUL: firstIndex = 2; break;
+        case CF_TIR_BINARY_OPERATOR_DIV: firstIndex = 3; break;
+
+        default:
+            break;
+        }
+
+        uint32_t secondIndex = 0;
+        switch (expression->resultingType) {
+        case CF_TIR_TYPE_I32: secondIndex = 0; break;
+        case CF_TIR_TYPE_U32: secondIndex = 1; break;
+        case CF_TIR_TYPE_F32: secondIndex = 2; break;
+        case CF_TIR_TYPE_VOID:
+            // invalid TIR
+            cfCodeGeneratorAssert(self, false);
+            break;
+        }
+
+        if (firstIndex != ~0U) {
+            // generate simple expression
+            cfCodeGeneratorWriteOpcode(self, binaryOperatorOpcodes[firstIndex][secondIndex]);
+            break;
+        }
+
+        // generate comparison opcode
+        switch (expression->binaryOperator.lhs->resultingType) {
+        case CF_TIR_TYPE_I32: cfCodeGeneratorWriteOpcode(self, CF_OPCODE_ICMP); break;
+        case CF_TIR_TYPE_U32: cfCodeGeneratorWriteOpcode(self, CF_OPCODE_CMP ); break;
+        case CF_TIR_TYPE_F32: cfCodeGeneratorWriteOpcode(self, CF_OPCODE_FCMP); break;
+
+        case CF_TIR_TYPE_VOID:
+            assert(false && "unreachable");
+        }
+
+        switch (expression->binaryOperator.op) {
+        case CF_TIR_BINARY_OPERATOR_ADD:
+        case CF_TIR_BINARY_OPERATOR_SUB:
+        case CF_TIR_BINARY_OPERATOR_MUL:
+        case CF_TIR_BINARY_OPERATOR_DIV:
+            assert(false && "unreachable");
+
+        // I DO NOT WANT TO DO THIS SH*T (TODO: fix command system)
+        case CF_TIR_BINARY_OPERATOR_LT:
+        case CF_TIR_BINARY_OPERATOR_GT:
+        case CF_TIR_BINARY_OPERATOR_LE:
+        case CF_TIR_BINARY_OPERATOR_GE:
+        case CF_TIR_BINARY_OPERATOR_EQ:
+        case CF_TIR_BINARY_OPERATOR_NE:
+            assert(false && "unimplemented");
+            break;
+        }
+        break;
+    }
+    case CF_TIR_EXPRESSION_TYPE_CALL: {
+        // execute argument expressions in reverse order
+        for (int32_t i = expression->call.inputArrayLength - 1; i >= 0; i--)
+            cfCodeGeneratorGenExpression(self, expression->call.inputArray[i]);
+        // call function, actually
+        const CfTirFunction *function = cfTirGetFunctionById(self->tir, expression->call.functionId);
+        cfCodeGeneratorAssert(self, function != NULL);
+
+        // call function by name
+        cfCodeGeneratorWriteOpcode(self, CF_OPCODE_CALL);
+        cfCodeGeneratorAddLink(self, function->name);
+
+        // push AX to stack
+        cfCodeGeneratorWritePushPop(self,
+            CF_OPCODE_PUSH,
+            (CfPushPopInfo) { CF_REGISTER_AX },
+            0
+        );
+        break;
+    }
+
+    case CF_TIR_EXPRESSION_TYPE_LOCAL: {
+        cfCodeGeneratorWritePushPop(self,
+            CF_OPCODE_PUSH,
+            (CfPushPopInfo) {
+                .registerIndex = CF_REGISTER_FX,
+                .isMemoryAccess = true,
+                .doReadImmediate = true,
+            },
+            -(int32_t)(expression->local + 1) * 4
+        );
+        break;
+    }
+
+    case CF_TIR_EXPRESSION_TYPE_GLOBAL: {
+        assert(false && "Not implemented yet");
+        break;
+    }
+
+    case CF_TIR_EXPRESSION_TYPE_ASSIGNMENT: {
+        cfCodeGeneratorGenExpression(self, expression->assignment.value);
+        cfCodeGeneratorWritePushPop(self,
+            CF_OPCODE_POP,
+            (CfPushPopInfo) {
+                .registerIndex = CF_REGISTER_FX,
+                .isMemoryAccess = true,
+                .doReadImmediate = true,
+            },
+            -(int32_t)(expression->local + 1) * 4
+        );
+
+        // void has value)))
+        cfCodeGeneratorWritePushPop(self,
+            CF_OPCODE_PUSH,
+            (CfPushPopInfo) { CF_REGISTER_CZ },
+            0
+        );
+
+        break;
+    }
+    case CF_TIR_EXPRESSION_TYPE_CAST: {
+        // cast to void does nothing
+        if (expression->cast.type == CF_TIR_TYPE_VOID)
+            break;
+        // cast to self does nothing
+        if (expression->cast.type == expression->cast.expression->resultingType)
+            break;
+        // cast between integer types isn't required
+        if (expression->cast.type != CF_TIR_TYPE_F32 && expression->cast.expression->resultingType != CF_TIR_TYPE_F32)
+            break;
+
+        cfCodeGeneratorWriteOpcode(self, expression->cast.type == CF_TIR_TYPE_I32
+            ? CF_OPCODE_ITOF
+            : CF_OPCODE_FTOI
+        );
+        break;
+    }
+    }
 } // cfCodeGeneratorGenExpression
 
 void cfCodeGeneratorGenReturn( CfCodeGenerator *const self ) {
@@ -256,7 +452,7 @@ void cfCodeGeneratorGenStatement( CfCodeGenerator *const self, const CfTirStatem
 
         snprintf(elseLabel, sizeof(elseLabel), "__%*.s__else_%d",
             (int)cfStrLength(self->currentFunction),
-            self->currentFunction,
+            self->currentFunction.begin,
             condIndex
         );
 
@@ -264,7 +460,7 @@ void cfCodeGeneratorGenStatement( CfCodeGenerator *const self, const CfTirStatem
 
         snprintf(ifEndLabel, sizeof(ifEndLabel), "__%*.s__if_end_%d",
             (int)cfStrLength(self->currentFunction),
-            self->currentFunction,
+            self->currentFunction.begin,
             condIndex
         );
 
@@ -303,7 +499,7 @@ void cfCodeGeneratorGenStatement( CfCodeGenerator *const self, const CfTirStatem
 
         snprintf(loopLabel, sizeof(loopLabel), "__%*.s__loop_%d",
             (int)cfStrLength(self->currentFunction),
-            self->currentFunction,
+            self->currentFunction.begin,
             loopIndex
         );
 
@@ -311,7 +507,7 @@ void cfCodeGeneratorGenStatement( CfCodeGenerator *const self, const CfTirStatem
 
         snprintf(loopEndLabel, sizeof(loopEndLabel), "__%*.s__loop_end_%d",
             (int)cfStrLength(self->currentFunction),
-            self->currentFunction,
+            self->currentFunction.begin,
             loopIndex
         );
 
@@ -462,8 +658,9 @@ CfCodegenResult cfCodegen( const CfTir *tir, CfObject *dst, CfArena *tempArena )
         .codeDeque    = cfDequeCtor(1, 512, tempArena),
         .linkDeque    = cfDequeCtor(sizeof(CfLink), CF_DEQUE_CHUNK_SIZE_UNDEFINED, tempArena),
         .labelDeque   = cfDequeCtor(sizeof(CfLabel), CF_DEQUE_CHUNK_SIZE_UNDEFINED, tempArena),
+        .tir          = tir,
 
-        .result = (CfCodegenResult) { CF_CODEGEN_STATUS_INTERNAL_ERROR },
+        .result       = (CfCodegenResult) { CF_CODEGEN_STATUS_INTERNAL_ERROR },
     };
 
     int isError = setjmp(generator.finishBuffer);

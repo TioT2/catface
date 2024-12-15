@@ -295,6 +295,14 @@ size_t cfTirGetFunctionArrayLength( const CfTir *tir ) {
     return tir->functionArrayLength;
 } // cfTirGetFunctionArrayLength
 
+const CfTirFunction * cfTirGetFunctionById( const CfTir *tir, CfTirFunctionId functionId ) {
+    assert(tir != NULL);
+
+    if (tir->functionArrayLength >= functionId)
+        return NULL;
+    return &tir->functionArray[(size_t)functionId];
+} // cfTirGetFunctionById
+
 CfStr cfTirGetSourceName( const CfTir *tir ) {
     assert(tir != NULL);
     return tir->sourceName;

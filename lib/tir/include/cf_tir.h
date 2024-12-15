@@ -203,6 +203,16 @@ const CfTirFunction * cfTirGetFunctionArray( const CfTir *tir );
 size_t cfTirGetFunctionArrayLength( const CfTir *tir );
 
 /**
+ * @brief get function by id
+ * 
+ * @param[in] tir        tir to get function of (non-null)
+ * @param[in] functionId function id
+ * 
+ * @return function pointer (NULL if there is no corresponding function)
+ */
+const CfTirFunction * cfTirGetFunctionById( const CfTir *tir, CfTirFunctionId functionId );
+
+/**
  * @brief TIR source name getting function
  * 
  * @param[in] tir TIR to get source name of
