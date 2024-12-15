@@ -9,6 +9,50 @@ pop ex
 call main
 halt
 
+; fn discr(a: f32, b: f32, c: f32) f32;
+; result is stored at AX register (ATL now)
+discr:
+    ; pop args from stack
+    pop [ex -  4] ; ex -  4 -> a
+    pop [ex -  8] ; ex -  8 -> b
+    pop [ex - 12] ; ex - 12 -> c
+
+    ; save old fx
+    push fx
+
+    ; fx = ex
+    push ex
+    pop fx
+
+    ; ex += 12
+    push ex + 12
+    pop ex
+
+    ; fx - i * 4 -> local[i] // it's assumed, that void is 4-byte type)))
+    ; some code...
+    ; where result is stored?
+    ; in ax!
+
+    ; ax -> b * b - 4.0 * a * c
+    push [fx - 8]
+    push [fx - 8]
+    fmul
+    push 4.0
+    push [fx - 4]
+    fmul
+    push [fx - 12]
+    fmul
+    fsub
+    pop ax
+
+    ; ex -= 12
+    push ex - 12
+    pop ex
+
+    ; restore fx
+    pop fx
+ret
+
 ; Main function
 main:
     ; save base pointer
