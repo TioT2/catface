@@ -50,7 +50,8 @@ typedef struct CfTirLocalVariable_ {
 /// @brief statement type
 typedef enum CfTirStatementType_ {
     CF_TIR_STATEMENT_TYPE_EXPRESSION, ///< expression
-    CF_TIR_STATEMENT_BLOCK,           ///< block
+    CF_TIR_STATEMENT_TYPE_BLOCK,      ///< block
+    CF_TIR_STATEMENT_TYPE_RETURN,     ///< return statement
     CF_TIR_STATEMENT_TYPE_IF,         ///< if-else combination
     CF_TIR_STATEMENT_TYPE_LOOP,       ///< while loop
 } CfTirStatementType;
@@ -62,6 +63,7 @@ typedef struct CfTirStatement_ {
     union {
         CfTirExpression * expression; ///< expression
         CfTirBlock      * block;      ///< block statement
+        CfTirExpression * return_;    ///< return statement (non-null (empty return is replaced by void constant))
 
         struct {
             CfTirExpression * condition; ///< 'if' condition
@@ -73,6 +75,7 @@ typedef struct CfTirStatement_ {
             CfTirExpression * condition; ///< loop condition (may be NULL)
             CfTirBlock      * block;     ///< loop code block
         } loop;
+
     };
 } CfTirStatement;
 
@@ -220,6 +223,7 @@ typedef enum CfTirBuildingStatus_ {
     CF_TIR_BUILDING_STATUS_IF_CONDITION_TYPE_MUST_BE_U32,    ///< 'if' statement condition **must** have U32 type
     CF_TIR_BUILDING_STATUS_WHILE_CONDITION_TYPE_MUST_BE_U32, ///< 'while' statement condition **must** have U32 type
     CF_TIR_BUILDING_STATUS_UNEXPECTED_INITIALIZER_TYPE,      ///< unexpected variable initializer resulting type
+    CF_TIR_BUILDING_STATUS_UNEXPECTED_RETURN_TYPE,           ///< unexpected function return type
 } CfTirBuildingStatus;
 
 /// @brief TIR from AST generation result
@@ -303,6 +307,12 @@ typedef struct CfTirBuildingResult_ {
             CfAstType             expectedType;        ///< expected type
             CfAstType             actualType;          ///< actual type
         } unexpectedInitializerType;
+
+        struct {
+            const CfAstFunction   * function;   ///< declaration
+            const CfAstExpression * expression; ///< returned expression
+            CfAstType               actualType; ///< actual type
+        } unexpectedReturnType;
     };
 } CfTirBuildingResult;
 

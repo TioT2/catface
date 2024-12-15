@@ -543,7 +543,7 @@ static CfTirBlock * cfTirFunctionBuilderBuildBlock(
 
         case CF_AST_STATEMENT_TYPE_BLOCK: {
             CfTirStatement statement = {
-                .type = CF_TIR_STATEMENT_BLOCK,
+                .type = CF_TIR_STATEMENT_TYPE_BLOCK,
                 .block = cfTirFunctionBuilderBuildBlock(self, stmt->block),
             };
 
@@ -602,6 +602,40 @@ static CfTirBlock * cfTirFunctionBuilderBuildBlock(
                     .block     = cfTirFunctionBuilderBuildBlock(self, stmt->while_.code),
                 },
             };
+            cfTirBuilderAssert(self->tirBuilder, cfDequePushBack(stmtDeque, &statement));
+            break;
+        }
+
+        case CF_AST_STATEMENT_TYPE_RETURN: {
+            CfTirExpression *expr = NULL;
+
+
+            if (stmt->return_ == NULL) {
+                expr = (CfTirExpression *)cfTirBuilderAllocData(self->tirBuilder, sizeof(CfTirExpression));
+
+                *expr = (CfTirExpression) { CF_TIR_EXPRESSION_TYPE_VOID };
+            } else {
+                expr = cfTirFunctionBuilderBuildExpression(
+                    self,
+                    stmt->return_
+                );
+            }
+
+            if (expr->resultingType != self->function->function.prototype.outputType)
+                cfTirBuilderFinish(self->tirBuilder, (CfTirBuildingResult) {
+                    .status = CF_TIR_BUILDING_STATUS_UNEXPECTED_RETURN_TYPE,
+                    .unexpectedReturnType = {
+                        .function   = self->function->astFunction,
+                        .expression = stmt->return_,
+                        .actualType = cfAstTypeFromTirType(expr->resultingType),
+                    },
+                });
+
+            CfTirStatement statement = {
+                .type    = CF_TIR_STATEMENT_TYPE_RETURN,
+                .return_ = expr,
+            };
+
             cfTirBuilderAssert(self->tirBuilder, cfDequePushBack(stmtDeque, &statement));
             break;
         }

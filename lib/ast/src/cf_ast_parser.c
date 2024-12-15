@@ -217,10 +217,21 @@ static bool cfAstParseStmt( CfAstParser *const self, const CfLexerToken **tokenL
 
         *stmtDst = (CfAstStatement) {
             .type = CF_AST_STATEMENT_TYPE_WHILE,
+            .span = (CfStrSpan) { spanBegin, tokenList->span.begin },
             .while_ = {
                 .condition = condition,
                 .code       = code,
             },
+        };
+    } else if (cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_RETURN, false) != NULL) {
+        CfAstExpression *expr = cfAstParseExpr(self, &tokenList);
+
+        cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_SEMICOLON, true);
+
+        *stmtDst = (CfAstStatement) {
+            .type = CF_AST_STATEMENT_TYPE_RETURN,
+            .span = (CfStrSpan) { spanBegin, tokenList->span.begin },
+            .return_ = expr,
         };
     } else if ((block = cfAstParseBlock(self, &tokenList)) != NULL) {
         *stmtDst = (CfAstStatement) {

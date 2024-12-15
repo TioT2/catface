@@ -21,16 +21,17 @@ static bool cfLexerTokenKeywordFromIdent( CfStr identifier, CfLexerTokenType *kw
         const char      * text;
         CfLexerTokenType  type;
     } table[] = {
-        {"fn",    CF_LEXER_TOKEN_TYPE_FN    },
-        {"let",   CF_LEXER_TOKEN_TYPE_LET   },
-        {"i32",   CF_LEXER_TOKEN_TYPE_I32   },
-        {"u32",   CF_LEXER_TOKEN_TYPE_U32   },
-        {"f32",   CF_LEXER_TOKEN_TYPE_F32   },
-        {"void",  CF_LEXER_TOKEN_TYPE_VOID  },
-        {"if",    CF_LEXER_TOKEN_TYPE_IF    },
-        {"else",  CF_LEXER_TOKEN_TYPE_ELSE  },
-        {"while", CF_LEXER_TOKEN_TYPE_WHILE },
-        {"as",    CF_LEXER_TOKEN_TYPE_AS    },
+        {"fn",     CF_LEXER_TOKEN_TYPE_FN     },
+        {"let",    CF_LEXER_TOKEN_TYPE_LET    },
+        {"i32",    CF_LEXER_TOKEN_TYPE_I32    },
+        {"u32",    CF_LEXER_TOKEN_TYPE_U32    },
+        {"f32",    CF_LEXER_TOKEN_TYPE_F32    },
+        {"void",   CF_LEXER_TOKEN_TYPE_VOID   },
+        {"if",     CF_LEXER_TOKEN_TYPE_IF     },
+        {"else",   CF_LEXER_TOKEN_TYPE_ELSE   },
+        {"while",  CF_LEXER_TOKEN_TYPE_WHILE  },
+        {"as",     CF_LEXER_TOKEN_TYPE_AS     },
+        {"return", CF_LEXER_TOKEN_TYPE_RETURN },
     };
 
     for (size_t i = 0, n = sizeof(table) / sizeof(table[0]); i < n; i++) {

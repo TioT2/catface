@@ -110,6 +110,7 @@ typedef enum CfAstStatementType {
     CF_AST_STATEMENT_TYPE_BLOCK,       ///< block statement (curly brace enclosed sequence)
     CF_AST_STATEMENT_TYPE_IF,          ///< if/else statement
     CF_AST_STATEMENT_TYPE_WHILE,       ///< while loop statement
+    CF_AST_STATEMENT_TYPE_RETURN,      ///< return from function
 } CfAstStatementType;
 
 /// @brief statement repersentation structure
@@ -132,6 +133,8 @@ struct CfAstStatement_ {
             CfAstExpression  * condition; ///< loop condition
             CfAstBlock       * code;       ///< loop code
         } while_; ///< while statement
+
+        CfAstExpression *return_; ///< returned value (nullable, actually)
     };
 }; // struct CfAstStatement_
 

@@ -17,16 +17,17 @@ typedef enum CfLexerTokenType_ {
     CF_LEXER_TOKEN_TYPE_FLOATING,        ///< floating-point constant
     CF_LEXER_TOKEN_TYPE_IDENTIFIER,      ///< identifier
 
-    CF_LEXER_TOKEN_TYPE_FN,              ///< "fn"    keyword
-    CF_LEXER_TOKEN_TYPE_LET,             ///< "let"   keyword
-    CF_LEXER_TOKEN_TYPE_I32,             ///< "i32"   keyword
-    CF_LEXER_TOKEN_TYPE_U32,             ///< "u32"   keyword
-    CF_LEXER_TOKEN_TYPE_F32,             ///< "f32"   keyword
-    CF_LEXER_TOKEN_TYPE_VOID,            ///< "void"  keyword
-    CF_LEXER_TOKEN_TYPE_IF,              ///< "if"    keyword
-    CF_LEXER_TOKEN_TYPE_ELSE,            ///< "else"  keyword
-    CF_LEXER_TOKEN_TYPE_WHILE,           ///< "while" keyword
-    CF_LEXER_TOKEN_TYPE_AS,              ///< "as"    keyword
+    CF_LEXER_TOKEN_TYPE_FN,              ///< "fn"     keyword
+    CF_LEXER_TOKEN_TYPE_LET,             ///< "let"    keyword
+    CF_LEXER_TOKEN_TYPE_I32,             ///< "i32"    keyword
+    CF_LEXER_TOKEN_TYPE_U32,             ///< "u32"    keyword
+    CF_LEXER_TOKEN_TYPE_F32,             ///< "f32"    keyword
+    CF_LEXER_TOKEN_TYPE_VOID,            ///< "void"   keyword
+    CF_LEXER_TOKEN_TYPE_IF,              ///< "if"     keyword
+    CF_LEXER_TOKEN_TYPE_ELSE,            ///< "else"   keyword
+    CF_LEXER_TOKEN_TYPE_WHILE,           ///< "while"  keyword
+    CF_LEXER_TOKEN_TYPE_AS,              ///< "as"     keyword
+    CF_LEXER_TOKEN_TYPE_RETURN,          ///< "return" keyword
 
     CF_LEXER_TOKEN_TYPE_ANGULAR_BR_OPEN_EQUAL,  ///< "<=" character combination
     CF_LEXER_TOKEN_TYPE_ANGULAR_BR_CLOSE_EQUAL, ///< ">=" character combination
