@@ -1,0 +1,31 @@
+// Square equation solver program
+
+/// @brief square root calculation function
+/// @param[in] n input parameter
+/// @return n square root. if n < 0, result is undefined
+fn _cfvm_sqrt(n: f32) f32;
+
+fn _cfvm_write_f32(n: f32) f32;
+
+fn _cfvm_read_f32() f32;
+
+fn main() {
+    let a: f32 = _cfvm_read_f32();
+    let b: f32 = _cfvm_read_f32();
+    let c: f32 = _cfvm_read_f32();
+
+    let d: f32 = b * b - 4.0 as f32 * a * c;
+
+    if d == 0.0 as f32 {
+        _cfvm_write_f32(0.0 as f32 - b / (2.0 as f32 * a));
+    } else {
+        if d > 0.0 as f32 {
+            let sqrt_d: f32 = _cfvm_sqrt(d);
+
+            _cfvm_write_f32(((0.0 as f32 - b) - sqrt_d) / (2.0 as f32 * a));
+            _cfvm_write_f32(((0.0 as f32 - b) + sqrt_d) / (2.0 as f32 * a));
+        } else {
+            // do nothing)))
+        }
+    }
+}

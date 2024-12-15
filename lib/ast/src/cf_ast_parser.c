@@ -168,21 +168,21 @@ static bool cfAstParseStmt( CfAstParser *const self, const CfLexerToken **tokenL
                 .ifConditionMissing = (CfStrSpan) { spanBegin, tokenList->span.begin },
             });
 
-        CfAstBlock *codeThen = cfAstParseBlock(self, &tokenList);
+        CfAstBlock *blockThen = cfAstParseBlock(self, &tokenList);
 
-        if (codeThen == NULL)
+        if (blockThen == NULL)
             cfAstParserFinish(self, (CfAstParseResult) {
                 .status = CF_AST_PARSE_STATUS_IF_BLOCK_MISSING,
                 .ifBlockMissing = (CfStrSpan) { spanBegin, tokenList->span.begin },
             });
 
-        CfAstBlock *codeElse = NULL;
+        CfAstBlock *blockElse = NULL;
         const CfLexerToken *elseToken = NULL;
         if ((elseToken = cfAstParseToken(self, &tokenList, CF_LEXER_TOKEN_TYPE_ELSE, false)) != NULL) {
             // parse else block
-            codeElse = cfAstParseBlock(self, &tokenList);
+            blockElse = cfAstParseBlock(self, &tokenList);
 
-            if (codeElse == NULL)
+            if (blockElse == NULL)
                 cfAstParserFinish(self, (CfAstParseResult) {
                     .status = CF_AST_PARSE_STATUS_ELSE_BLOCK_MISSING,
                     .elseBlockMissing = elseToken->span,
@@ -193,8 +193,8 @@ static bool cfAstParseStmt( CfAstParser *const self, const CfLexerToken **tokenL
             .type = CF_AST_STATEMENT_TYPE_IF,
             .if_ = {
                 .condition = cond,
-                .codeThen  = codeThen,
-                .codeElse  = codeElse,
+                .blockThen  = blockThen,
+                .blockElse  = blockElse,
             },
         };
 
@@ -218,7 +218,7 @@ static bool cfAstParseStmt( CfAstParser *const self, const CfLexerToken **tokenL
         *stmtDst = (CfAstStatement) {
             .type = CF_AST_STATEMENT_TYPE_WHILE,
             .while_ = {
-                .conditinon = condition,
+                .condition = condition,
                 .code       = code,
             },
         };

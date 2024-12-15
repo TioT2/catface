@@ -378,7 +378,7 @@ bool cfDequeCursorAdvance( CfDequeCursor *cursor, ptrdiff_t offset ) {
     ptrdiff_t totalOffset = offset + cursor->index;
     CfDequeChunk *current = cursor->chunk;
 
-    if (totalOffset > 0)
+    if (totalOffset > 0) {
         while (totalOffset >= cursor->deque->chunkSize) {
             if (current->isPinned)
                 return false;
@@ -386,7 +386,11 @@ bool cfDequeCursorAdvance( CfDequeCursor *cursor, ptrdiff_t offset ) {
             current = current->next;
             totalOffset -= cursor->deque->chunkSize;
         }
-    else
+
+        if (totalOffset >= cursor->deque->back.index)
+            return false;
+    }
+    else {
         while (totalOffset < 0) {
             if (current->isPinned)
                 return false;
@@ -394,6 +398,10 @@ bool cfDequeCursorAdvance( CfDequeCursor *cursor, ptrdiff_t offset ) {
             current = current->prev;
             totalOffset += cursor->deque->chunkSize;
         }
+
+        if (totalOffset < cursor->deque->front.index)
+            return false;
+    }
 
     cursor->chunk = current;
     cursor->index = totalOffset;

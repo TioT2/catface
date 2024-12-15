@@ -4,8 +4,15 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include <cf_ast.h>
+#include <cf_tir.h>
+
+// just to shut up IntelliSence
+#ifndef _TEST_EXAMPLE_DIR
+#define _TEST_EXAMPLE_DIR
+#endif
 
 char * readFile( const char *path ) {
     FILE *file = fopen(path, "rt");
@@ -36,16 +43,44 @@ char * readFile( const char *path ) {
  */
 int main( void ) {
     // 'example.cf' file is processed to be C++ raw string and added to /include/gen build subdirectory
-    char *source = readFile(_TEST_EXAMPLE_DIR"/example.cf");
+    char  * text = NULL;
+    CfAst * ast  = NULL;
+    CfTir * tir  = NULL;
 
-    CfAstParseResult result = cfAstParse(CF_STR("example.cf"), CF_STR(source), NULL);
+    CfArena tempArena = cfArenaCtor(1024);
+    assert(tempArena != NULL);
 
-    if (result.status != CF_AST_PARSE_STATUS_OK)
-        return 1;
+    {
+        text = readFile(_TEST_EXAMPLE_DIR"/square_equation_solver.cf");
 
-    cfAstDumpJson(stdout, result.ok);
+        if (text == NULL)
+            return 1;
+    }
 
-    cfAstDtor(result.ok);
+    {
+        CfAstParseResult result = cfAstParse(CF_STR("square_equation_solver.cf"), CF_STR(text), tempArena);
+
+        if (result.status != CF_AST_PARSE_STATUS_OK)
+            return 1;
+
+        ast = result.ok;
+
+        cfAstDumpJson(stdout, ast);
+        cfArenaFree(tempArena);
+    }
+
+    {
+        CfTirBuildingResult result = cfTirBuild(ast, tempArena);
+
+        if (result.status != CF_TIR_BUILDING_STATUS_OK)
+            return 1;
+        cfArenaFree(tempArena);
+    }
+
+    cfArenaDtor(tempArena);
+    cfTirDtor(tir);
+    cfAstDtor(ast);
+    free(text);
 
     return 0;
 } // main

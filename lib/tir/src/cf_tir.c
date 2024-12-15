@@ -2,104 +2,8 @@
  * @brief TIR (Typed Intermediate Representation) main implementation file
  */
 
-#include <assert.h>
-#include <setjmp.h>
+#include "cf_tir_builder.h"
 
-#include <cf_deque.h>
-
-#include "cf_tir.h"
-
-/// @brief TIR, actually
-struct CfTir_ {
-    CfArena dataArena; ///< TIR actual content storage arena
-}; // struct CfTir
-
-/// @brief build-time internal function structure
-typedef struct CfTirBuilderFunction_ {
-    CfStr                 name;         ///< function name
-    CfDeque             * argNameDeque; ///< function parameter names
-    CfTirFunction         function;     ///< tir-level function
-    CfTirFunctionId       id;           ///< identifier
-    const CfAstFunction * astFunction;  ///< AST function
-} CfTirBuilderFunction;
-
-/// @brief build-time internal prototype structure
-typedef struct CfTirBuilderFunctionPrototype_ {
-    CfTirFunctionPrototype   prototype; ///< tir-level prototype
-    CfTirFunctionPrototypeId id;        ///< id
-} CfTirBuilderFunctionPrototype;
-
-/// @brief TIR builder
-typedef struct CfTirBuilder_ {
-    CfArena dataArena;
-    CfArena tempArena;
-
-    CfDeque *functionPrototypes;     ///< set of function prototypes
-    CfDeque *functions;              ///< set of defined functions
-
-    jmp_buf             errorBuffer; ///< error buffer
-    CfTirBuildingResult error;       ///< error itself
-} CfTirBuilder;
-
-/**
- * @brief immediately finish building process
- * 
- * @param[in] self   building pointer
- * @param[in] result building result (must be error)
- * 
- * @note this function would never return
- */
-void cfTirBuilderFinish( CfTirBuilder *const self, CfTirBuildingResult result ) {
-    assert(self != NULL);
-
-    self->error = result;
-    longjmp(self->errorBuffer, 1);
-} // cfTirBuilderFinish
-
-/**
- * @brief assertion (finishes with INTERNAL_ERROR if condition is false)
- * 
- * @param[in] self builder pointer
- * @param[in] cond condition
- */
-void cfTirBuilderAssert( CfTirBuilder *const self, bool cond ) {
-    if (!cond)
-        cfTirBuilderFinish(self, (CfTirBuildingResult) { CF_TIR_BUILDING_STATUS_INTERNAL_ERROR });
-} // cfTirBuilderAssert
-
-/**
- * @brief get function prototype by id from builder
- * 
- * @param[in] self builder pointer
- * @param[in] id   prototype id (MUST BE valid)
- * 
- * @return function prototype pointer
- */
-const CfTirFunctionPrototype * cfTirBuilderGetFunctionPrototype(
-    CfTirBuilder             *const self,
-    CfTirFunctionPrototypeId        id
-) {
-    CfDequeCursor prototypeCursor;
-
-    cfTirBuilderAssert(self, cfDequeFrontCursor(self->functionPrototypes, &prototypeCursor));
-    cfTirBuilderAssert(self, cfDequeCursorAdvance(&prototypeCursor, id));
-
-    const CfTirBuilderFunctionPrototype *prototype = (const CfTirBuilderFunctionPrototype *)cfDequeCursorGet(&prototypeCursor);
-
-    cfTirBuilderAssert(self, prototype->id == id);
-
-    cfDequeCursorDtor(&prototypeCursor);
-
-    return &prototype->prototype;
-} // cfTirBuilderGetFunctionPrototype
-
-/**
- * @brief TIR type from ast one building function
- * 
- * @param[in] type ast type
- * 
- * @return corresponding TIR type
- */
 CfTirType cfTirTypeFromAstType( CfAstType type ) {
     switch (type) {
     case CF_AST_TYPE_I32  : return CF_TIR_TYPE_I32  ;
@@ -108,6 +12,46 @@ CfTirType cfTirTypeFromAstType( CfAstType type ) {
     case CF_AST_TYPE_VOID : return CF_TIR_TYPE_VOID ;
     }
 } // cfTirTypeFromAstType
+
+CfAstType cfAstTypeFromTirType( CfTirType type ) {
+    switch (type) {
+    case CF_TIR_TYPE_I32  : return CF_AST_TYPE_I32  ;
+    case CF_TIR_TYPE_U32  : return CF_AST_TYPE_U32  ;
+    case CF_TIR_TYPE_F32  : return CF_AST_TYPE_F32  ;
+    case CF_TIR_TYPE_VOID : return CF_AST_TYPE_VOID ;
+    }
+} // cfTirTypeFromAstType
+
+CfTirBinaryOperator cfTirBinaryOperatorFromAstBinaryOperator( CfAstBinaryOperator op ) {
+    switch (op) {
+    case CF_AST_BINARY_OPERATOR_ADD : return CF_TIR_BINARY_OPERATOR_ADD ;
+    case CF_AST_BINARY_OPERATOR_SUB : return CF_TIR_BINARY_OPERATOR_SUB ;
+    case CF_AST_BINARY_OPERATOR_MUL : return CF_TIR_BINARY_OPERATOR_MUL ;
+    case CF_AST_BINARY_OPERATOR_DIV : return CF_TIR_BINARY_OPERATOR_DIV ;
+    case CF_AST_BINARY_OPERATOR_EQ  : return CF_TIR_BINARY_OPERATOR_EQ  ;
+    case CF_AST_BINARY_OPERATOR_NE  : return CF_TIR_BINARY_OPERATOR_NE  ;
+    case CF_AST_BINARY_OPERATOR_LT  : return CF_TIR_BINARY_OPERATOR_LT  ;
+    case CF_AST_BINARY_OPERATOR_GT  : return CF_TIR_BINARY_OPERATOR_GT  ;
+    case CF_AST_BINARY_OPERATOR_LE  : return CF_TIR_BINARY_OPERATOR_LE  ;
+    case CF_AST_BINARY_OPERATOR_GE  : return CF_TIR_BINARY_OPERATOR_GE  ;
+    }
+} // cfTirBinaryOperatorFromAstBinaryOperator
+
+bool cfTirBinaryOperatorIsComparison( CfTirBinaryOperator op ) {
+    switch (op) {
+    case CF_TIR_BINARY_OPERATOR_ADD : return false ;
+    case CF_TIR_BINARY_OPERATOR_SUB : return false ;
+    case CF_TIR_BINARY_OPERATOR_MUL : return false ;
+    case CF_TIR_BINARY_OPERATOR_DIV : return false ;
+    case CF_TIR_BINARY_OPERATOR_LT  : return true  ;
+    case CF_TIR_BINARY_OPERATOR_GT  : return true  ;
+    case CF_TIR_BINARY_OPERATOR_LE  : return true  ;
+    case CF_TIR_BINARY_OPERATOR_GE  : return true  ;
+    case CF_TIR_BINARY_OPERATOR_EQ  : return true  ;
+    case CF_TIR_BINARY_OPERATOR_NE  : return true  ;
+    }
+} // cfTirBinaryOperatorIsComparison
+
 
 /**
  * @brief check for function matches prototype
@@ -141,9 +85,7 @@ bool cfTirBuilderAstFunctionMatchesPrototype(
  * @param[in] self     builder pointer
  * @param[in] function function to build prototype for
  * 
- * @return prototype id
- * 
- * @note prototype is allocated on temp arena
+ * @return function id
  */
 CfTirFunctionId cfTirBuilderExploreFunction(
     CfTirBuilder *const self,
@@ -154,52 +96,68 @@ CfTirFunctionId cfTirBuilderExploreFunction(
     if (cfDequeFrontCursor(self->functions, &fnCursor)) {
         // check for name duplicates
 
-        while (cfDequeCursorAdvance(&fnCursor, 1)) {
-            CfTirBuilderFunction *fn = (CfTirBuilderFunction *)cfDequeCursorGet(&fnCursor);
+        do {
+            CfTirBuilderFunction *tirFunction = (CfTirBuilderFunction *)cfDequeCursorGet(&fnCursor);
 
             // check if function matches prototype of previous declaration
-            if (!cfTirBuilderAstFunctionMatchesPrototype(
-                self,
-                function,
-                cfTirBuilderGetFunctionPrototype(self, fn->function.prototypeId)
-            )) {
+
+            if (true
+                && cfStrIsSame(function->name, tirFunction->function.name)
+                && !cfTirBuilderAstFunctionMatchesPrototype(
+                    self,
+                    function,
+                    &tirFunction->function.prototype
+                )
+            ) {
                 cfTirBuilderFinish(self, (CfTirBuildingResult) {
                     .status = CF_TIR_BUILDING_STATUS_UNMATCHED_FUNCTION_PROTOTYPES,
                     .unmatchedFunctionPrototypes = {
-                        .firstDeclaration = fn->astFunction,
+                        .firstDeclaration = tirFunction->astFunction,
                         .secondDeclaration = function,
                     }
                 });
             }
 
             // return it's id
-            if (cfStrIsSame(fn->name, function->name))
-                return fn->id;
-        }
+            if (cfStrIsSame(tirFunction->astFunction->name, function->name))
+                return tirFunction->id;
+
+        } while (cfDequeCursorAdvance(&fnCursor, 1));
 
         cfDequeCursorDtor(&fnCursor);
     }
 
-    // find function prototype
-    CfDequeCursor prototypeCursor = {};
-    if (cfDequeFrontCursor(self->functionPrototypes, &prototypeCursor)) {
-        // check for some prototype match this function
+    // acquire function id
+    CfTirFunctionId id = cfDequeLength(self->functions);
 
-        while (cfDequeCursorAdvance(&prototypeCursor, 1)) {
-            const CfTirBuilderFunctionPrototype *prototype =
-                (const CfTirBuilderFunctionPrototype *)cfDequeCursorGet(
-                &prototypeCursor
-            );
+    // build prototype
+    CfTirFunctionPrototype prototype = {
+        .inputTypeArray = (CfTirType *)cfTirBuilderAllocData(
+            self,
+            sizeof(CfTirType) * function->inputCount
+        ),
+        .inputTypeArrayLength = function->inputCount,
+        .outputType = cfTirTypeFromAstType(function->outputType),
+    };
 
-            if (cfTirBuilderAstFunctionMatchesPrototype(self, function, &prototype->prototype)) {
-                // prototype found
-            }
-        }
+    for (size_t i = 0; i < prototype.inputTypeArrayLength; i++)
+        prototype.inputTypeArray[i] = cfTirTypeFromAstType(function->inputs[i].type);
 
-        cfDequeCursorDtor(&prototypeCursor);
-    }
+    // build function
+    CfTirBuilderFunction fn = {
+        .function     = (CfTirFunction) {
+            .prototype = prototype,
+            .name = function->name,
+            .impl = NULL,
+        },
+        .id           = id,
+        .astFunction  = function,
+    };
 
-    // add function to function pool
+    // add to function deque
+    cfTirBuilderAssert(self, cfDequePushBack(self->functions, &fn));
+
+    return id;
 } // cfTirBuildPrototype
 
 /**
@@ -235,13 +193,35 @@ CfTir * cfTirBuildFromAst( CfTirBuilder *const self, const CfAst *ast ) {
         cfTirBuilderExploreFunction(self, &decl->fn);
     }
 
-    // then compile'em
-    for (size_t i = 0; i < declarationCount; i++) {
+    // compile function implementations
+    cfTirBuildFunctions(self);
 
+    // allocate tir itself
+    CfTir *tir = (CfTir *)cfTirBuilderAllocData(self, sizeof(CfTir));
+
+    // build function array
+    CfTirFunction *functionArray = (CfTirFunction *)cfTirBuilderAllocData(
+        self,
+        sizeof(CfTirFunction) * cfDequeLength(self->functions)
+    );
+
+    CfDequeCursor functionCursor = {};
+    if (cfDequeFrontCursor(self->functions, &functionCursor)) {
+        size_t index = 0;
+        do {
+            functionArray[index] = ((CfTirBuilderFunction *)cfDequeCursorGet(&functionCursor))->function;
+        } while (cfDequeCursorAdvance(&functionCursor, 1));
+        cfDequeCursorDtor(&functionCursor);
     }
 
-    return NULL;
+    tir->functionArray = functionArray;
+    tir->functionArrayLength = cfDequeLength(self->functions);
+
+    tir->dataArena = self->dataArena;
+
+    return tir;
 } // cfTirBuildFromAst
+
 
 CfTirBuildingResult cfTirBuild( const CfAst *ast, CfArena tempArena ) {
     assert(ast != NULL);
@@ -263,11 +243,6 @@ CfTirBuildingResult cfTirBuild( const CfAst *ast, CfArena tempArena ) {
     // setup data arena and arrays
     if (false
         || (builder.dataArena = cfArenaCtor(CF_ARENA_CHUNK_SIZE_UNDEFINED)) == NULL
-        || (builder.functionPrototypes = cfDequeCtor(
-            sizeof(CfTirBuilderFunctionPrototype),
-            CF_DEQUE_CHUNK_SIZE_UNDEFINED,
-            builder.tempArena
-        )) == NULL
         || (builder.functions = cfDequeCtor(
             sizeof(CfTirBuilderFunction),
             CF_DEQUE_CHUNK_SIZE_UNDEFINED,
@@ -301,5 +276,20 @@ CfTirBuildingResult cfTirBuild( const CfAst *ast, CfArena tempArena ) {
 
     return builder.error;
 } // cfTirBuild
+
+void cfTirDtor( CfTir *tir ) {
+    if (tir != NULL)
+        cfArenaDtor(tir->dataArena);
+} // cfTirDtor
+
+const CfTirFunction * cfTirGetFunctionArray( const CfTir *tir ) {
+    assert(tir != NULL);
+    return tir->functionArray;
+} // cfTirGetFunctionArray
+
+size_t cfTirGetFunctionArrayLength( const CfTir *tir ) {
+    assert(tir != NULL);
+    return tir->functionArrayLength;
+} // cfTirGetFunctionArrayLength
 
 // cf_tir.c

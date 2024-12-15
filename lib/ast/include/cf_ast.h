@@ -124,12 +124,12 @@ struct CfAstStatement_ {
 
         struct {
             CfAstExpression  * condition; ///< condition (non-null)
-            CfAstBlock       * codeThen;  ///< code to execute then condition returned true (non-null)
-            CfAstBlock       * codeElse;  ///< code to execute then condition returned false (nulllable)
+            CfAstBlock       * blockThen;  ///< code to execute then condition returned true (non-null)
+            CfAstBlock       * blockElse;  ///< code to execute then condition returned false (nulllable)
         } if_; ///< if statement
 
         struct {
-            CfAstExpression  * conditinon; ///< loop condition
+            CfAstExpression  * condition; ///< loop condition
             CfAstBlock       * code;       ///< loop code
         } while_; ///< while statement
     };
@@ -162,7 +162,7 @@ typedef struct CfAstExpressionConversion_ {
 /// @brief call expression
 typedef struct CfAstExpressionCall_ {
     CfAstExpression *  callee;              ///< called object
-    size_t       argumentArrayLength; ///< argArrayLength length
+    size_t             argumentArrayLength; ///< argArrayLength length
     CfAstExpression ** argumentArray;       ///< arguments function called with
 } CfAstExpressionCall;
 
@@ -179,7 +179,7 @@ typedef enum CfAstAssignmentOperator_ {
 typedef struct CfAstExprAssignment_ {
     CfAstAssignmentOperator   op;          ///< exact assignment operator
     CfStr                     destination; ///< variable to assign to name (variable assignment only is supported at least now)
-    CfAstExpression               * value;       ///< value to assign to
+    CfAstExpression         * value;       ///< value to assign to
 } CfAstExprAssignment;
 
 /// @brief binary operator enumeration
@@ -188,7 +188,6 @@ typedef enum CfAstBinaryOperator_ {
     CF_AST_BINARY_OPERATOR_SUB, ///< substraction
     CF_AST_BINARY_OPERATOR_MUL, ///< multiplication
     CF_AST_BINARY_OPERATOR_DIV, ///< division
-
     CF_AST_BINARY_OPERATOR_EQ,  ///< equal
     CF_AST_BINARY_OPERATOR_NE,  ///< not equal
     CF_AST_BINARY_OPERATOR_LT,  ///< less than
@@ -200,8 +199,8 @@ typedef enum CfAstBinaryOperator_ {
 /// @brief binary operator expression
 typedef struct CfAstExprBinaryOperator_ {
     CfAstBinaryOperator   op;  ///< operator to perform
-    CfAstExpression           * lhs; ///< left hand side
-    CfAstExpression           * rhs; ///< right hand side
+    CfAstExpression     * lhs; ///< left hand side
+    CfAstExpression     * rhs; ///< right hand side
 } CfAstExprBinaryOperator;
 
 /// @brief expression representaiton structure

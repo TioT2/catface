@@ -66,6 +66,8 @@ static void cfAstExprDumpJson( FILE *out, const CfAstExpression *expr, size_t of
 } // 
 
 void cfAstDumpJson( FILE *out, const CfAst *ast ) {
+    assert(ast != NULL);
+
     fprintf(out, "{\n");
 
     fprintf(out, "    \"sourceName\": \"");
