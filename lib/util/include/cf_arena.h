@@ -13,7 +13,7 @@ extern "C" {
 #endif
 
 /// @brief arena allocator handle representation structure
-typedef struct CfArenaImpl_ * CfArena;
+typedef struct CfArena_ CfArena;
 
 /// @brief value that may be passed to cfArenaCtor value to denote that there is no preferred chunk size
 #define CF_ARENA_CHUNK_SIZE_UNDEFINED (~(size_t)0)
@@ -28,14 +28,14 @@ typedef struct CfArenaImpl_ * CfArena;
  * @note CF_ARENA_CHUNK_SIZE_UNDEFINED value may be passed to *chunkSize*
  * parameter to denote that there is no preferred chunk size for user
  */
-CfArena cfArenaCtor( size_t chunkSize );
+CfArena * cfArenaCtor( size_t chunkSize );
 
 /**
  * @brief arena allocator destructor
  * 
  * @param[in] arena arena to destroy (nullable)
  */
-void cfArenaDtor( CfArena arena );
+void cfArenaDtor( CfArena *arena );
 
 /**
  * @brief arena allocation function
@@ -48,7 +48,7 @@ void cfArenaDtor( CfArena arena );
  * @note return value of this function is aligned by size of max_align_t
  * @note allocated memory is zeroed
  */
-void * cfArenaAlloc( CfArena arena, size_t size );
+void * cfArenaAlloc( CfArena *arena, size_t size );
 
 /**
  * @brief **all** arena allocations free'ing function
@@ -60,7 +60,7 @@ void * cfArenaAlloc( CfArena arena, size_t size );
  * because this function reuses already allocated 
  * memory chunks.
  */
-void cfArenaFree( CfArena arena );
+void cfArenaFree( CfArena *arena );
 
 #ifdef __cplusplus
 }

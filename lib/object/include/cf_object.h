@@ -16,7 +16,7 @@ extern "C" {
 /// @brief maximal length of jump label supported
 #define CF_LABEL_MAX 64
 
-/// @brief Label (point to code or just constant)
+/// @brief label (point to code or just constant)
 typedef struct CfLabel_ {
     uint32_t sourceLine;               ///< source file line label declared at
     uint32_t value;                    ///< label underlying value
@@ -24,7 +24,7 @@ typedef struct CfLabel_ {
     char     label     [CF_LABEL_MAX]; ///< label string
 } CfLabel;
 
-/// @brief label and link (references to certain code point with different semantics)
+/// @brief link (references to certain code point with different semantics)
 typedef struct CfLink_ {
     uint32_t sourceLine;               ///< line label declared at
     uint32_t codeOffset;               ///< offset link encodes

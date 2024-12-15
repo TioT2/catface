@@ -33,13 +33,13 @@ typedef struct CfDequeBorderCursor_ {
 
 /// @brief deque internal structure
 struct CfDeque_ {
-    CfArena             arena;       ///< arena allocator (nullable, if null - all dealocation is handled manually)
-    size_t              elementSize; ///< deque element size
-    size_t              chunkSize;   ///< deque chunk size
+    CfArena             * arena;       ///< arena allocator (nullable, if null - all dealocation is handled manually)
+    size_t                elementSize; ///< deque element size
+    size_t                chunkSize;   ///< deque chunk size
 
-    size_t              size;        ///< current deque size (in elements)
-    CfDequeBorderCursor front;       ///< cursor to deque front
-    CfDequeBorderCursor back;        ///< cursor to deque back
+    size_t                size;        ///< current deque size (in elements)
+    CfDequeBorderCursor   front;       ///< cursor to deque front
+    CfDequeBorderCursor   back;        ///< cursor to deque back
 };
 
 /**
@@ -61,7 +61,7 @@ static CfDequeChunk * cfDequeAllocChunk( CfDeque *deque ) {
         : (CfDequeChunk *)cfArenaAlloc(deque->arena, allocSize);
 } // cfDequeAllocChunk
 
-CfDeque *cfDequeCtor( size_t elementSize, size_t chunkSize, CfArena arena ) {
+CfDeque *cfDequeCtor( size_t elementSize, size_t chunkSize, CfArena *arena ) {
     assert(elementSize > 0);
     assert(chunkSize > 0);
 
@@ -174,6 +174,30 @@ void cfDequeWrite( const CfDeque *deque, void *dst ) {
     );
 } // cfDequeWrite
 
+/**
+ * @brief adds new chunk in free part of chunk ring
+ * 
+ * @param[in] deque deque to add chunk in
+ * 
+ * @return true if added, false if allocation failed.
+ */
+static bool cfDequeAddChunk( CfDeque *deque ) {
+    // allocate new chunk and insert it to chunk ring
+    CfDequeChunk *nextChunk = cfDequeAllocChunk(deque);
+
+    if (nextChunk == NULL)
+        return false;
+
+    // bad practice, but IntelliSense is dying if I use names here
+    *nextChunk = (CfDequeChunk) { deque->back.chunk, deque->back.chunk->next };
+
+    // conect chunk with list
+    nextChunk->prev->next = nextChunk;
+    nextChunk->next->prev = nextChunk;
+
+    return true;
+} // cfDequeAddChunk
+
 bool cfDequePushBack( CfDeque *deque, const void *data ) {
     assert(deque != NULL);
     assert(data != NULL);
@@ -185,26 +209,12 @@ bool cfDequePushBack( CfDeque *deque, const void *data ) {
     );
 
     if (deque->back.index >= deque->chunkSize - 1) {
-        // move to next chunk or allocate new one
-        CfDequeChunk *nextChunk = NULL;
 
-        if (deque->back.chunk->next->isPinned) {
-            // allocate new chunk and insert it to chunk ring
-            nextChunk = cfDequeAllocChunk(deque);
-
-            if (nextChunk == NULL)
+        // try to allocate next chunk if current next chunk is pinned by front.
+        if (deque->back.chunk->next->isPinned)
+            if (!cfDequeAddChunk(deque))
                 return false;
-
-            // bad practice, but IntelliSense is dying if I use names in this case
-            *nextChunk = (CfDequeChunk) { deque->back.chunk, deque->back.chunk->next };
-
-            // conect chunk with list
-            nextChunk->prev->next = nextChunk;
-            nextChunk->next->prev = nextChunk;
-        } else {
-            // just use next chunk
-            nextChunk = deque->back.chunk->next;
-        }
+        CfDequeChunk *nextChunk = deque->back.chunk->next;
 
         // remains pinned only if it's pinned by front cursor too.
         deque->back.chunk->isPinned = (deque->front.chunk == deque->back.chunk);
@@ -220,6 +230,82 @@ bool cfDequePushBack( CfDeque *deque, const void *data ) {
     deque->size++;
     return true;
 } // cfDequePushBack
+
+bool cfDequePushArrayBack( CfDeque *deque, const void *array, const size_t arrayLength ) {
+    assert(deque != NULL);
+
+    if (arrayLength == 0)
+        return true;
+
+    assert(array != NULL);
+
+    if (arrayLength + deque->back.index <= deque->chunkSize) {
+        // just write array data to current chunk
+        memcpy(
+            deque->back.chunk->data + deque->elementSize * deque->back.index,
+            array,
+            arrayLength * deque->elementSize
+        );
+        deque->back.index += arrayLength;
+        return true;
+    }
+
+    size_t arrayLengthRest = arrayLength;
+
+    // write front
+    memcpy(
+        deque->back.chunk->data + deque->elementSize * deque->back.index,
+        array,
+        (deque->chunkSize - deque->back.index) * deque->elementSize
+    );
+    array = (char *)array + (deque->chunkSize - deque->back.index) * deque->elementSize;
+    arrayLengthRest -= deque->chunkSize - deque->back.index;
+
+    // save back for case where smth may went wrong
+    CfDequeBorderCursor oldBack = deque->back;
+
+    while (arrayLengthRest >= deque->chunkSize) {
+        // add next chunks (actually, new chunks without moving are not a problem itself)
+        if (deque->back.chunk->next->isPinned)
+            if (!cfDequeAddChunk(deque)) {
+                // restore back
+                deque->back = oldBack;
+                return false;
+            }
+
+        deque->back.chunk = deque->back.chunk->next;
+
+        memcpy(
+            deque->back.chunk->data,
+            array,
+            deque->chunkSize * deque->elementSize
+        );
+
+        array = (char *)array + deque->chunkSize * deque->elementSize;
+        arrayLengthRest -= deque->chunkSize;
+    }
+
+    // now add new chunk to satisfy back rules
+    if (deque->back.chunk->next->isPinned)
+        if (!cfDequeAddChunk(deque)) {
+            deque->back = oldBack;
+            return false;
+        }
+
+    deque->back.chunk = deque->back.chunk->next;
+    deque->back.index = arrayLengthRest;
+
+    // copy chunk rest
+    memcpy(
+        deque->back.chunk->data,
+        array,
+        arrayLengthRest * deque->elementSize
+    );
+
+    deque->size += arrayLength;
+
+    return true;
+} // cfDequePushArrayBack
 
 bool cfDequePopBack( CfDeque *deque, void *data ) {
     assert(deque != NULL);
@@ -255,24 +341,10 @@ bool cfDequePushFront( CfDeque *deque, const void *data ) {
 
     // move cursor back
     if (deque->front.index <= 0) {
-        CfDequeChunk *prevChunk = NULL;
-
-        if (deque->front.chunk->prev->isPinned) {
-            // allocate new chunk
-            prevChunk = cfDequeAllocChunk(deque);
-
-            if (prevChunk == NULL)
+        if (deque->front.chunk->prev->isPinned)
+            if (!cfDequeAddChunk(deque))
                 return false;
-
-            // initialize prevChunk
-            *prevChunk = (CfDequeChunk) { deque->front.chunk->prev, deque->front.chunk };
-
-            // connect prev chunk with ring
-            prevChunk->next->prev = prevChunk;
-            prevChunk->prev->next = prevChunk;
-        } else {
-            prevChunk = deque->front.chunk->prev;
-        }
+        CfDequeChunk *prevChunk = deque->front.chunk->prev;
 
         // current chunk remains pinned only if it's pinned by back cursor too.
         deque->front.chunk->isPinned = (deque->back.chunk == deque->front.chunk);

@@ -18,7 +18,7 @@ extern "C" {
 
 /// @brief TIR, actually
 struct CfTir_ {
-    CfArena         dataArena;           ///< actual content storage arena
+    CfArena       * dataArena;           ///< actual content storage arena
     CfTirFunction * functionArray;       ///< functions declared/implemented in this module
     size_t          functionArrayLength; ///< function array length
 }; // struct CfTir
@@ -32,11 +32,11 @@ typedef struct CfTirBuilderFunction_ {
 
 /// @brief TIR builder
 typedef struct CfTirBuilder_ {
-    CfArena              dataArena;   ///< 'final' allocation arena
-    CfArena              tempArena;   ///< temporary allocation arena
-    CfDeque            * functions;   ///< set of defined functions
-    jmp_buf              errorBuffer; ///< error buffer
-    CfTirBuildingResult  error;       ///< error itself
+    CfArena             * dataArena;   ///< 'final' allocation arena
+    CfArena             * tempArena;   ///< temporary allocation arena
+    CfDeque             * functions;   ///< set of defined functions
+    jmp_buf               errorBuffer; ///< error buffer
+    CfTirBuildingResult   error;       ///< error itself
 } CfTirBuilder;
 
 /**

@@ -13,7 +13,7 @@ extern "C" {
 
 /// @brief AST structure declaration
 struct CfAst_ {
-    CfArena             dataArena;      ///< AST allocation holder
+    CfArena           * dataArena;      ///< AST allocation holder
     CfStr               sourceName;     ///< source file name
     CfStr               sourceContents; ///< source file contents
     CfAstDeclaration  * declArray;      ///< declaration array (extends beyond structure memory for declCount - 1 elements)

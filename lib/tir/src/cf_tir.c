@@ -223,7 +223,7 @@ CfTir * cfTirBuildFromAst( CfTirBuilder *const self, const CfAst *ast ) {
 } // cfTirBuildFromAst
 
 
-CfTirBuildingResult cfTirBuild( const CfAst *ast, CfArena tempArena ) {
+CfTirBuildingResult cfTirBuild( const CfAst *ast, CfArena *tempArena ) {
     assert(ast != NULL);
     CfTir *tir = NULL;
 

@@ -15,11 +15,11 @@ extern "C" {
 
 /// @brief AST parsing context
 typedef struct CfAstParser_ {
-    CfArena tempArena; ///< arena to allocate temporary data in (such as intermediate arrays)
-    CfArena dataArena; ///< arena to allocate actual AST data in
+    CfArena          * tempArena;   ///< arena to allocate temporary data in (such as intermediate arrays)
+    CfArena          * dataArena;   ///< arena to allocate actual AST data in
 
-    jmp_buf          errorBuffer; ///< buffer to jump to if some error occured
-    CfAstParseResult parseResult; ///< AST parsing result (used in case if error committed)
+    jmp_buf            errorBuffer; ///< buffer to jump to if some error occured
+    CfAstParseResult   parseResult; ///< AST parsing result (used in case if error committed)
 } CfAstParser;
 
 /**

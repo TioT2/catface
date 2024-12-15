@@ -58,7 +58,7 @@ static size_t cfArenaAlignUp( size_t number, size_t alignment ) {
 } // cfArenaAlignUp
 
 /// @brief arena implementation structure declaration
-typedef struct CfArenaImpl_ {
+struct CfArena_ {
     CfArenaChunk * free;      ///< free stack top
     CfArenaChunk * firstUsed; ///< used stack top
     CfArenaChunk * lastUsed;  ///< used stack bottom (it is ok to read it's value only in case if firstUsed != NULL)
@@ -66,16 +66,18 @@ typedef struct CfArenaImpl_ {
 
     void *         currStart; ///< current chunk memory start
     void *         currEnd;   ///< current chunk memory end
-} CfArenaImpl;
 
-CfArena cfArenaCtor( size_t chunkSize ) {
+    // statistics
+}; // struct CfArena_
+
+CfArena * cfArenaCtor( size_t chunkSize ) {
     assert(chunkSize > 0);
 
     // set 1024 as default arena chunk size
     if (chunkSize == CF_ARENA_CHUNK_SIZE_UNDEFINED)
         chunkSize = 1024;
 
-    CfArenaImpl *arena = (CfArenaImpl *)calloc(1, sizeof(CfArenaImpl));
+    CfArena *arena = (CfArena *)calloc(1, sizeof(CfArena));
 
     if (arena != NULL)
         arena->chunkSize = chunkSize;
@@ -83,7 +85,7 @@ CfArena cfArenaCtor( size_t chunkSize ) {
     return arena;
 } // cfArenaCtor
 
-void cfArenaDtor( CfArena arena ) {
+void cfArenaDtor( CfArena *arena ) {
     if (arena == NULL)
         return;
 
@@ -102,7 +104,7 @@ void cfArenaDtor( CfArena arena ) {
     free(arena);
 } // cfArenaDtor
 
-void * cfArenaAlloc( CfArena arena, size_t size ) {
+void * cfArenaAlloc( CfArena *arena, size_t size ) {
     assert(arena != NULL);
 
     // any non-null pointer is considered good enough in case if zero-sized allocation wanted.
@@ -158,7 +160,7 @@ void * cfArenaAlloc( CfArena arena, size_t size ) {
     return allocation;
 } // cfArenaAlloc
 
-void cfArenaFree( CfArena arena ) {
+void cfArenaFree( CfArena *arena ) {
     assert(arena != NULL);
 
     // check for chunks to free

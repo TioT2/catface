@@ -147,7 +147,7 @@ int testDeque( uint32_t seed, CfDeque *deque ) {
 }
 
 int main( void ) {
-    CfArena arena = cfArenaCtor(CF_ARENA_CHUNK_SIZE_UNDEFINED);
+    CfArena *arena = cfArenaCtor(CF_ARENA_CHUNK_SIZE_UNDEFINED);
     assert(arena != NULL);
     CfDeque *arenaDeque = cfDequeCtor(sizeof(uint64_t), CF_DEQUE_CHUNK_SIZE_UNDEFINED, arena);
 

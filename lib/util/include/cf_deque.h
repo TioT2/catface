@@ -35,7 +35,7 @@ typedef struct CfDeque_ CfDeque;
  * 
  * - In case if 'arena' is not NULL, deque constructor may not be called.
  */
-CfDeque * cfDequeCtor( size_t elementSize, size_t chunkSize, CfArena arena );
+CfDeque * cfDequeCtor( size_t elementSize, size_t chunkSize, CfArena *arena );
 
 /**
  * @brief deque destructor
@@ -70,6 +70,15 @@ void cfDequeWrite( const CfDeque *deque, void *dst );
  * @return true if pushed, false if smth went wrong
  */
 bool cfDequePushBack( CfDeque *deque, const void *data );
+
+/**
+ * @brief array to front pushing function
+ * 
+ * @param[in] deque       deque to push array to (non-null)
+ * @param[in] array       array to push (non-null if arrayLength > 0)
+ * @param[in] arrayLength array length
+ */
+bool cfDequePushArrayBack( CfDeque *deque, const void *array, size_t arrayLength );
 
 /**
  * @brief element from back popping function

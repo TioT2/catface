@@ -5,10 +5,15 @@
 /// @return n square root. if n < 0, result is undefined
 fn _cfvm_sqrt(n: f32) f32;
 
-fn _cfvm_write_f32(n: f32) f32;
+/// @brief value to global stdout writing function
+/// @param n number to write
+fn _cfvm_write_f32(n: f32);
 
+/// @brief value from global stdin reading function
+/// @param n input parameter
 fn _cfvm_read_f32() f32;
 
+/// @brief discriminant calculation function
 fn discriminant(a: f32, b: f32, c: f32) f32 {
     return b * b - 4.0 as f32 * a * c;
 }

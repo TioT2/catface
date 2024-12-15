@@ -4,9 +4,9 @@
 
 #include "cf_ast_parser.h"
 
-CfAstParseResult cfAstParse( CfStr fileName, CfStr fileContents, CfArena tempArena ) {
+CfAstParseResult cfAstParse( CfStr fileName, CfStr fileContents, CfArena *tempArena ) {
     // arena that contains actual AST data
-    CfArena dataArena = NULL;
+    CfArena *dataArena = NULL;
     CfAst *ast = NULL;
 
     if (false

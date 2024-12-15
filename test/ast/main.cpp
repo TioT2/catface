@@ -47,7 +47,7 @@ int main( void ) {
     CfAst * ast  = NULL;
     CfTir * tir  = NULL;
 
-    CfArena tempArena = cfArenaCtor(1024);
+    CfArena *tempArena = cfArenaCtor(1024);
     assert(tempArena != NULL);
 
     {

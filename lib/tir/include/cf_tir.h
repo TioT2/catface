@@ -324,7 +324,7 @@ typedef struct CfTirBuildingResult_ {
  * 
  * @return TIR building result
  */
-CfTirBuildingResult cfTirBuild( const CfAst *ast, CfArena tempArena );
+CfTirBuildingResult cfTirBuild( const CfAst *ast, CfArena *tempArena );
 
 #ifdef __cplusplus
 }

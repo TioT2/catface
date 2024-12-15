@@ -332,7 +332,7 @@ typedef struct CfAstParseResult_ {
  * @note
  * - 'fileName' and 'fileContents' parameter contents **must** live longer, than resulting AST in case if this function execution succeeded.
  */
-CfAstParseResult cfAstParse( CfStr fileName, CfStr fileContents, CfArena tempArena );
+CfAstParseResult cfAstParse( CfStr fileName, CfStr fileContents, CfArena *tempArena );
 
 #ifdef __cplusplus
 }
