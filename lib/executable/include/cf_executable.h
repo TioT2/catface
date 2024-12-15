@@ -87,6 +87,18 @@ typedef union CfRegisters_ {
     };
 } CfRegisters;
 
+/// @brief register enumeration
+typedef enum CfRegister_ {
+    CF_REGISTER_CZ = 0, ///< constant-zero register
+    CF_REGISTER_FL = 1, ///< flag register
+    CF_REGISTER_AX = 2, ///< general-purpose register 'a'
+    CF_REGISTER_BX = 3, ///< general-purpose register 'b'
+    CF_REGISTER_CX = 4, ///< general-purpose register 'c'
+    CF_REGISTER_DX = 5, ///< general-purpose register 'd'
+    CF_REGISTER_EX = 6, ///< general-purpose register 'e'
+    CF_REGISTER_FX = 7, ///< general-purpose register 'f'
+} CfRegister;
+
 /// @brief pushpop instruciton additional data layout
 typedef struct CfInstructionPushPop_ {
     uint8_t isMemoryAccess : 1; ///< do access memory
@@ -296,9 +308,14 @@ typedef enum CfExecutableReadStatus_ {
 
 /// @brief push and pop instruction additional data
 typedef struct CfPushPopInfo_ {
-    uint8_t registerIndex   : 3; ///< index of register to get value from
-    uint8_t isMemoryAccess  : 1; ///< true if destination is placed in memory
-    uint8_t doReadImmediate : 1; ///< is this instruction followed by 4-byte immediate
+    union {
+        uint8_t asByte; ///< pushPopInfo asByte
+        struct {
+            uint8_t registerIndex   : 3; ///< index of register to get value from
+            uint8_t isMemoryAccess  : 1; ///< true if destination is placed in memory
+            uint8_t doReadImmediate : 1; ///< is this instruction followed by 4-byte immediate
+        };
+    };
 } CfPushPopInfo;
 
 /**

@@ -4,20 +4,23 @@
 
 #include <setjmp.h>
 #include <string.h>
+#include <stdlib.h>
+#include <assert.h>
 
 #include <cf_deque.h>
+#include <cf_executable.h>
 
 #include "cf_codegen.h"
 
 
 /// @brief code generator
 typedef struct CfCodeGenerator {
-    CfDeque * codeDeque;  ///< code destination
-    CfDeque * linkDeque;  ///< link deque
-    CfDeque * labelDeque; ///< label deque
-
-    jmp_buf         finishBuffer;
-    CfCodegenResult result;
+    CfArena         * tempArena;    ///< temporary arena
+    CfDeque         * codeDeque;    ///< code destination
+    CfDeque         * linkDeque;    ///< link deque
+    CfDeque         * labelDeque;   ///< label deque
+    jmp_buf           finishBuffer; ///< finishing buffer
+    CfCodegenResult   result;       ///< result
 } CfCodeGenerator;
 
 /**
@@ -131,11 +134,148 @@ void cfCodeGeneratorAddConstant( CfCodeGenerator *const self, CfStr name, uint32
     cfCodeGeneratorAssert(self, cfDequePushBack(self->labelDeque, &label));
 } // cfCodeGeneratorAddConstant
 
+/**
+ * @brief code generator start function
+ * 
+ * @param[in] self code generator
+ * 
+ * @note writes prelude to codegenerator
+ */
+void cfCodeGeneratorBegin( CfCodeGenerator *const self ) {
+    // write this code to 
+    /*
+        mgs
+        pop ex
+        mgs
+        pop fx
+        call main
+        halt
+     */
+
+    // prelude code
+    const uint8_t code[] = {
+        CF_OPCODE_MGS,
+        CF_OPCODE_POP,
+        (CfPushPopInfo) {
+            .registerIndex = CF_REGISTER_EX,
+            .doReadImmediate = false,
+            .isMemoryAccess = false,
+        }.asByte,
+
+        CF_OPCODE_MGS,
+        CF_OPCODE_POP,
+        (CfPushPopInfo) {
+            .registerIndex = CF_REGISTER_FX,
+            .doReadImmediate = false,
+            .isMemoryAccess = false,
+        }.asByte,
+        CF_OPCODE_CALL,
+    };
+    cfCodeGeneratorWriteCode(self, &code, sizeof(code));
+    // add link to main
+    cfCodeGeneratorAddLink(self, CF_STR("main"));
+
+    // write halt opcode
+    uint8_t halt = CF_OPCODE_HALT;
+    cfCodeGeneratorWriteCode(self, &halt, sizeof(halt));
+} // code generator
+
+/**
+ * @brief codegen a function
+ * 
+ * @param[in] self     codeGenerator
+ * @param[in] function TIR function pointer
+ */
+void cfCodeGeneratorAddFunction( CfCodeGenerator *const self, const CfTirFunction *function ) {
+    // set function label
+    cfCodeGeneratorAddLabel(self, function->name);
+
+    // argument storage?
+    assert(false && "Not implemented yet");
+
+    // add ret opcode
+    uint8_t ret = CF_OPCODE_RET;
+    cfCodeGeneratorWriteCode(self, &ret, 1);
+} // cfCodeGeneratorAddFunction
+
+/**
+ * @brief code generation finishing function
+ * 
+ * @param[in] self       code generator
+ * @param[in] sourceName source file name
+ * @param[in] objectDst  object destination (non-null)
+ */
+void cfCodeGeneratorEnd( CfCodeGenerator *const self, CfStr sourceName, CfObject *objectDst ) {
+    assert(objectDst != NULL);
+
+    // build object
+    *objectDst = (CfObject) {
+        .sourceName = cfStrOwnedCopy(sourceName),
+        .codeLength = cfDequeLength(self->codeDeque),
+        .code       = (uint8_t *)calloc(cfDequeLength(self->codeDeque), 1),
+        .linkCount  = cfDequeLength(self->linkDeque),
+        .links      = (CfLink *)calloc(cfDequeLength(self->linkDeque), sizeof(CfLink)),
+        .labelCount = cfDequeLength(self->labelDeque),
+        .labels     = (CfLabel *)calloc(cfDequeLength(self->labelDeque), sizeof(CfLabel)),
+    };
+
+    // check that all allocations are success
+    cfCodeGeneratorAssert(self, false
+        || objectDst->sourceName == NULL
+        || objectDst->code       == NULL
+        || objectDst->links      == NULL
+        || objectDst->labelCount == NULL
+    );
+
+    // write deque data
+    cfDequeWrite(self->codeDeque , objectDst->code  );
+    cfDequeWrite(self->linkDeque , objectDst->links );
+    cfDequeWrite(self->labelDeque, objectDst->labels);
+} // cfCodeGeneratorEnd
+
 CfCodegenResult cfCodegen( const CfTir *tir, CfObject *dst, CfArena *tempArena ) {
+    // zero destination memory
+    memset(dst, 0, sizeof(CfObject));
+
+    bool tempArenaOwned = (tempArena == NULL);
+
+    if (tempArenaOwned) {
+        tempArena = cfArenaCtor(CF_ARENA_CHUNK_SIZE_UNDEFINED);
+        if (tempArena == NULL)
+            return (CfCodegenResult) { CF_CODEGEN_STATUS_INTERNAL_ERROR };
+    }
+    CfCodeGenerator generator = {
+        .tempArena    = tempArena,
+        .codeDeque    = cfDequeCtor(1, 512, tempArena),
+        .linkDeque    = cfDequeCtor(sizeof(CfLink), CF_DEQUE_CHUNK_SIZE_UNDEFINED, tempArena),
+        .labelDeque   = cfDequeCtor(sizeof(CfLabel), CF_DEQUE_CHUNK_SIZE_UNDEFINED, tempArena),
+
+        .result = (CfCodegenResult) { CF_CODEGEN_STATUS_INTERNAL_ERROR },
+    };
+
+    int isError = setjmp(generator.finishBuffer);
+
+    if (false
+        || isError
+        || generator.codeDeque == NULL
+        || generator.linkDeque == NULL
+        || generator.labelDeque == NULL
+    ) {
+        cfObjectDtor(dst);
+        return generator.result;
+    }
+
+    cfCodeGeneratorBegin(&generator);
+
     const CfTirFunction *functionArray = cfTirGetFunctionArray(tir);
     size_t functionArrayLength = cfTirGetFunctionArrayLength(tir);
 
-    return (CfCodegenResult) { CF_CODEGEN_STATUS_INTERNAL_ERROR };
+    for (size_t i = 0; i < functionArrayLength; i++)
+        cfCodeGeneratorAddFunction(&generator, &functionArray[i]);
+
+    cfCodeGeneratorEnd(&generator, cfTirGetSourceName(tir), dst);
+
+    return (CfCodegenResult) { CF_CODEGEN_STATUS_OK };
 } // cfCodegen
 
 // cf_codegen.c

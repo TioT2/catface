@@ -214,10 +214,13 @@ CfTir * cfTirBuildFromAst( CfTirBuilder *const self, const CfAst *ast ) {
         cfDequeCursorDtor(&functionCursor);
     }
 
-    tir->functionArray = functionArray;
-    tir->functionArrayLength = cfDequeLength(self->functions);
-
-    tir->dataArena = self->dataArena;
+    // initialize build TIR structure
+    *tir = (CfTir) {
+        .dataArena           = self->dataArena,
+        .functionArray       = functionArray,
+        .functionArrayLength = cfDequeLength(self->functions),
+        .sourceName          = cfAstGetSourceFileName(ast),
+    };
 
     return tir;
 } // cfTirBuildFromAst
@@ -291,5 +294,10 @@ size_t cfTirGetFunctionArrayLength( const CfTir *tir ) {
     assert(tir != NULL);
     return tir->functionArrayLength;
 } // cfTirGetFunctionArrayLength
+
+CfStr cfTirGetSourceName( const CfTir *tir ) {
+    assert(tir != NULL);
+    return tir->sourceName;
+} // cfTirGetSourceName
 
 // cf_tir.c

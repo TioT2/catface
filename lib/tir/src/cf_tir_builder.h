@@ -21,6 +21,7 @@ struct CfTir_ {
     CfArena       * dataArena;           ///< actual content storage arena
     CfTirFunction * functionArray;       ///< functions declared/implemented in this module
     size_t          functionArrayLength; ///< function array length
+    CfStr           sourceName;          ///< source file name
 }; // struct CfTir
 
 /// @brief build-time internal function structure

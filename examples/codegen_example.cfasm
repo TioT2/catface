@@ -1,23 +1,37 @@
 ; Codegeneration 'test' file
-; in CF compilation results, EX register is considered to be RSP analog, FX - RBP analog.
+; in CF compilation results, EX - RSP, FX is currently a RBP analog.
 
 ; prelude (setup stack and call main)
 mgs
-pop ex
-mgs
 pop fx
+mgs
+pop ex
 call main
 halt
 
 ; Main function
 main:
-    ; save previous base pointer
-    push ex-4
-    pop  ex
+    ; save base pointer
     push fx
-    pop  [ex]
 
-    pop 
+    ; ex -= 16
+    push ex - 16
+    pop ex
+
+    ; fx = ex
+    push ex
+    pop fx
+
+    ; do stuff here
+    ; ........
+    ; ........
+    ; ........
+
+    ; ex += 16
+    push ex + 16
+    pop ex
+    ; fx = old fx
+    pop fx
 ret
 
 ; codegen_example.cfasm
