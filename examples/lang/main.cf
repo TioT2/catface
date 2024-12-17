@@ -1,0 +1,13 @@
+// Example file
+
+fn main() {
+    let a: i32 = 5 as i32;
+    let b: u32 = 11 as u32;
+
+    let c: f32 = a as f32 + b as f32;
+
+    while c as u32 {
+        c = c / 2.0 as f32;
+        // do something?
+    }
+}

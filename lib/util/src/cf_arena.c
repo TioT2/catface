@@ -171,6 +171,10 @@ void cfArenaFree( CfArena *arena ) {
     arena->lastUsed->next = arena->free;
     arena->free = arena->firstUsed;
 
+    // reset start and end pointers
+    arena->currStart = NULL;
+    arena->currEnd = NULL;
+
     // remove chunks from used stack
     arena->firstUsed = NULL;
 } // cfArenaFree

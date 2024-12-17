@@ -42,6 +42,7 @@ add_subdirectory(app/executor)
 add_subdirectory(app/assembler)
 add_subdirectory(app/disassembler)
 add_subdirectory(app/linker)
+add_subdirectory(app/compiler)
 
 # tests (debug-only)
 if (CMAKE_BUILD_TYPE MATCHES Debug)

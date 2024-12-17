@@ -75,7 +75,6 @@ typedef struct CfTirStatement_ {
             CfTirExpression * condition; ///< loop condition (may be NULL)
             CfTirBlock      * block;     ///< loop code block
         } loop;
-
     };
 } CfTirStatement;
 

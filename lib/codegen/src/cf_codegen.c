@@ -96,16 +96,16 @@ void cfCodeGeneratorBegin( CfCodeGenerator *const self ) {
         CF_OPCODE_POP,
         (CfPushPopInfo) {
             .registerIndex = CF_REGISTER_EX,
-            .doReadImmediate = false,
             .isMemoryAccess = false,
+            .doReadImmediate = false,
         }.asByte,
 
         CF_OPCODE_MGS,
         CF_OPCODE_POP,
         (CfPushPopInfo) {
             .registerIndex = CF_REGISTER_FX,
-            .doReadImmediate = false,
             .isMemoryAccess = false,
+            .doReadImmediate = false,
         }.asByte,
         CF_OPCODE_CALL,
     };
@@ -497,7 +497,7 @@ void cfCodeGeneratorGenStatement( CfCodeGenerator *const self, const CfTirStatem
 
         char loopLabel[CF_LABEL_MAX] = {0};
 
-        snprintf(loopLabel, sizeof(loopLabel), "__%*.s__loop_%d",
+        snprintf(loopLabel, sizeof(loopLabel), "__%.*s__loop_%d",
             (int)cfStrLength(self->currentFunction),
             self->currentFunction.begin,
             loopIndex
@@ -505,7 +505,7 @@ void cfCodeGeneratorGenStatement( CfCodeGenerator *const self, const CfTirStatem
 
         char loopEndLabel[CF_LABEL_MAX] = {0};
 
-        snprintf(loopEndLabel, sizeof(loopEndLabel), "__%*.s__loop_end_%d",
+        snprintf(loopEndLabel, sizeof(loopEndLabel), "__%.*s__loop_end_%d",
             (int)cfStrLength(self->currentFunction),
             self->currentFunction.begin,
             loopIndex
@@ -629,11 +629,11 @@ void cfCodeGeneratorEnd( CfCodeGenerator *const self, CfStr sourceName, CfObject
     };
 
     // check that all allocations are success
-    cfCodeGeneratorAssert(self, false
-        || objectDst->sourceName == NULL
-        || objectDst->code       == NULL
-        || objectDst->links      == NULL
-        || objectDst->labels     == NULL
+    cfCodeGeneratorAssert(self, true
+        && objectDst->sourceName != NULL
+        && objectDst->code       != NULL
+        && objectDst->links      != NULL
+        && objectDst->labels     != NULL
     );
 
     // write deque data

@@ -247,6 +247,7 @@ bool cfDequePushArrayBack( CfDeque *deque, const void *array, const size_t array
             arrayLength * deque->elementSize
         );
         deque->back.index += arrayLength;
+        deque->size += arrayLength;
         return true;
     }
 

@@ -11,6 +11,9 @@ CfTirType cfTirTypeFromAstType( CfAstType type ) {
     case CF_AST_TYPE_F32  : return CF_TIR_TYPE_F32  ;
     case CF_AST_TYPE_VOID : return CF_TIR_TYPE_VOID ;
     }
+
+    assert(false && "unreachable");
+    return CF_TIR_TYPE_VOID;
 } // cfTirTypeFromAstType
 
 CfAstType cfAstTypeFromTirType( CfTirType type ) {
@@ -20,6 +23,9 @@ CfAstType cfAstTypeFromTirType( CfTirType type ) {
     case CF_TIR_TYPE_F32  : return CF_AST_TYPE_F32  ;
     case CF_TIR_TYPE_VOID : return CF_AST_TYPE_VOID ;
     }
+
+    assert(false && "unreachable");
+    return CF_AST_TYPE_VOID;
 } // cfTirTypeFromAstType
 
 CfTirBinaryOperator cfTirBinaryOperatorFromAstBinaryOperator( CfAstBinaryOperator op ) {
@@ -35,6 +41,9 @@ CfTirBinaryOperator cfTirBinaryOperatorFromAstBinaryOperator( CfAstBinaryOperato
     case CF_AST_BINARY_OPERATOR_LE  : return CF_TIR_BINARY_OPERATOR_LE  ;
     case CF_AST_BINARY_OPERATOR_GE  : return CF_TIR_BINARY_OPERATOR_GE  ;
     }
+
+    assert(false && "unreachable");
+    return CF_TIR_BINARY_OPERATOR_ADD;
 } // cfTirBinaryOperatorFromAstBinaryOperator
 
 bool cfTirBinaryOperatorIsComparison( CfTirBinaryOperator op ) {
@@ -50,6 +59,9 @@ bool cfTirBinaryOperatorIsComparison( CfTirBinaryOperator op ) {
     case CF_TIR_BINARY_OPERATOR_EQ  : return true  ;
     case CF_TIR_BINARY_OPERATOR_NE  : return true  ;
     }
+
+    assert(false && "unreachable");
+    return false;
 } // cfTirBinaryOperatorIsComparison
 
 

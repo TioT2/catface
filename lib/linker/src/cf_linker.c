@@ -33,7 +33,7 @@ typedef struct CfLinker_ {
     CfDarr          labels;          ///< labels
 
     CfLinkStatus    linkStatus;      ///< linking status
-    CfLinkDetails * details;     ///< linking details (non-null)
+    CfLinkDetails * details;         ///< linking details (non-null)
     jmp_buf         errorJumpBuffer; ///< jump buffer
 } CfLinker;
 
