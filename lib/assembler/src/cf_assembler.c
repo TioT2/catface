@@ -774,7 +774,7 @@ void cfAssemblerRun( CfAssembler *const self ) {
 
                 if (!cfAssemblerNextToken(self, &labelToken))
                     cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_JUMP_ARGUMENT_MISSING);
-                
+
                 if (labelToken.type != CF_ASSEMBLER_TOKEN_TYPE_IDENTIFIER)
                     cfAssemblerFinish(self, CF_ASSEMBLY_STATUS_INVALID_JUMP_ARGUMENT);
 

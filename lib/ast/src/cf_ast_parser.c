@@ -7,7 +7,7 @@
 
 #include <cf_deque.h>
 
-#include "cf_ast_parser.h"
+#include "cf_ast_internal.h"
 
 void cfAstParserFinish( CfAstParser *const self, CfAstParseResult parseResult ) {
     self->parseResult = parseResult;
@@ -18,6 +18,12 @@ void cfAstParserAssert( CfAstParser *const self, bool condition ) {
     if (!condition)
         cfAstParserFinish(self, (CfAstParseResult) { CF_AST_PARSE_STATUS_INTERNAL_ERROR });
 } // cfAstParserAssert
+
+void * cfAstParserAllocData( CfAstParser *const self, size_t size ) {
+    void *data = cfArenaAlloc(self->dataArena, size);
+    cfAstParserAssert(self, data != NULL);
+    return data;
+} // cfAstParserAllocData
 
 bool cfAstParseType( CfAstParser *const self, const CfLexerToken **tokenListPtr, CfAstType *typeDst ) {
     switch ((*tokenListPtr)->type) {
@@ -228,11 +234,9 @@ CfAstBlock * cfAstParseBlock( CfAstParser *const self, const CfLexerToken **toke
         cfAstParserAssert(self, cfDequePushBack(stmtDeque, &stmt));
     }
 
-    CfAstBlock *block = (CfAstBlock *)cfArenaAlloc(
-        self->dataArena,
+    CfAstBlock *block = (CfAstBlock *)cfAstParserAllocData(self,
         sizeof(CfAstBlock) + sizeof(CfAstStatement) * cfDequeLength(stmtDeque)
     );
-    cfAstParserAssert(self, block != NULL);
 
     block->statementCount = cfDequeLength(stmtDeque);
     cfDequeWrite(stmtDeque, block->statements);
@@ -275,11 +279,9 @@ CfAstFunction cfAstParseFunction( CfAstParser *const self, const CfLexerToken **
 
     // parameter array
     size_t paramArrayLength = cfDequeLength(paramDeque);
-    CfAstFunctionParam *paramArray = (CfAstFunctionParam *)cfArenaAlloc(
-        self->dataArena,
+    CfAstFunctionParam *paramArray = (CfAstFunctionParam *)cfAstParserAllocData(self,
         sizeof(CfAstFunctionParam) * paramArrayLength
     );
-    cfAstParserAssert(self, paramArray != NULL);
     cfDequeWrite(paramDeque, paramArray);
 
     // parse return type

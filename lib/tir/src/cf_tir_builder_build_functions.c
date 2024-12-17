@@ -570,7 +570,10 @@ static CfTirBlock * cfTirFunctionBuilderBuildBlock(
                 .if_ = {
                     .condition = condition,
                     .blockThen = cfTirFunctionBuilderBuildBlock(self, stmt->if_.blockThen),
-                    .blockElse = cfTirFunctionBuilderBuildBlock(self, stmt->if_.blockElse),
+                    // may be not presented
+                    .blockElse = stmt->if_.blockElse != NULL
+                        ? cfTirFunctionBuilderBuildBlock(self, stmt->if_.blockElse)
+                        : NULL,
                 },
             };
 

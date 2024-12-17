@@ -100,12 +100,9 @@ CompilerAddCfFileResult compilerAddCfFile( Compiler *const self, const char *sou
     ast = astParseResult.ok;
 
     // free temp variables
-    // cfArenaFree(self->tempArena);
+    cfArenaFree(self->tempArena);
 
-    CfTirBuildingResult tirBuildResult = cfTirBuild(
-        ast,
-        self->tempArena
-    );
+    CfTirBuildingResult tirBuildResult = cfTirBuild(ast, self->tempArena);
 
     if (tirBuildResult.status != CF_TIR_BUILDING_STATUS_OK)
         return (CompilerAddCfFileResult) {
@@ -114,7 +111,7 @@ CompilerAddCfFileResult compilerAddCfFile( Compiler *const self, const char *sou
         };
     tir = tirBuildResult.ok;
 
-    // cfArenaFree(self->tempArena);
+    cfArenaFree(self->tempArena);
 
     // run codegenerator
     CfCodegenResult codegenResult = cfCodegen(tir, CF_STR(sourceName), &file.object, self->tempArena);
@@ -125,9 +122,10 @@ CompilerAddCfFileResult compilerAddCfFile( Compiler *const self, const char *sou
             .codegenError = codegenResult
         };
 
-    // object built
-    cfAstDtor(ast);
+    // free unused resources
     cfTirDtor(tir);
+    cfAstDtor(ast);
+    free(tokenList);
 
     // 
     if (!cfDequePushBack(self->inputFileDeque, &file)) {

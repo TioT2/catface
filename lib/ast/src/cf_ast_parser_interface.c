@@ -4,7 +4,7 @@
 
 #include <cf_deque.h>
 
-#include "cf_ast_parser.h"
+#include "cf_ast_internal.h"
 
 CfAstParseResult cfAstParse( const CfLexerToken *tokenList, CfArena *tempArena ) {
     // arena that contains actual AST data

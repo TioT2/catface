@@ -100,7 +100,7 @@ uint32_t cfVmReadRegister( CfVm *const self, const uint32_t reg ) {
 
 void * cfVmGetMemoryPointer( CfVm *const self, const uint32_t addr ) {
     // perform address bound check
-    if (addr >= self->ramSize - 4) {
+    if (addr + 4 > self->ramSize) {
         self->termInfo.segmentationFault.memorySize = self->ramSize;
         self->termInfo.segmentationFault.addr = addr;
         cfVmTerminate(self, CF_TERM_REASON_SEGMENTATION_FAULT);

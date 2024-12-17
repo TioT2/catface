@@ -287,13 +287,15 @@ CfLexerTokenizeTextResult cfLexerTokenizeText( CfStr file ) {
         }
 
         // insert token to tspan
-        if (cfDarrPush(&tokenArray, &token) != CF_DARR_OK) {
-            cfDarrDtor(tokenArray);
-            return (CfLexerTokenizeTextResult) { CF_LEXER_TOKENIZE_TEXT_INTERNAL_ERROR };
-        }
+        if (token.type != CF_LEXER_TOKEN_TYPE_COMMENT) {
+            if (cfDarrPush(&tokenArray, &token) != CF_DARR_OK) {
+                cfDarrDtor(tokenArray);
+                return (CfLexerTokenizeTextResult) { CF_LEXER_TOKENIZE_TEXT_INTERNAL_ERROR };
+            }
 
-        if (token.type == CF_LEXER_TOKEN_TYPE_END)
-            break;
+            if (token.type == CF_LEXER_TOKEN_TYPE_END)
+                break;
+        }
 
         // update rest
         rest.begin = token.span.end;

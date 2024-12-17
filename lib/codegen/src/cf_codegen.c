@@ -584,7 +584,8 @@ void cfCodeGeneratorGenStatement( CfCodeGenerator *const self, const CfTirStatem
         cfCodeGeneratorAddLink(self, CF_STR(ifEndLabel));
 
         cfCodeGeneratorAddLabel(self, CF_STR(elseLabel));
-        cfCodeGeneratorGenBlock(self, statement->if_.blockElse);
+        if (statement->if_.blockElse != NULL)
+            cfCodeGeneratorGenBlock(self, statement->if_.blockElse);
         cfCodeGeneratorAddLabel(self, CF_STR(ifEndLabel));
         break;
     }

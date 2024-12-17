@@ -112,7 +112,10 @@ typedef struct CfLexerTokenizeFileResult_ {
  * 
  * @return file tokenization result
  * 
- * @note resulting array is ok to destoy with standard free() function.
+ * @note
+ * - resulting array is ok to destoy with standard free() function.
+ * 
+ * - resulting token sequence do not contain comment tokens
  */
 CfLexerTokenizeTextResult cfLexerTokenizeText( CfStr file );
 

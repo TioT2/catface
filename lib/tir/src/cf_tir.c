@@ -232,8 +232,7 @@ CfTir * cfTirBuildFromAst( CfTirBuilder *const self, const CfAst *ast ) {
     CfTir *tir = (CfTir *)cfTirBuilderAllocData(self, sizeof(CfTir));
 
     // build function array
-    CfTirFunction *functionArray = (CfTirFunction *)cfTirBuilderAllocData(
-        self,
+    CfTirFunction *functionArray = (CfTirFunction *)cfTirBuilderAllocData(self,
         sizeof(CfTirFunction) * cfDequeLength(self->functions)
     );
 

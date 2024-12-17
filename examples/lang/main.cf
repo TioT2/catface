@@ -34,10 +34,15 @@ fn main() {
     let discriminant: f32 = discriminant(a, b, c);
 
     if 0.0 as f32 < discriminant {
-        let discriminant_sqrt: f32 = __cfvm_f32_sqrt(discriminant);
+        if f32_is_equal(discriminant, 0.0 as f32) {
+            __cfvm_f32_write((0.0 as f32 - b) / (2.0 as f32 * a));
+        } else {
+            let discriminant_sqrt: f32 = __cfvm_f32_sqrt(discriminant);
 
-        __cfvm_f32_write((0.0 as f32 - b - discriminant_sqrt) / (2.0 as f32 * a));
-        __cfvm_f32_write((0.0 as f32 - b + discriminant_sqrt) / (2.0 as f32 * a));
+            __cfvm_f32_write((0.0 as f32 - b - discriminant_sqrt) / (2.0 as f32 * a));
+            __cfvm_f32_write((0.0 as f32 - b + discriminant_sqrt) / (2.0 as f32 * a));
+        }
+
     }
 
 } // main
