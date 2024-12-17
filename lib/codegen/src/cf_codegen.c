@@ -8,6 +8,56 @@
 
 #include "cf_codegen_internal.h"
 
+/// @brief intrinsict
+typedef enum CfCodeGeneratorInstrinsict_ {
+    CF_CODE_GENERATOR_INTRINSICT_F32_READ,  ///< read f32
+    CF_CODE_GENERATOR_INTRINSICT_F32_WRITE, ///< write f32
+} CfCodeGeneratorInstrinsict;
+
+/// @brief insintrisct info
+typedef struct CfCodeGeneratorIntrinsictInfo_ {
+    const CfTirFunctionPrototype * funcPrototype; ///< function prototype
+    CfCodeGeneratorInstrinsict     intrinsict;    ///< intrinsict
+} CfCodeGeneratorIntrinsictInfo;
+
+/**
+ * @brief get intrinsict info
+ * 
+ * @param[in] name intrinsict name
+ * 
+ * @return info ptr, NULL if there's no corresponding intrinsict
+ */
+static const CfCodeGeneratorIntrinsictInfo * cfCodeGeneratorGetIntrinsictInfo( CfStr name ) {
+    if (cfStrIsSame(name, CF_STR("__cfvm_f32_read"))) {
+        static CfTirFunctionPrototype prototype = {
+            .inputTypeArray = NULL,
+            .inputTypeArrayLength = 0,
+            .outputType = CF_TIR_TYPE_F32,
+        };
+        static CfCodeGeneratorIntrinsictInfo info = {
+            .funcPrototype = &prototype,
+            .intrinsict = CF_CODE_GENERATOR_INTRINSICT_F32_READ,
+        };
+
+        return &info;
+    } else if (cfStrIsSame(name, CF_STR("__cfvm_f32_write"))) {
+        static CfTirType type = CF_TIR_TYPE_F32;
+        static CfTirFunctionPrototype prototype = {
+            .inputTypeArray = &type,
+            .inputTypeArrayLength = 1,
+            .outputType = CF_TIR_TYPE_VOID,
+        };
+        static CfCodeGeneratorIntrinsictInfo info = {
+            .funcPrototype = &prototype,
+            .intrinsict = CF_CODE_GENERATOR_INTRINSICT_F32_WRITE,
+        };
+
+        return &info;
+    } else {
+        return NULL;
+    }
+} // cfCodeGeneratorGetIntrinsictInfo
+
 void cfCodeGeneratorFinish( CfCodeGenerator *const self, CfCodegenResult result ) {
     self->result = result;
     longjmp(self->finishBuffer, 1);
@@ -80,7 +130,7 @@ void cfCodeGeneratorAddConstant( CfCodeGenerator *const self, CfStr name, uint32
 } // cfCodeGeneratorAddConstant
 
 void cfCodeGeneratorBegin( CfCodeGenerator *const self ) {
-    // write this code to 
+    // write this code to
     /*
         mgs
         pop ex
@@ -161,7 +211,7 @@ void cfCodeGeneratorGenExpression( CfCodeGenerator *const self, const CfTirExpre
                 .registerIndex   = CF_REGISTER_CZ,
                 .doReadImmediate = true
             },
-            *(const float *)&expression->constF32
+            *(const int32_t *)&expression->constF32
         );
         break;
     }
@@ -258,20 +308,48 @@ void cfCodeGeneratorGenExpression( CfCodeGenerator *const self, const CfTirExpre
         // execute argument expressions in reverse order
         for (int32_t i = expression->call.inputArrayLength - 1; i >= 0; i--)
             cfCodeGeneratorGenExpression(self, expression->call.inputArray[i]);
-        // call function, actually
+        // call function, actually>=
         const CfTirFunction *function = cfTirGetFunctionById(self->tir, expression->call.functionId);
         cfCodeGeneratorAssert(self, function != NULL);
 
-        // call function by name
-        cfCodeGeneratorWriteOpcode(self, CF_OPCODE_CALL);
-        cfCodeGeneratorAddLink(self, function->name);
+        const CfCodeGeneratorIntrinsictInfo *info = cfCodeGeneratorGetIntrinsictInfo(function->name);
 
-        // push AX to stack
-        cfCodeGeneratorWritePushPop(self,
-            CF_OPCODE_PUSH,
-            (CfPushPopInfo) { CF_REGISTER_AX },
-            0
-        );
+        if (info != NULL) {
+            switch (info->intrinsict) {
+            case CF_CODE_GENERATOR_INTRINSICT_F32_READ: {
+                // syscall 0
+                int32_t n = 0;
+                cfCodeGeneratorWriteOpcode(self, CF_OPCODE_SYSCALL);
+                cfCodeGeneratorWriteCode(self, &n, 4);
+                break;
+            }
+
+            case CF_CODE_GENERATOR_INTRINSICT_F32_WRITE: {
+                // syscall 1
+                int32_t n = 1;
+                cfCodeGeneratorWriteOpcode(self, CF_OPCODE_SYSCALL);
+                cfCodeGeneratorWriteCode(self, &n, 4);
+                cfCodeGeneratorWritePushPop(self,
+                    CF_OPCODE_PUSH,
+                    (CfPushPopInfo) { CF_REGISTER_CZ },
+                    0
+                );
+                break;
+            }
+            }
+        } else {
+            // call function by name
+            cfCodeGeneratorWriteOpcode(self, CF_OPCODE_CALL);
+            cfCodeGeneratorAddLink(self, function->name);
+
+            // push AX to stack
+            cfCodeGeneratorWritePushPop(self,
+                CF_OPCODE_PUSH,
+                (CfPushPopInfo) { CF_REGISTER_AX },
+                0
+            );
+        }
+
         break;
     }
 
@@ -547,10 +625,60 @@ void cfCodeGeneratorGenStatement( CfCodeGenerator *const self, const CfTirStatem
     }
 } // cfCodeGeneratorGenStatement
 
+/**
+ * @brief validate intrinsict prototype
+ * 
+ * @param[in] self      code generator pointer
+ * @param[in] name      intrinsict name (MUST start from __cfvm)
+ * @param[in] prototype actually, function prototype
+ * 
+ * @note Finishes with UNKNOWN_INTRINSICT if name doesn't corresponds to existing CFVM intrinsict.
+ * With INVALID_INTRINSICT_PROTOTYPE if prototype doesn't match actual function prototype.
+ */
+void cfCodeGeneratorCheckIntrinsictPrototype(
+    CfCodeGenerator              *const self,
+    CfStr                               name,
+    const CfTirFunctionPrototype *      prototype
+) {
+    const CfCodeGeneratorIntrinsictInfo *info = cfCodeGeneratorGetIntrinsictInfo(name);
+
+    // info
+    if (!info)
+        cfCodeGeneratorFinish(self, (CfCodegenResult) {
+            .status = CF_CODEGEN_STATUS_UNKNOWN_INTRINSICT,
+            .unknownIntrinsict = name,
+        });
+
+    // function prototype is same (or not)
+    if (!cfTirFunctionPrototypeIsSame(prototype, info->funcPrototype))
+        return cfCodeGeneratorFinish(self, (CfCodegenResult) {
+            .status = CF_CODEGEN_STATUS_INVALID_INTRINSICT_PROTOTYPE,
+            .invalidIntrinsictPrototype = {
+                .intrisictName = name,
+            },
+        });
+} // cfCodegenValidateIntrinsictPrototype
+
 void cfCodeGeneratorGenFunction( CfCodeGenerator *const self, const CfTirFunction *function ) {
+    bool isIntrinsict = cfStrStartsWith(function->name, "__cfvm");
+
     // only if function is implemented...
-    if (function->impl == NULL)
+    if (function->impl == NULL) {
+        if (isIntrinsict)
+            // match function declaration with intrinsict declaration
+            cfCodeGeneratorCheckIntrinsictPrototype(
+                self,
+                function->name,
+                &function->prototype
+            );
         return;
+    }
+
+    if (isIntrinsict)
+        cfCodeGeneratorFinish(self, (CfCodegenResult) {
+            .status = CF_CODEGEN_STATUS_CANNOT_IMPLEMENT_INTRINSICT,
+            .cannotImplementIntrinsict = function,
+        });
 
     // enter 'function context'
     self->currentFunction = function->name;

@@ -10,10 +10,13 @@
 
 /// @brief code generation status
 typedef enum CfCodegenStatus_ {
-    CF_CODEGEN_STATUS_OK,                 ///< parsing succeeded
-    CF_CODEGEN_STATUS_INTERNAL_ERROR,     ///< internal error
-    CF_CODEGEN_STATUS_TOO_LONG_NAME,      ///< function name is too long
-    CF_CODEGEN_STATUS_RESERVED_NAME_USED, ///< reserved name computed
+    CF_CODEGEN_STATUS_OK,                           ///< parsing succeeded
+    CF_CODEGEN_STATUS_INTERNAL_ERROR,               ///< internal error
+    CF_CODEGEN_STATUS_TOO_LONG_NAME,                ///< function name is too long
+    CF_CODEGEN_STATUS_RESERVED_NAME_USED,           ///< reserved name computed
+    CF_CODEGEN_STATUS_UNKNOWN_INTRINSICT,           ///< unknown intrinsict function
+    CF_CODEGEN_STATUS_CANNOT_IMPLEMENT_INTRINSICT,  ///< user is trying to implement function reserved as CFVM intrinsict
+    CF_CODEGEN_STATUS_INVALID_INTRINSICT_PROTOTYPE, ///< invalid intrinsict prototype
 } CfCodegenStatus;
 
 /// @brief code generation result
@@ -21,8 +24,17 @@ typedef struct CfCodegenResult_ {
     CfCodegenStatus status; ///< codegen status
 
     union {
-        CfStr tooLongName;  ///< name is TOO long (exceeds CF_LABEL_MAX)
-        CfStr reservedName; ///< reserved name
+        CfStr tooLongName;       ///< name is TOO long (exceeds CF_LABEL_MAX)
+        CfStr reservedName;      ///< reserved name
+        CfStr unknownIntrinsict; ///< unknown CFVM intrinsict function
+
+        const CfTirFunction *cannotImplementIntrinsict; ///< intrinsict function pointer
+
+        struct {
+            CfStr                          intrisictName;     ///< intrinsict name
+            const CfTirFunctionPrototype * expectedPrototype; ///< expected function prototype
+            const CfTirFunctionPrototype * actualPrototype;   ///< actual function prototype
+        } invalidIntrinsictPrototype;
     };
 } CfCodegenResult;
 

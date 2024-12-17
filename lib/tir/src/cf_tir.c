@@ -65,6 +65,26 @@ bool cfTirBinaryOperatorIsComparison( CfTirBinaryOperator op ) {
 } // cfTirBinaryOperatorIsComparison
 
 
+bool cfTirFunctionPrototypeIsSame(
+    const CfTirFunctionPrototype *lhs,
+    const CfTirFunctionPrototype *rhs
+) {
+    assert(lhs != NULL);
+    assert(rhs != NULL);
+
+    if (lhs->outputType != rhs->outputType)
+        return false;
+
+    if (lhs->inputTypeArrayLength != rhs->inputTypeArrayLength)
+        return false;
+
+    for (size_t i = 0; i < lhs->inputTypeArrayLength; i++)
+        if (lhs->inputTypeArray[i] != rhs->inputTypeArray[i])
+            return false;
+
+    return true;
+} // cfTirFunctionPrototypeIsSame
+
 /**
  * @brief check for function matches prototype
  * 
@@ -221,7 +241,7 @@ CfTir * cfTirBuildFromAst( CfTirBuilder *const self, const CfAst *ast ) {
     if (cfDequeFrontCursor(self->functions, &functionCursor)) {
         size_t index = 0;
         do {
-            functionArray[index] = ((CfTirBuilderFunction *)cfDequeCursorGet(&functionCursor))->function;
+            functionArray[index++] = ((CfTirBuilderFunction *)cfDequeCursorGet(&functionCursor))->function;
         } while (cfDequeCursorAdvance(&functionCursor, 1));
         cfDequeCursorDtor(&functionCursor);
     }
@@ -310,7 +330,7 @@ size_t cfTirGetFunctionArrayLength( const CfTir *tir ) {
 const CfTirFunction * cfTirGetFunctionById( const CfTir *tir, CfTirFunctionId functionId ) {
     assert(tir != NULL);
 
-    if (tir->functionArrayLength >= functionId)
+    if (tir->functionArrayLength <= functionId)
         return NULL;
     return &tir->functionArray[(size_t)functionId];
 } // cfTirGetFunctionById

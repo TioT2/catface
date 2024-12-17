@@ -93,6 +93,19 @@ typedef struct CfTirFunctionPrototype_ {
     CfTirType   outputType;           ///< input type
 } CfTirFunctionPrototype;
 
+/**
+ * @brief compare function prototypes
+ * 
+ * @param[in] lhs left hand side (non-null)
+ * @param[in] rhs right hand side (non-null)
+ * 
+ * @return true if prototypes are same, false if not
+ */
+bool cfTirFunctionPrototypeIsSame(
+    const CfTirFunctionPrototype *lhs,
+    const CfTirFunctionPrototype *rhs
+);
+
 /// @brief function structure
 typedef struct CfTirFunction_ {
     CfTirFunctionPrototype     prototype; ///< prototype
@@ -137,6 +150,13 @@ typedef enum CfTirBinaryOperator_ {
  */
 bool cfTirBinaryOperatorIsComparison( CfTirBinaryOperator op );
 
+/// @brief call expression
+typedef struct CfTirExpressionCall_ {
+    CfTirFunctionId    functionId;       ///< function
+    CfTirExpression ** inputArray;       ///< function input array
+    size_t             inputArrayLength; ///< function input array length
+} CfTirExpressionCall;
+
 /// @brief expression structure
 struct CfTirExpression_ {
     CfTirExpressionType type;
@@ -155,11 +175,7 @@ struct CfTirExpression_ {
             CfTirExpression     * rhs; ///< right hand side
         } binaryOperator;
 
-        struct {
-            CfTirFunctionId    functionId;       ///< function
-            CfTirExpression ** inputArray;       ///< function input array
-            size_t             inputArrayLength; ///< function input array length
-        } call;
+        CfTirExpressionCall call; ///< call expression
 
         struct {
             CfTirLocalVariableId   destination; ///< assignment destination

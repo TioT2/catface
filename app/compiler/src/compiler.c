@@ -90,7 +90,7 @@ CompilerAddCfFileResult compilerAddCfFile( Compiler *const self, const char *sou
     ast = astParseResult.ok;
 
     // free temp variables
-    cfArenaFree(self->tempArena);
+    // cfArenaFree(self->tempArena);
 
 
     CfTirBuildingResult tirBuildResult = cfTirBuild(
@@ -105,7 +105,7 @@ CompilerAddCfFileResult compilerAddCfFile( Compiler *const self, const char *sou
         };
     tir = tirBuildResult.ok;
 
-    cfArenaFree(self->tempArena);
+    // cfArenaFree(self->tempArena);
 
     // run codegenerator
     CfCodegenResult codegenResult = cfCodegen(tir, &file.object, self->tempArena);
@@ -160,7 +160,7 @@ CompilerBuildResult compilerBuildExecutable( Compiler *const self ) {
             },
         };
 
-    cfArenaFree(self->tempArena);
+    // cfArenaFree(self->tempArena);
 
     return (CompilerBuildResult) {
         .status = COMPILER_BUILD_STATUS_OK,

@@ -60,21 +60,28 @@ void printHelp( void ) {
  * @return exit status (0 on success)
  */
 int main( int argc_, const char **argv_ ) {
-    // int argc = argc_;
-    // const char **argv = argv_;
-    int argc = 4;
-    const char *argv[] = {
-        "amogus",
-        "-o",
-        "examples/lang/main.cfexe",
-        "examples/lang/main.cf",
-    };
+    int argc = argc_;
+    const char **argv = argv_;
+    // int argc = 4;
+    // const char *argv[] = {
+    //     "amogus",
+    //     "-o",
+    //     "temp/main.cfexe",
+    //     "examples/lang/main.cf",
+    // };
+
+    if (argc <= 1) {
+        printHelp();
+        return 0;
+    }
     
     // arguments: cf_compiler -o main.cfexe -l main.cf example1.cf example2.cf
 
     struct {
+        bool doHelp;
         const char *outName;
     } options = {
+        .doHelp = false,
         .outName = "out.cfexe",
     };
 
@@ -89,12 +96,21 @@ int main( int argc_, const char **argv_ ) {
             continue;
         }
 
+        if (strcmp(argv[argumentIndex], "-h") == 0) {
+            options.doHelp = true;
+            continue;
+        }
+
         if (argv[argumentIndex][0] == '-') {
             printf("Unknown flag: \"%s\"\n", argv[argumentIndex]);
             return 0;
         }
 
         break;
+    }
+
+    if (options.doHelp) {
+        printHelp();
     }
 
     Compiler *compiler = compilerCtor();
