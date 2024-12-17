@@ -797,7 +797,7 @@ void cfCodeGeneratorEnd( CfCodeGenerator *const self, CfStr sourceName, CfObject
     cfDequeWrite(self->labelDeque, objectDst->labels);
 } // cfCodeGeneratorEnd
 
-CfCodegenResult cfCodegen( const CfTir *tir, CfObject *dst, CfArena *tempArena ) {
+CfCodegenResult cfCodegen( const CfTir *tir, CfStr sourceName, CfObject *dst, CfArena *tempArena ) {
     // zero destination memory
     memset(dst, 0, sizeof(CfObject));
 
@@ -838,7 +838,7 @@ CfCodegenResult cfCodegen( const CfTir *tir, CfObject *dst, CfArena *tempArena )
     for (size_t i = 0; i < functionArrayLength; i++)
         cfCodeGeneratorGenFunction(&generator, &functionArray[i]);
 
-    cfCodeGeneratorEnd(&generator, cfTirGetSourceName(tir), dst);
+    cfCodeGeneratorEnd(&generator, sourceName, dst);
 
     return (CfCodegenResult) { CF_CODEGEN_STATUS_OK };
 } // cfCodegen

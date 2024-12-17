@@ -41,13 +41,14 @@ typedef struct CfCodegenResult_ {
 /**
  * @brief compile TIR to CF Object format
  * 
- * @param[in] tir       TIR pointer (non-null)
- * @param[in] dst       code generation destination (non-null)
- * @param[in] tempArena arena for temporary variable allocation (nullable)
+ * @param[in] tir        TIR pointer (non-null)
+ * @param[in] sourceName name of source file
+ * @param[in] dst        code generation destination (non-null)
+ * @param[in] tempArena  arena for temporary variable allocation (nullable)
  * 
  * @return code generation result
  */
-CfCodegenResult cfCodegen( const CfTir *tir, CfObject *dst, CfArena *tempArena );
+CfCodegenResult cfCodegen( const CfTir *tir, CfStr sourceName, CfObject *dst, CfArena *tempArena );
 
 #endif // !defined(CF_CODEGEN_H_)
 

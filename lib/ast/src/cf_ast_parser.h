@@ -41,26 +41,6 @@ void cfAstParserFinish( CfAstParser *const self, CfAstParseResult parseResult );
 void cfAstParserAssert( CfAstParser *const self, bool condition );
 
 /**
- * @brief token list parsing function
- * 
- * @param[in]  self             parser pointer
- * @param[in]  fileContents     text to tokenize
- * @param[out] tokenArrayDst    resulting token array start pointer destination (non-null)
- * @param[out] tokenArrayLenDst resulting token array length destination (non-null)
- * 
- * @note
- * - Token array is allocated from temporary arena.
- * 
- * - Token array **is** terminated by token with CF_LEXER_TOKEN_TYPE_END type
- */
-void cfAstParseTokenList(
-    CfAstParser *const self,
-    CfStr              fileContents,
-    CfLexerToken **      tokenArrayDst,
-    size_t      *      tokenArrayLenDst
-);
-
-/**
  * @brief type from AST parsing function
  * 
  * @param[in]     self         parser pointer
@@ -142,18 +122,18 @@ CfAstVariable cfAstParseVariable( CfAstParser *const self, const CfLexerToken **
 bool cfAstParseDecl( CfAstParser *const self, const CfLexerToken **tokenListPtr, CfAstDeclaration *dst );
 
 /**
- * @brief declaration array parsing function
+ * @brief parser (as 'self') main function
  * 
  * @param[in]  self            parser pointer
- * @param[in]  fileContents    text to parse
+ * @param[in]  tokenList       token list to parse
  * @param[out] declArryDst     declaration array (non-null)
  * @param[out] declArrayLenDst declcaration array length destination (non-null)
  */
-void cfAstParseDecls(
-    CfAstParser  *const self,
-    CfStr               fileContents,
-    CfAstDeclaration   **      declArrayDst,
-    size_t       *      declArrayLenDst
+void cfAstParserStart(
+    CfAstParser        *const self,
+    const CfLexerToken *      tokenList,
+    CfAstDeclaration   **     declArrayDst,
+    size_t             *      declArrayLenDst
 );
 
 #ifdef __cplusplus

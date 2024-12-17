@@ -2,9 +2,11 @@
  * @brief parser interface implementation file
  */
 
+#include <cf_deque.h>
+
 #include "cf_ast_parser.h"
 
-CfAstParseResult cfAstParse( CfStr fileName, CfStr fileContents, CfArena *tempArena ) {
+CfAstParseResult cfAstParse( const CfLexerToken *tokenList, CfArena *tempArena ) {
     // arena that contains actual AST data
     CfArena *dataArena = NULL;
     CfAst *ast = NULL;
@@ -49,7 +51,7 @@ CfAstParseResult cfAstParse( CfStr fileName, CfStr fileContents, CfArena *tempAr
     CfAstDeclaration *declArray = NULL;
     size_t declArrayLen = 0;
 
-    cfAstParseDecls(&parser, fileContents, &declArray, &declArrayLen);
+    cfAstParserStart(&parser, tokenList, &declArray, &declArrayLen);
 
     // destroy temp arena in case if it's created in this function
     if (tempArenaOwned)
@@ -57,9 +59,7 @@ CfAstParseResult cfAstParse( CfStr fileName, CfStr fileContents, CfArena *tempAr
 
     // assemble AST from parts.
     *ast = (CfAst) {
-        .dataArena            = dataArena,
-        .sourceName     = fileName,
-        .sourceContents = fileContents,
+        .dataArena      = dataArena,
         .declArray      = declArray,
         .declArrayLen   = declArrayLen,
     };

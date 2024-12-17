@@ -43,9 +43,10 @@ char * readFile( const char *path ) {
  */
 int main( void ) {
     // 'example.cf' file is processed to be C++ raw string and added to /include/gen build subdirectory
-    char  * text = NULL;
-    CfAst * ast  = NULL;
-    CfTir * tir  = NULL;
+    char         * text      = NULL;
+    CfLexerToken * tokenList = NULL;
+    CfAst        * ast       = NULL;
+    CfTir        * tir       = NULL;
 
     CfArena *tempArena = cfArenaCtor(1024);
     assert(tempArena != NULL);
@@ -58,7 +59,16 @@ int main( void ) {
     }
 
     {
-        CfAstParseResult result = cfAstParse(CF_STR("square_equation_solver.cf"), CF_STR(text), tempArena);
+        CfLexerTokenizeTextResult result = cfLexerTokenizeText(CF_STR(text));
+
+        if (result.status != CF_LEXER_TOKENIZE_TEXT_OK)
+            return 1;
+
+        tokenList = result.ok.array;
+    }
+
+    {
+        CfAstParseResult result = cfAstParse(tokenList, tempArena);
 
         if (result.status != CF_AST_PARSE_STATUS_OK)
             return 1;
@@ -80,6 +90,7 @@ int main( void ) {
     cfArenaDtor(tempArena);
     cfTirDtor(tir);
     cfAstDtor(ast);
+    free(tokenList);
     free(text);
 
     return 0;

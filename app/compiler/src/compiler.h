@@ -43,9 +43,10 @@ typedef struct CompilrAddCfFileResult_ {
     CompilerAddCfFileStatus status; ///< 
 
     union {
-        CfAstParseResult    astError;     ///< AST building error
-        CfTirBuildingResult tirError;     ///< TIR building error
-        CfCodegenResult     codegenError; ///< code generation error
+        CfLexerTokenizeTextResult lexerError;   ///< lexer error
+        CfAstParseResult          astError;     ///< AST building error
+        CfTirBuildingResult       tirError;     ///< TIR building error
+        CfCodegenResult           codegenError; ///< code generation error
     };
 } CompilerAddCfFileResult;
 

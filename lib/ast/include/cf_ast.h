@@ -258,32 +258,28 @@ const CfAstDeclaration * cfAstGetDeclarations( const CfAst *ast );
  */
 size_t cfAstGetDeclarationCount( const CfAst *ast );
 
-/**resultingType
- * @brief AST source file name getting function
- * 
- * @param[in] ast AST to get source file name of (non-null)
- * 
- * @return AST source file name slice
- */
-CfStr cfAstGetSourceFileName( const CfAst *ast );
-
 /// @brief AST parsing status
 typedef enum CfAstParseStatus_ {
+    // general
     CF_AST_PARSE_STATUS_OK,                             ///< parsing succeeded
     CF_AST_PARSE_STATUS_INTERNAL_ERROR,                 ///< internal error occured
-    CF_AST_PARSE_STATUS_UNEXPECTED_SYMBOL,              ///< unexpected symbol occured (tokenization error)
     CF_AST_PARSE_STATUS_UNEXPECTED_TOKEN_TYPE,          ///< function signature parsing error occured
+
+    // expression parsing-related
     CF_AST_PARSE_STATUS_EXPR_BRACKET_INTERNALS_MISSING, ///< no contents in sub-expression
     CF_AST_PARSE_STATUS_EXPR_RHS_MISSING,               ///< right hand side missing
     CF_AST_PARSE_STATUS_EXPR_ASSIGNMENT_VALUE_MISSING,  ///< missing value to assign to expression
 
+    // if-else-related
     CF_AST_PARSE_STATUS_IF_CONDITION_MISSING,           ///< 'if' statement condition missing
     CF_AST_PARSE_STATUS_IF_BLOCK_MISSING,               ///< 'if' statement code block is missing
     CF_AST_PARSE_STATUS_ELSE_BLOCK_MISSING,             ///< 'else' code block is missing
 
+    // while-related
     CF_AST_PARSE_STATUS_WHILE_CONDITION_MISSING,        ///< 'while' statement condition missing
     CF_AST_PARSE_STATUS_WHILE_BLOCK_MISSING,            ///< 'while' statement code block is missing
 
+    // variable declaration-related
     CF_AST_PARSE_STATUS_VARIABLE_TYPE_MISSING,          ///< no variable type
     CF_AST_PARSE_STATUS_VARIABLE_INIT_MISSING,          ///< variable initailizer missing
 } CfAstParseStatus;
@@ -296,13 +292,8 @@ typedef struct CfAstParseResult_ {
         CfAst *ok; ///< success case
 
         struct {
-            char   symbol; ///< unexpected symbol itself
-            size_t offset; ///< offset to the symbol in source text
-        } unexpectedSymbol;
-
-        struct {
-            CfLexerToken     actualToken;  ///< actual token
-            CfLexerTokenType expectedType; ///< expected token type
+            const CfLexerToken * actualToken;  ///< actual token
+            CfLexerTokenType     expectedType; ///< expected token type
         } unexpectedTokenType;
 
         // Do something with this situation...
@@ -323,16 +314,17 @@ typedef struct CfAstParseResult_ {
 /**
  * @brief AST from file contents parsing function
  * 
- * @param[in] fileName     input file name
- * @param[in] fileContents text to parse, actually
- * @param[in] tempArena    arena to allocate temporary memory in (nullable)
+ * @param[in] tokenList list of tokens to build AST from. (non-null)
+ * @param[in] tempArena arena to allocate temporary memory in (nullable)
  * 
  * @return operation result
  * 
  * @note
- * - 'fileName' and 'fileContents' parameter contents **must** live longer, than resulting AST in case if this function execution succeeded.
+ * - tokenList **must** live longer, than AST.
+ * 
+ * - tokenList **must** have CF_LEXER_TOKEN_TYPE_END in the parsed region end
  */
-CfAstParseResult cfAstParse( CfStr fileName, CfStr fileContents, CfArena *tempArena );
+CfAstParseResult cfAstParse( const CfLexerToken *tokenList, CfArena *tempArena );
 
 #ifdef __cplusplus
 }

@@ -13,21 +13,21 @@ extern "C" {
 
 /// @brief token type (union tag)
 typedef enum CfLexerTokenType_ {
-    CF_LEXER_TOKEN_TYPE_INTEGER,         ///< integer constant
-    CF_LEXER_TOKEN_TYPE_FLOATING,        ///< floating-point constant
-    CF_LEXER_TOKEN_TYPE_IDENTIFIER,      ///< identifier
+    CF_LEXER_TOKEN_TYPE_INTEGER,                ///< integer constant
+    CF_LEXER_TOKEN_TYPE_FLOATING,               ///< floating-point constant
+    CF_LEXER_TOKEN_TYPE_IDENTIFIER,             ///< identifier
 
-    CF_LEXER_TOKEN_TYPE_FN,              ///< "fn"     keyword
-    CF_LEXER_TOKEN_TYPE_LET,             ///< "let"    keyword
-    CF_LEXER_TOKEN_TYPE_I32,             ///< "i32"    keyword
-    CF_LEXER_TOKEN_TYPE_U32,             ///< "u32"    keyword
-    CF_LEXER_TOKEN_TYPE_F32,             ///< "f32"    keyword
-    CF_LEXER_TOKEN_TYPE_VOID,            ///< "void"   keyword
-    CF_LEXER_TOKEN_TYPE_IF,              ///< "if"     keyword
-    CF_LEXER_TOKEN_TYPE_ELSE,            ///< "else"   keyword
-    CF_LEXER_TOKEN_TYPE_WHILE,           ///< "while"  keyword
-    CF_LEXER_TOKEN_TYPE_AS,              ///< "as"     keyword
-    CF_LEXER_TOKEN_TYPE_RETURN,          ///< "return" keyword
+    CF_LEXER_TOKEN_TYPE_FN,                     ///< "fn"     keyword
+    CF_LEXER_TOKEN_TYPE_LET,                    ///< "let"    keyword
+    CF_LEXER_TOKEN_TYPE_I32,                    ///< "i32"    keyword
+    CF_LEXER_TOKEN_TYPE_U32,                    ///< "u32"    keyword
+    CF_LEXER_TOKEN_TYPE_F32,                    ///< "f32"    keyword
+    CF_LEXER_TOKEN_TYPE_VOID,                   ///< "void"   keyword
+    CF_LEXER_TOKEN_TYPE_IF,                     ///< "if"     keyword
+    CF_LEXER_TOKEN_TYPE_ELSE,                   ///< "else"   keyword
+    CF_LEXER_TOKEN_TYPE_WHILE,                  ///< "while"  keyword
+    CF_LEXER_TOKEN_TYPE_AS,                     ///< "as"     keyword
+    CF_LEXER_TOKEN_TYPE_RETURN,                 ///< "return" keyword
 
     CF_LEXER_TOKEN_TYPE_ANGULAR_BR_OPEN_EQUAL,  ///< "<=" character combination
     CF_LEXER_TOKEN_TYPE_ANGULAR_BR_CLOSE_EQUAL, ///< ">=" character combination
@@ -41,23 +41,23 @@ typedef enum CfLexerTokenType_ {
     CF_LEXER_TOKEN_TYPE_ANGULAR_BR_OPEN,        ///< '<' symbol
     CF_LEXER_TOKEN_TYPE_ANGULAR_BR_CLOSE,       ///< '>' symbol
 
-    CF_LEXER_TOKEN_TYPE_COLON,           ///< ':' symbol
-    CF_LEXER_TOKEN_TYPE_SEMICOLON,       ///< ';' symbol
-    CF_LEXER_TOKEN_TYPE_COMMA,           ///< ',' symbol
-    CF_LEXER_TOKEN_TYPE_EQUAL,           ///< '=' symbol
-    CF_LEXER_TOKEN_TYPE_PLUS,            ///< '+' symbol
-    CF_LEXER_TOKEN_TYPE_MINUS,           ///< '-' symbol
-    CF_LEXER_TOKEN_TYPE_ASTERISK,        ///< '*' symbol
-    CF_LEXER_TOKEN_TYPE_SLASH,           ///< '/' symbol
-    CF_LEXER_TOKEN_TYPE_CURLY_BR_OPEN,   ///< '{' symbol
-    CF_LEXER_TOKEN_TYPE_CURLY_BR_CLOSE,  ///< '}' symbol
-    CF_LEXER_TOKEN_TYPE_ROUND_BR_OPEN,   ///< '(' symbol
-    CF_LEXER_TOKEN_TYPE_ROUND_BR_CLOSE,  ///< ')' symbol
-    CF_LEXER_TOKEN_TYPE_SQUARE_BR_OPEN,  ///< '[' symbol
-    CF_LEXER_TOKEN_TYPE_SQUARE_BR_CLOSE, ///< ']' symbol
+    CF_LEXER_TOKEN_TYPE_COLON,                  ///< ':' symbol
+    CF_LEXER_TOKEN_TYPE_SEMICOLON,              ///< ';' symbol
+    CF_LEXER_TOKEN_TYPE_COMMA,                  ///< ',' symbol
+    CF_LEXER_TOKEN_TYPE_EQUAL,                  ///< '=' symbol
+    CF_LEXER_TOKEN_TYPE_PLUS,                   ///< '+' symbol
+    CF_LEXER_TOKEN_TYPE_MINUS,                  ///< '-' symbol
+    CF_LEXER_TOKEN_TYPE_ASTERISK,               ///< '*' symbol
+    CF_LEXER_TOKEN_TYPE_SLASH,                  ///< '/' symbol
+    CF_LEXER_TOKEN_TYPE_CURLY_BR_OPEN,          ///< '{' symbol
+    CF_LEXER_TOKEN_TYPE_CURLY_BR_CLOSE,         ///< '}' symbol
+    CF_LEXER_TOKEN_TYPE_ROUND_BR_OPEN,          ///< '(' symbol
+    CF_LEXER_TOKEN_TYPE_ROUND_BR_CLOSE,         ///< ')' symbol
+    CF_LEXER_TOKEN_TYPE_SQUARE_BR_OPEN,         ///< '[' symbol
+    CF_LEXER_TOKEN_TYPE_SQUARE_BR_CLOSE,        ///< ']' symbol
 
-    CF_LEXER_TOKEN_TYPE_COMMENT,         ///< comment
-    CF_LEXER_TOKEN_TYPE_END,             ///< text ending token
+    CF_LEXER_TOKEN_TYPE_COMMENT,                ///< comment
+    CF_LEXER_TOKEN_TYPE_END,                    ///< text ending token
 } CfLexerTokenType;
 
 /// @brief token representation structure (tagged union, actually)
@@ -82,6 +82,39 @@ typedef struct CfLexerToken_ {
  * @return true if parsed, false if not
  */
 bool cfLexerParseToken( CfStr str, CfStrSpan span, CfLexerToken *tokenDst );
+
+/// @brief file tokenization status
+typedef enum CfLexerTokenizeTextStatus_ {
+    CF_LEXER_TOKENIZE_TEXT_OK,                   ///< parsing succeeded
+    CF_LEXER_TOKENIZE_TEXT_INTERNAL_ERROR,       ///< internal error occured
+    CF_LEXER_TOKENIZE_TEXT_UNEXPECTED_CHARACTER, ///< unexpected character occured
+} CfLexerTokenizeTextStatus;
+
+/// @brief file tokenization result
+typedef struct CfLexerTokenizeFileResult_ {
+    CfLexerTokenizeTextStatus status; ///< status
+
+    union {
+
+        struct {
+            CfLexerToken * array;  ///< resulting token array
+            size_t         length; ///< resulting token array length
+        } ok; ///< success case
+
+        const char *unexpectedCharacter; ///< unexpected character occured
+    };
+} CfLexerTokenizeTextResult;
+
+/**
+ * @brief tokenize input file
+ * 
+ * @param[in] file file to tokenize
+ * 
+ * @return file tokenization result
+ * 
+ * @note resulting array is ok to destoy with standard free() function.
+ */
+CfLexerTokenizeTextResult cfLexerTokenizeText( CfStr file );
 
 #ifdef __cplusplus
 }

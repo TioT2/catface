@@ -46,11 +46,6 @@ size_t cfAstGetDeclarationCount( const CfAst *ast ) {
     return ast->declArrayLen;
 } // cfAstGetDeclarationCount
 
-CfStr cfAstGetSourceFileName( const CfAst *ast ) {
-    assert(ast != NULL);
-    return ast->sourceName;
-} // cfAstGetSourceFileName
-
 void cfAstSpanDumpJson( FILE *out, CfStrSpan span ) {
     fprintf(out, "[%u, %u]", span.begin, span.end);
 } // cfAstSpanDumpJson
@@ -69,14 +64,6 @@ void cfAstDumpJson( FILE *out, const CfAst *ast ) {
     assert(ast != NULL);
 
     fprintf(out, "{\n");
-
-    fprintf(out, "    \"sourceName\": \"");
-    cfStrWriteShielded(out, ast->sourceName);
-    fprintf(out, "\",\n");
-
-    fprintf(out, "    \"sourceContents\": \"");
-    cfStrWriteShielded(out, ast->sourceContents);
-    fprintf(out, "\",\n");
 
     fprintf(out, "    \"declarations\": [\n");
     for (size_t i = 0; i < ast->declArrayLen; i++) {

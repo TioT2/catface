@@ -251,7 +251,6 @@ CfTir * cfTirBuildFromAst( CfTirBuilder *const self, const CfAst *ast ) {
         .dataArena           = self->dataArena,
         .functionArray       = functionArray,
         .functionArrayLength = cfDequeLength(self->functions),
-        .sourceName          = cfAstGetSourceFileName(ast),
     };
 
     return tir;
@@ -334,10 +333,5 @@ const CfTirFunction * cfTirGetFunctionById( const CfTir *tir, CfTirFunctionId fu
         return NULL;
     return &tir->functionArray[(size_t)functionId];
 } // cfTirGetFunctionById
-
-CfStr cfTirGetSourceName( const CfTir *tir ) {
-    assert(tir != NULL);
-    return tir->sourceName;
-} // cfTirGetSourceName
 
 // cf_tir.c

@@ -6,6 +6,8 @@
 #include <ctype.h>
 #include <math.h>
 
+#include <cf_darr.h>
+
 #include "cf_lexer.h"
 
 /**
@@ -262,5 +264,58 @@ bool cfLexerParseToken( CfStr source, CfStrSpan span, CfLexerToken *tokenDst ) {
 
     return false;
 } // cfLexerParseToken
+
+
+
+CfLexerTokenizeTextResult cfLexerTokenizeText( CfStr file ) {
+    CfDarr tokenArray = cfDarrCtor(sizeof(CfLexerToken));
+
+    if (tokenArray == NULL)
+        return (CfLexerTokenizeTextResult) { CF_LEXER_TOKENIZE_TEXT_INTERNAL_ERROR };
+
+    CfStrSpan rest = { 0, (uint32_t)cfStrLength(file) };
+
+    for (;;) {
+        CfLexerToken token = {};
+
+        if (!cfLexerParseToken(file, rest, &token)) {
+            cfDarrDtor(tokenArray);
+            return (CfLexerTokenizeTextResult) {
+                .status = CF_LEXER_TOKENIZE_TEXT_UNEXPECTED_CHARACTER,
+                .unexpectedCharacter = file.begin + rest.begin
+            };
+        }
+
+        // insert token to tspan
+        if (cfDarrPush(&tokenArray, &token) != CF_DARR_OK) {
+            cfDarrDtor(tokenArray);
+            return (CfLexerTokenizeTextResult) { CF_LEXER_TOKENIZE_TEXT_INTERNAL_ERROR };
+        }
+
+        if (token.type == CF_LEXER_TOKEN_TYPE_END)
+            break;
+
+        // update rest
+        rest.begin = token.span.end;
+    }
+
+    // insert 
+    CfLexerToken *array = NULL;
+    size_t length = cfDarrLength(tokenArray);
+    if (cfDarrIntoData(tokenArray, (void **)&array) != CF_DARR_OK) {
+        cfDarrDtor(tokenArray);
+        return (CfLexerTokenizeTextResult) { CF_LEXER_TOKENIZE_TEXT_INTERNAL_ERROR };
+    }
+
+    cfDarrDtor(tokenArray);
+
+    return (CfLexerTokenizeTextResult) {
+        .status = CF_LEXER_TOKENIZE_TEXT_OK,
+        .ok = {
+            .array = array,
+            .length = length,
+        },
+    };
+} // cfLexerTokenizeText
 
 // cf_lexer.c

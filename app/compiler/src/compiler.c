@@ -71,15 +71,26 @@ CompilerAddCfFileResult compilerAddCfFile( Compiler *const self, const char *sou
         .name = sourceNameCopy,
     };
 
-    CfAst *ast = NULL;
-    CfTir *tir = NULL;
+    CfLexerToken * tokenList       = NULL;
+    size_t         tokenListLength = 0;
+    CfAst        * ast             = NULL;
+    CfTir        * tir             = NULL;
+
+    // parse token list
+    CfLexerTokenizeTextResult tokenizeTextResult = cfLexerTokenizeText(
+        (CfStr) { file.text, file.text + sourceLength }
+    );
+
+    if (tokenizeTextResult.status != CF_LEXER_TOKENIZE_TEXT_OK)
+        return (CompilerAddCfFileResult) {
+            .status = COMPILER_ADD_CF_FILE_STATUS_LEXER_ERROR,
+            .lexerError = tokenizeTextResult,
+        };
+    tokenList = tokenizeTextResult.ok.array;
+    tokenListLength = tokenizeTextResult.ok.length;
 
     // build AST
-    CfAstParseResult astParseResult = cfAstParse(
-        (CfStr) { file.name, file.name + sourceNameLength },
-        (CfStr) { file.text, file.text + sourceLength },
-        self->tempArena
-    );
+    CfAstParseResult astParseResult = cfAstParse(tokenList, self->tempArena);
 
     if (astParseResult.status != CF_AST_PARSE_STATUS_OK)
         return (CompilerAddCfFileResult) {
@@ -90,7 +101,6 @@ CompilerAddCfFileResult compilerAddCfFile( Compiler *const self, const char *sou
 
     // free temp variables
     // cfArenaFree(self->tempArena);
-
 
     CfTirBuildingResult tirBuildResult = cfTirBuild(
         ast,
@@ -107,7 +117,7 @@ CompilerAddCfFileResult compilerAddCfFile( Compiler *const self, const char *sou
     // cfArenaFree(self->tempArena);
 
     // run codegenerator
-    CfCodegenResult codegenResult = cfCodegen(tir, &file.object, self->tempArena);
+    CfCodegenResult codegenResult = cfCodegen(tir, CF_STR(sourceName), &file.object, self->tempArena);
 
     if (codegenResult.status != CF_CODEGEN_STATUS_OK)
         return (CompilerAddCfFileResult) {

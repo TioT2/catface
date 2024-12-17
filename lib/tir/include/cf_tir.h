@@ -227,15 +227,6 @@ size_t cfTirGetFunctionArrayLength( const CfTir *tir );
  */
 const CfTirFunction * cfTirGetFunctionById( const CfTir *tir, CfTirFunctionId functionId );
 
-/**
- * @brief TIR source name getting function
- * 
- * @param[in] tir TIR to get source name of
- * 
- * @return source file TIR generated from name (may be empty, actually)
- */
-CfStr cfTirGetSourceName( const CfTir *tir );
-
 /// @brief TIR from AST generation status
 typedef enum CfTirBuildingStatus_ {
     CF_TIR_BUILDING_STATUS_OK,                               ///< ok
