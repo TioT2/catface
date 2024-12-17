@@ -99,13 +99,6 @@ typedef enum CfRegister_ {
     CF_REGISTER_FX = 7, ///< general-purpose register 'f'
 } CfRegister;
 
-/// @brief pushpop instruciton additional data layout
-typedef struct CfInstructionPushPop_ {
-    uint8_t isMemoryAccess : 1; ///< do access memory
-    uint8_t regIndex       : 3; ///< register index
-    uint8_t useImm         : 1; ///< add 4-byte immediate after number
-} CfInstructionPushPop;
-
 /// @brief keycode representatiton enumeration
 typedef enum CfKey_ {
     // keys that can be represented as ASCII characters.
@@ -204,9 +197,9 @@ typedef enum CfOpcode_ {
     CF_OPCODE_SHL,    ///< shift 32-bit integer left
     CF_OPCODE_SHR,    ///< shift signed   i32 right
     CF_OPCODE_SAR,    ///< shift unsigned i32 right
-    CF_OPCODE_OR,     ///< shift unsigned i32 right
-    CF_OPCODE_XOR,    ///< shift unsigned i32 right
-    CF_OPCODE_AND,    ///< shift unsigned i32 right
+    CF_OPCODE_OR,     ///< 32-bit integer bitwise or
+    CF_OPCODE_XOR,    ///< 32-bit integer bitwise xor
+    CF_OPCODE_AND,    ///< 32-bit integer bitwise and
 
     // i32 signed/unsigned instructions
     CF_OPCODE_IMUL,   ///< signed   i32 multiplication

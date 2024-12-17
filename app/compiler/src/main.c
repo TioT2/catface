@@ -60,15 +60,15 @@ void printHelp( void ) {
  * @return exit status (0 on success)
  */
 int main( int argc_, const char **argv_ ) {
-    int argc = argc_;
-    const char **argv = argv_;
-    // int argc = 4;
-    // const char *argv[] = {
-    //     "amogus",
-    //     "-o",
-    //     "temp/main.cfexe",
-    //     "examples/lang/main.cf",
-    // };
+    // int argc = argc_;
+    // const char **argv = argv_;
+    int argc = 4;
+    const char *argv[] = {
+        "amogus",
+        "-o",
+        "temp/main.cfexe",
+        "examples/lang/main.cf",
+    };
 
     if (argc <= 1) {
         printHelp();

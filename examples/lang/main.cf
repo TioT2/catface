@@ -1,7 +1,43 @@
 // Example file
 
+// write number to stdout
 fn __cfvm_f32_write(n: f32);
 
+// read number from stdin
+fn __cfvm_f32_read() f32;
+
+// calculate square root
+fn __cfvm_f32_sqrt(n: f32) f32;
+
+fn discriminant(a: f32, b: f32, c: f32) f32 {
+    return b * b - 4.0 as f32 * a * c;
+}
+
+fn f32_abs(n: f32) f32 {
+    if n < 0.0 as f32 {
+        return 0.0 as f32 - n;
+    } else {
+        return n;
+    }
+}
+
+fn f32_is_equal(lhs: f32, rhs: f32) u32 {
+    return f32_abs(lhs - rhs) < 0.001 as f32;
+}
+
+// main program function
 fn main() {
-    __cfvm_f32_write(30.0 as f32);
+    let a: f32 = __cfvm_f32_read();
+    let b: f32 = __cfvm_f32_read();
+    let c: f32 = __cfvm_f32_read();
+
+    let discriminant: f32 = discriminant(a, b, c);
+
+    if 0.0 as f32 < discriminant {
+        let discriminant_sqrt: f32 = __cfvm_f32_sqrt(discriminant);
+
+        __cfvm_f32_write((0.0 as f32 - b - discriminant_sqrt) / (2.0 as f32 * a));
+        __cfvm_f32_write((0.0 as f32 - b + discriminant_sqrt) / (2.0 as f32 * a));
+    }
+
 } // main

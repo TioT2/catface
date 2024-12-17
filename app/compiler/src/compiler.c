@@ -65,7 +65,6 @@ CompilerAddCfFileResult compilerAddCfFile( Compiler *const self, const char *sou
     memcpy(textCopy, source, sourceLength);
     memcpy(sourceNameCopy, sourceName, sourceNameLength);
 
-
     CompilerFile file = {
         .textLength = sourceLength,
         .text = textCopy,

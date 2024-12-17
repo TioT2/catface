@@ -12,6 +12,7 @@
 typedef enum CfCodeGeneratorInstrinsict_ {
     CF_CODE_GENERATOR_INTRINSICT_F32_READ,  ///< read f32
     CF_CODE_GENERATOR_INTRINSICT_F32_WRITE, ///< write f32
+    CF_CODE_GENERATOR_INTRINSICT_F32_SQRT,  ///< write f32 square root
 } CfCodeGeneratorInstrinsict;
 
 /// @brief insintrisct info
@@ -50,6 +51,19 @@ static const CfCodeGeneratorIntrinsictInfo * cfCodeGeneratorGetIntrinsictInfo( C
         static CfCodeGeneratorIntrinsictInfo info = {
             .funcPrototype = &prototype,
             .intrinsict = CF_CODE_GENERATOR_INTRINSICT_F32_WRITE,
+        };
+
+        return &info;
+    } else if (cfStrIsSame(name, CF_STR("__cfvm_f32_sqrt"))) {
+        static CfTirType type = CF_TIR_TYPE_F32;
+        static CfTirFunctionPrototype prototype = {
+            .inputTypeArray = &type,
+            .inputTypeArrayLength = 1,
+            .outputType = CF_TIR_TYPE_F32,
+        };
+        static CfCodeGeneratorIntrinsictInfo info = {
+            .funcPrototype = &prototype,
+            .intrinsict = CF_CODE_GENERATOR_INTRINSICT_F32_SQRT,
         };
 
         return &info;
@@ -141,31 +155,26 @@ void cfCodeGeneratorBegin( CfCodeGenerator *const self ) {
      */
 
     // prelude code
-    const uint8_t code[] = {
-        CF_OPCODE_MGS,
+    cfCodeGeneratorWriteOpcode(self, CF_OPCODE_MGS);
+    cfCodeGeneratorWritePushPop(self,
         CF_OPCODE_POP,
-        (CfPushPopInfo) {
-            .registerIndex = CF_REGISTER_EX,
-            .isMemoryAccess = false,
-            .doReadImmediate = false,
-        }.asByte,
+        (CfPushPopInfo) { CF_REGISTER_EX },
+        0
+    );
 
-        CF_OPCODE_MGS,
+    cfCodeGeneratorWriteOpcode(self, CF_OPCODE_MGS);
+    cfCodeGeneratorWritePushPop(self,
         CF_OPCODE_POP,
-        (CfPushPopInfo) {
-            .registerIndex = CF_REGISTER_FX,
-            .isMemoryAccess = false,
-            .doReadImmediate = false,
-        }.asByte,
-        CF_OPCODE_CALL,
-    };
-    cfCodeGeneratorWriteCode(self, &code, sizeof(code));
-    // add link to main
+        (CfPushPopInfo) { CF_REGISTER_FX },
+        0
+    );
+
+    // link to main
+    cfCodeGeneratorWriteOpcode(self, CF_OPCODE_CALL);
     cfCodeGeneratorAddLink(self, CF_STR("main"));
 
-    // write halt opcode
-    uint8_t halt = CF_OPCODE_HALT;
-    cfCodeGeneratorWriteCode(self, &halt, sizeof(halt));
+    // Halt program
+    cfCodeGeneratorWriteOpcode(self, CF_OPCODE_HALT);
 } // code generator
 
 void cfCodeGeneratorWritePushPop(
@@ -292,8 +301,21 @@ void cfCodeGeneratorGenExpression( CfCodeGenerator *const self, const CfTirExpre
         case CF_TIR_BINARY_OPERATOR_DIV:
             assert(false && "unreachable");
 
-        // I DO NOT WANT TO DO THIS SH*T (TODO: fix command system)
         case CF_TIR_BINARY_OPERATOR_LT:
+            // (n & 1)
+            cfCodeGeneratorWritePushPop(self, CF_OPCODE_PUSH, (CfPushPopInfo) { CF_REGISTER_FL }, 0);
+            cfCodeGeneratorWritePushPop(self,
+                CF_OPCODE_PUSH,
+                (CfPushPopInfo) {
+                    .registerIndex = CF_REGISTER_CZ,
+                    .doReadImmediate = true
+                },
+                1
+            );
+            cfCodeGeneratorWriteOpcode(self, CF_OPCODE_AND);
+            break;
+
+        // I DO NOT WANT TO DO THIS SH*T (TODO: fix command system)
         case CF_TIR_BINARY_OPERATOR_GT:
         case CF_TIR_BINARY_OPERATOR_LE:
         case CF_TIR_BINARY_OPERATOR_GE:
@@ -334,6 +356,11 @@ void cfCodeGeneratorGenExpression( CfCodeGenerator *const self, const CfTirExpre
                     (CfPushPopInfo) { CF_REGISTER_CZ },
                     0
                 );
+                break;
+            }
+
+            case CF_CODE_GENERATOR_INTRINSICT_F32_SQRT: {
+                cfCodeGeneratorWriteOpcode(self, CF_OPCODE_FSQRT);
                 break;
             }
             }

@@ -238,8 +238,7 @@ CfStr cfTirGetSourceName( const CfTir *tir );
 
 /// @brief TIR from AST generation status
 typedef enum CfTirBuildingStatus_ {
-    CF_TIR_BUILDING_STATUS_OK,                            ///< ok
-
+    CF_TIR_BUILDING_STATUS_OK,                               ///< ok
     CF_TIR_BUILDING_STATUS_INTERNAL_ERROR,                   ///< internal tir builder error occured
     CF_TIR_BUILDING_STATUS_GLOBAL_VARIABLES_NOT_ALLOWED,     ///< global variables aren't allowed (yet)
     CF_TIR_BUILDING_STATUS_LOCAL_FUNCTIONS_NOT_ALLOWED,      ///< local funciton declarations aren't allowed (yet)
