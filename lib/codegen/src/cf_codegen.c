@@ -420,6 +420,9 @@ void cfCodeGeneratorGenExpression( CfCodeGenerator *const self, const CfTirExpre
         break;
     }
     case CF_TIR_EXPRESSION_TYPE_CAST: {
+        // codegenerate expression itself
+        cfCodeGeneratorGenExpression(self, expression->cast.expression);
+
         // cast to void does nothing
         if (expression->cast.type == CF_TIR_TYPE_VOID)
             break;
@@ -430,7 +433,7 @@ void cfCodeGeneratorGenExpression( CfCodeGenerator *const self, const CfTirExpre
         if (expression->cast.type != CF_TIR_TYPE_F32 && expression->cast.expression->resultingType != CF_TIR_TYPE_F32)
             break;
 
-        cfCodeGeneratorWriteOpcode(self, expression->cast.type == CF_TIR_TYPE_I32
+        cfCodeGeneratorWriteOpcode(self, expression->cast.type == CF_TIR_TYPE_F32
             ? CF_OPCODE_ITOF
             : CF_OPCODE_FTOI
         );
@@ -464,7 +467,7 @@ void cfCodeGeneratorGenReturn( CfCodeGenerator *const self ) {
 } // cfCodeGeneratorGenReturn
 
 void cfCodeGeneratorGenBlock( CfCodeGenerator *const self, const CfTirBlock *block ) {
-    // ex += localCount * 4
+    // ex -= localCount * 4
     cfCodeGeneratorWritePushPop(self,
         CF_OPCODE_PUSH,
         (CfPushPopInfo) {
@@ -472,7 +475,7 @@ void cfCodeGeneratorGenBlock( CfCodeGenerator *const self, const CfTirBlock *blo
             .isMemoryAccess  = false,
             .doReadImmediate = true,
         },
-        (int32_t)block->localCount * 4
+        -(int32_t)block->localCount * 4
     );
     cfCodeGeneratorWritePushPop(self,
         CF_OPCODE_POP,
@@ -484,7 +487,7 @@ void cfCodeGeneratorGenBlock( CfCodeGenerator *const self, const CfTirBlock *blo
     for (size_t i = 0; i < block->statementCount; i++)
         cfCodeGeneratorGenStatement(self, &block->statements[i]);
 
-    // ex -= localCount * 4
+    // ex += localCount * 4
     cfCodeGeneratorWritePushPop(self,
         CF_OPCODE_PUSH,
         (CfPushPopInfo) {
@@ -492,7 +495,7 @@ void cfCodeGeneratorGenBlock( CfCodeGenerator *const self, const CfTirBlock *blo
             .isMemoryAccess  = false,
             .doReadImmediate = true,
         },
-        -(int32_t)block->localCount * 4
+        +(int32_t)block->localCount * 4
     );
     cfCodeGeneratorWritePushPop(self,
         CF_OPCODE_POP,
@@ -747,7 +750,7 @@ void cfCodeGeneratorGenFunction( CfCodeGenerator *const self, const CfTirFunctio
         0
     );
 
-    // ex += argCount * 4
+    // ex -= argCount * 4
     cfCodeGeneratorWritePushPop(self,
         CF_OPCODE_PUSH,
         (CfPushPopInfo) {
@@ -755,7 +758,7 @@ void cfCodeGeneratorGenFunction( CfCodeGenerator *const self, const CfTirFunctio
             .isMemoryAccess  = false,
             .doReadImmediate = true,
         },
-        (int32_t)function->prototype.inputTypeArrayLength * 4
+        -(int32_t)function->prototype.inputTypeArrayLength * 4
     );
     cfCodeGeneratorWritePushPop(self,
         CF_OPCODE_POP,

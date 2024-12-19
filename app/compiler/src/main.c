@@ -67,7 +67,7 @@ int main( int argc_, const char **argv_ ) {
         "amogus",
         "-o",
         "temp/main.cfexe",
-        "examples/lang/main.cf",
+        "examples/lang/square_equation_solver.cf",
     };
 
     if (argc <= 1) {

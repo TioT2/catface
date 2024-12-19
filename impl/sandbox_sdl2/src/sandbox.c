@@ -472,7 +472,7 @@ static void sandboxTerminate( void *userContext, const CfTermInfo *termInfo ) {
         return;
     }
 
-    printf("program panicked (by %zu offset). reason: ", termInfo->offset);
+    printf("program panicked (by 0x%zX offset). reason: ", termInfo->offset);
     switch (termInfo->reason) {
     case CF_TERM_REASON_HALT: break;
     case CF_TERM_REASON_SANDBOX_ERROR: break;
@@ -487,7 +487,7 @@ static void sandboxTerminate( void *userContext, const CfTermInfo *termInfo ) {
     }
 
     case CF_TERM_REASON_SEGMENTATION_FAULT: {
-        printf("segmentation fault (addr: %08X, memory size: %08X).",
+        printf("segmentation fault (addr: 0x%X, memory size: 0x%X).",
             termInfo->segmentationFault.addr,
             termInfo->segmentationFault.memorySize
         );
