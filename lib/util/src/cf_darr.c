@@ -78,6 +78,14 @@ CfDarrStatus cfDarrPop( CfDarr *darr, void *dst ) {
     return CF_DARR_OK;
 } // cfDarrPop
 
+void cfDarrClear( CfDarr *darr ) {
+    assert(darr != NULL);
+    CfDarrImpl *impl = *darr;
+    assert(impl != NULL);
+
+    impl->size = 0;
+} // cfDarrClear
+
 void * cfDarrData( CfDarr darr ) {
     assert(darr != NULL);
     return darr->data;

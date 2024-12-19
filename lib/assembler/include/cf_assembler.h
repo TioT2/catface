@@ -38,6 +38,11 @@ typedef enum CfAssemblyStatus_ {
     CF_ASSEMBLY_STATUS_UNEXPECTED_CHARACTERS,    ///< unexpected (a.k.a. unrelated to instruction) characters occured.
 } CfAssemblyStatus;
 
+/// @brief assembling result
+typedef struct CfAssemblyResult_ {
+    CfAssemblyStatus status; ///< assembling status
+} CfAssemblyResult;
+
 /// @brief detailed info about assembling process
 typedef struct CfAssemblyDetails_ {
     size_t line;     ///< index of line during parsing of error occured
@@ -54,7 +59,7 @@ typedef struct CfAssemblyDetails_ {
  *
  * @return assembling status
  */
-CfAssemblyStatus cfAssemble( CfStr text, CfStr sourceName, CfObject *dst, CfAssemblyDetails *details );
+CfAssemblyResult cfAssemble( CfStr text, CfStr sourceName );
 
 /**
  * @brief assembly status to string conversion error

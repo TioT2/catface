@@ -70,6 +70,13 @@ CfDarrStatus cfDarrPushArray( CfDarr *darr, const void *arr, size_t arrLen );
 CfDarrStatus cfDarrPop( CfDarr *darr, void *dst );
 
 /**
+ * @brief clear dynamic array
+ * 
+ * @param[in] darr darr pointer
+ */
+void cfDarrClear( CfDarr *darr );
+
+/**
  * @brief dynamic array contents getting function
  * 
  * @param[in] darr dynamic array to get data of 

@@ -9,6 +9,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include <cf_hash.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -92,6 +94,239 @@ void cfObjectDtor( CfObject *object );
  * @return string corresponding to status
  */
 const char * cfObjectReadStatusStr( CfObjectReadStatus status );
+
+
+
+/// @brief object
+typedef struct CfObject2_ CfObject2;
+
+/// @brief object builder
+typedef struct CfObjectBuilder_ CfObjectBuilder;
+
+
+
+
+/**
+ * @brief object destructor
+ * 
+ * @param[in] object to destroy (nullable)
+ */
+void cfObjectDtor2( CfObject2 *object );
+
+/*
+ * @brief get object code length
+ * 
+ * @param[in] object object pointer (non-null)
+ * 
+ * @return object code length
+ */
+size_t cfObjectGetCodeLength( const CfObject2 *object );
+
+/**
+ * @brief get object code
+ * 
+ * @param[in] object object pointer (non-null)
+ * 
+ * @return object code
+ */
+const void * cfObjectGetCode( const CfObject2 *object );
+
+/**
+ * @brief get object link array length
+ * 
+ * @param[in] object object pointer (non-null)
+ * 
+ * @return object link array length
+ */
+size_t cfObjectGetLinkArrayLength( const CfObject2 *object );
+
+/**
+ * @brief get object link array
+ * 
+ * @param[in] object object pointer (non-null)
+ * 
+ * @return object link array contents
+ */
+const CfLink * cfObjectGetLinkArray( const CfObject2 *object );
+
+/**
+ * @brief get object label array length
+ * 
+ * @param[in] object object pointer (non-null)
+ * 
+ * @return object label array length
+ */
+size_t cfObjectGetLabelArrayLength( const CfObject2 *object );
+
+/**
+ * @brief get object label array
+ * 
+ * @param[in] object object pointer (non-null)
+ * 
+ * @return object label array contents
+ */
+const CfLabel * cfObjectGetLabelArray( const CfObject2 *object );
+
+/// @brief object reading status
+typedef enum CfObjectReadStatus2_ {
+    CF_OBJECT_READ_STATUS_2_OK,                  ///< success
+    CF_OBJECT_READ_STATUS_2_INTERNAL_ERROR,      ///< internal error occured
+    CF_OBJECT_READ_STATUS_2_UNEXPECTED_FILE_END, ///< file ended while more bytes required
+    CF_OBJECT_READ_STATUS_2_INVALID_MAGIC,       ///< invalid object magic
+    CF_OBJECT_READ_STATUS_2_INVALID_HASH,        ///< invalid file hash
+} CfObjectReadStatus2;
+
+/// @brief object reading result
+typedef struct CfObjectReadResult2_ {
+    CfObjectReadStatus2 status; ///< operation status
+
+    union {
+        CfObject2 *ok; ///< read succeeded
+
+        struct {
+            size_t offset;            ///< current file offset
+            size_t requiredByteCount; ///< required byte count
+            size_t actualByteCount;   ///< actually read
+        } unexpectedFileEnd;
+
+        struct {
+            uint32_t expected; ///< object file magic
+            uint32_t actual;   ///< actual file magic
+        } invalidMagic;
+
+        struct {
+            CfHash expected; ///< expected hash
+            CfHash actual;   ///< actual hash
+        } invalidHash;
+    };
+} CfObjectReadResult2;
+
+/**
+ * @brief print object read result to file
+ * 
+ * @param[in] out    file to print to
+ * @param[in] result result pointer (non-null)
+ */
+void cfObjectReadResultWrite( FILE *out, const CfObjectReadResult2 *result );
+
+/**
+ * @brief read object from file
+ * 
+ * @param[in] file    file to read object from (opened for RB reading)
+ * @param[in] builder object builder (nullable)
+ * 
+ * @return object reading result
+ */
+CfObjectReadResult2 cfObjectRead2( FILE *file, CfObjectBuilder *builder );
+
+/**
+ * @brief write object to file
+ * 
+ * @param[in] file   file to write object to
+ * @param[in] object object to write (non-null)
+ * 
+ * @return operation status
+ */
+CfObjectWriteStatus cfObjectWrite2( FILE *file, const CfObject2 *object );
+
+
+/**
+ * @brief object builder constructor
+ * 
+ * @return created object builder (NULL if failed)
+ */
+CfObjectBuilder * cfObjectBuilderCtor( void );
+
+/**
+ * @brief object builder destructor
+ * 
+ * @param[in] builder object builder to destroy (nullable)
+ */
+void cfObjectBuilderDtor( CfObjectBuilder *builder );
+
+/**
+ * @brief emit new object
+ * 
+ * @param[in] self builder to emit object in (non-null)
+ * 
+ * @return built object (NULL if smth went wrong)
+ * 
+ * @note this function **does not** performs builder reset,
+ * you should do it manually if you want, of course.
+ */
+CfObject2 * cfObjectBuilderEmit( CfObjectBuilder *const self );
+
+/**
+ * @brief reset builder
+ * 
+ * @param[in] self builder to reset (non-null)
+ * 
+ * @note resets builder as if it was newly created
+ */
+void cfObjectBuilderReset( CfObjectBuilder *const self );
+
+/**
+ * @brief current code size getter
+ * 
+ * @param[in] self builder pointer (non-null)
+ * 
+ * @return current builder code size
+ */
+size_t cfObjectBuilderGetCodeLength( CfObjectBuilder *const self );
+
+/**
+ * @brief add code to object
+ * 
+ * @param[in] self builder pointer (non-null)
+ * @param[in] code code to add (non-null)
+ * @param[in] size code size
+ * 
+ * @return true if added, false if smth went wrong
+ */
+bool cfObjectBuilderAddCode( CfObjectBuilder *const self, const void *code, size_t size );
+
+/**
+ * @brief add link to object
+ * 
+ * @param[in] self builder pointer (non-null)
+ * @param[in] code code to add (non-null)
+ * @param[in] size code size
+ * 
+ * @return true if added, false if smth went wrong
+ */
+bool cfObjectBuilderAddLink( CfObjectBuilder *const self, const CfLink *link );
+
+/**
+ * @brief add link array to builder
+ * 
+ * @param[in] self   object pointer (non-null)
+ * @param[in] array  array pointer (non-null)
+ * @param[in] length length
+ * 
+ * @return true if added, false if not
+ */
+bool cfObjectBuilderAddLinkArray( CfObjectBuilder *const self, const CfLink *array, size_t length );
+
+/**
+ * @brief add label to object
+ * 
+ * @param[in] self  builder pointer
+ * @param[in] label label
+ * 
+ * @return true if added, false if smth went wrong
+ */
+bool cfObjectBuilderAddLabel( CfObjectBuilder *const self, const CfLabel *label );
+
+/**
+ * @brief add link array to builder
+ * 
+ * @param[in] self   object pointer (non-null)
+ * @param[in] array  array pointer (non-null)
+ * @param[in] length length
+ * 
+ * @return true if added, false if not
+ */
+bool cfObjectBuilderAddLabelArray( CfObjectBuilder *const self, const CfLabel *array, size_t length );
 
 #ifdef __cplusplus
 }
