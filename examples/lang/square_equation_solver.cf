@@ -33,7 +33,7 @@ fn main() {
 
     let discriminant: f32 = discriminant(a, b, c);
 
-    if 0.0 as f32 < discriminant {
+    if discriminant > 0.0 as f32 {
         if f32_is_equal(discriminant, 0.0 as f32) {
             __cfvm_f32_write((0.0 as f32 - b) / (2.0 as f32 * a));
         } else {

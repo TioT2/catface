@@ -189,6 +189,14 @@ void cfCodeGeneratorWritePushPop(
         cfCodeGeneratorWriteCode(self, &immediate, 4);
 } // cfCodeGeneratorWritePushPop
 
+void cfCodeGeneratorWritePushConstant( CfCodeGenerator *const self, int32_t constant ) {
+    cfCodeGeneratorWritePushPop(self,
+        CF_OPCODE_PUSH,
+        (CfPushPopInfo) { .doReadImmediate = constant != 0, },
+        constant
+    );
+} // cfCodeGeneratorWritePushConstant
+
 void cfCodeGeneratorWriteOpcode( CfCodeGenerator *const self, CfOpcode opcode ) {
     cfCodeGeneratorWriteCode(self, &opcode, 1);
 } // cfCodeGeneratorWriteOpcode
@@ -245,10 +253,6 @@ void cfCodeGeneratorGenExpression( CfCodeGenerator *const self, const CfTirExpre
         break;
     }
     case CF_TIR_EXPRESSION_TYPE_BINARY_OPERATOR: {
-        // generate operands
-        cfCodeGeneratorGenExpression(self, expression->binaryOperator.lhs);
-        cfCodeGeneratorGenExpression(self, expression->binaryOperator.rhs);
-
         CfOpcode binaryOperatorOpcodes[][4] = {
             {CF_OPCODE_ADD , CF_OPCODE_ADD, CF_OPCODE_FADD}, // for add
             {CF_OPCODE_SUB , CF_OPCODE_SUB, CF_OPCODE_FSUB}, // for sub
@@ -279,16 +283,41 @@ void cfCodeGeneratorGenExpression( CfCodeGenerator *const self, const CfTirExpre
         }
 
         if (firstIndex != ~0U) {
+            // generate operands
+            cfCodeGeneratorGenExpression(self, expression->binaryOperator.lhs);
+            cfCodeGeneratorGenExpression(self, expression->binaryOperator.rhs);
+
             // generate simple expression
             cfCodeGeneratorWriteOpcode(self, binaryOperatorOpcodes[firstIndex][secondIndex]);
             break;
         }
 
+        // generate lhs/rhs
+        if (false
+            || expression->binaryOperator.op == CF_TIR_BINARY_OPERATOR_LT
+            || expression->binaryOperator.op == CF_TIR_BINARY_OPERATOR_LE
+        ) {
+            cfCodeGeneratorGenExpression(self, expression->binaryOperator.lhs);
+            cfCodeGeneratorGenExpression(self, expression->binaryOperator.rhs);
+        } else {
+            cfCodeGeneratorGenExpression(self, expression->binaryOperator.rhs);
+            cfCodeGeneratorGenExpression(self, expression->binaryOperator.lhs);
+        }
+
         // generate comparison opcode
         switch (expression->binaryOperator.lhs->resultingType) {
-        case CF_TIR_TYPE_I32: cfCodeGeneratorWriteOpcode(self, CF_OPCODE_ICMP); break;
-        case CF_TIR_TYPE_U32: cfCodeGeneratorWriteOpcode(self, CF_OPCODE_CMP ); break;
-        case CF_TIR_TYPE_F32: cfCodeGeneratorWriteOpcode(self, CF_OPCODE_FCMP); break;
+        case CF_TIR_TYPE_I32:
+            // generate operands
+            cfCodeGeneratorWriteOpcode(self, CF_OPCODE_ICMP);
+            break;
+        case CF_TIR_TYPE_U32:
+            // generate operands
+            cfCodeGeneratorWriteOpcode(self, CF_OPCODE_CMP );
+            break;
+        case CF_TIR_TYPE_F32:
+            // generate operands
+            cfCodeGeneratorWriteOpcode(self, CF_OPCODE_FCMP);
+            break;
 
         case CF_TIR_TYPE_VOID:
             assert(false && "unreachable");
@@ -302,26 +331,45 @@ void cfCodeGeneratorGenExpression( CfCodeGenerator *const self, const CfTirExpre
             assert(false && "unreachable");
 
         case CF_TIR_BINARY_OPERATOR_LT:
-            // (n & 1)
-            cfCodeGeneratorWritePushPop(self, CF_OPCODE_PUSH, (CfPushPopInfo) { CF_REGISTER_FL }, 0);
-            cfCodeGeneratorWritePushPop(self,
-                CF_OPCODE_PUSH,
-                (CfPushPopInfo) {
-                    .registerIndex = CF_REGISTER_CZ,
-                    .doReadImmediate = true
-                },
-                1
-            );
-            cfCodeGeneratorWriteOpcode(self, CF_OPCODE_AND);
-            break;
-
-        // I DO NOT WANT TO DO THIS SH*T (TODO: fix command system)
         case CF_TIR_BINARY_OPERATOR_GT:
         case CF_TIR_BINARY_OPERATOR_LE:
         case CF_TIR_BINARY_OPERATOR_GE:
+
+            // generate operands
+            // n
+            cfCodeGeneratorWritePushPop(self, CF_OPCODE_PUSH, (CfPushPopInfo) { CF_REGISTER_FL }, 0);
+
+            if (false
+                || expression->binaryOperator.op == CF_TIR_BINARY_OPERATOR_LE
+                || expression->binaryOperator.op == CF_TIR_BINARY_OPERATOR_LE
+            ) {
+                // | (n << 1)
+                cfCodeGeneratorWritePushPop(self, CF_OPCODE_PUSH, (CfPushPopInfo) { CF_REGISTER_FL }, 0);
+                cfCodeGeneratorWritePushConstant(self, 1);
+                cfCodeGeneratorWriteOpcode(self, CF_OPCODE_SHL);
+                cfCodeGeneratorWriteOpcode(self, CF_OPCODE_OR);
+            }
+
+            // & 1
+            cfCodeGeneratorWritePushConstant(self, 1);
+            cfCodeGeneratorWriteOpcode(self, CF_OPCODE_AND);
+            break;
+
         case CF_TIR_BINARY_OPERATOR_EQ:
         case CF_TIR_BINARY_OPERATOR_NE:
-            assert(false && "unimplemented");
+            // push lhs/rhs
+            cfCodeGeneratorWritePushPop(self, CF_OPCODE_PUSH, (CfPushPopInfo) { CF_REGISTER_FL }, 0);
+            cfCodeGeneratorWritePushConstant(self, 1);
+            cfCodeGeneratorWriteOpcode(self, CF_OPCODE_SHL);
+
+            if (expression->binaryOperator.op == CF_TIR_BINARY_OPERATOR_NE) {
+                cfCodeGeneratorWritePushConstant(self, 1);
+                cfCodeGeneratorWriteOpcode(self, CF_OPCODE_XOR);
+            }
+
+            cfCodeGeneratorWritePushConstant(self, 1);
+            cfCodeGeneratorWriteOpcode(self, CF_OPCODE_AND);
+
             break;
         }
         break;
