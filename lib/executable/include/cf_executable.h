@@ -68,6 +68,18 @@ typedef enum CfVideoUpdateMode_ {
     CF_VIDEO_UPDATE_MODE_MANUAL    = 1, ///< update image on screen after certain only instruction call. During video memory update it's ok for image in actual window to change.
 } CfVideoUpdateMode;
 
+/// @brief register enumeration
+typedef enum CfRegister_ {
+    CF_REGISTER_CZ = 0, ///< constant-zero register
+    CF_REGISTER_FL = 1, ///< flag register
+    CF_REGISTER_AX = 2, ///< general-purpose register 'a'
+    CF_REGISTER_BX = 3, ///< general-purpose register 'b'
+    CF_REGISTER_CX = 4, ///< general-purpose register 'c'
+    CF_REGISTER_DX = 5, ///< general-purpose register 'd'
+    CF_REGISTER_EX = 6, ///< general-purpose register 'e'
+    CF_REGISTER_FX = 7, ///< general-purpose register 'f'
+} CfRegister;
+
 /// @brief register set representation structure
 typedef union CfRegisters_ {
     uint32_t indexed[8];    ///< registers as array
@@ -86,18 +98,6 @@ typedef union CfRegisters_ {
         uint32_t        fx; ///< general-purpose register 'f'
     };
 } CfRegisters;
-
-/// @brief register enumeration
-typedef enum CfRegister_ {
-    CF_REGISTER_CZ = 0, ///< constant-zero register
-    CF_REGISTER_FL = 1, ///< flag register
-    CF_REGISTER_AX = 2, ///< general-purpose register 'a'
-    CF_REGISTER_BX = 3, ///< general-purpose register 'b'
-    CF_REGISTER_CX = 4, ///< general-purpose register 'c'
-    CF_REGISTER_DX = 5, ///< general-purpose register 'd'
-    CF_REGISTER_EX = 6, ///< general-purpose register 'e'
-    CF_REGISTER_FX = 7, ///< general-purpose register 'f'
-} CfRegister;
 
 /// @brief keycode representatiton enumeration
 typedef enum CfKey_ {
@@ -284,7 +284,19 @@ typedef union CfVideoMemory_ {
     } colorPalette;
 } CfVideoMemory;
 
-/// @brief bytecode executable represetnation structure
+/// @brief push and pop instruction additional data
+typedef struct CfPushPopInfo_ {
+    union {
+        uint8_t asByte; ///< pushPopInfo asByte
+        struct {
+            uint8_t registerIndex   : 3; ///< index of register to get value from
+            uint8_t isMemoryAccess  : 1; ///< true if destination is placed in memory
+            uint8_t doReadImmediate : 1; ///< is this instruction followed by 4-byte immediate
+        };
+    };
+} CfPushPopInfo;
+
+/// @brief bytecode executable representation structure
 typedef struct CfExecutable_ {
     void    *code;       ///< executable bytecode
     size_t   codeLength; ///< executable bytecode length
@@ -298,18 +310,6 @@ typedef enum CfExecutableReadStatus_ {
     CF_EXECUTABLE_READ_STATUS_INVALID_EXECUTABLE_MAGIC, ///< invalid executable magic number
     CF_EXECUTABLE_READ_STATUS_CODE_INVALID_HASH,        ///< invalid executable code hash
 } CfExecutableReadStatus;
-
-/// @brief push and pop instruction additional data
-typedef struct CfPushPopInfo_ {
-    union {
-        uint8_t asByte; ///< pushPopInfo asByte
-        struct {
-            uint8_t registerIndex   : 3; ///< index of register to get value from
-            uint8_t isMemoryAccess  : 1; ///< true if destination is placed in memory
-            uint8_t doReadImmediate : 1; ///< is this instruction followed by 4-byte immediate
-        };
-    };
-} CfPushPopInfo;
 
 /**
  * @brief executable from file reading function

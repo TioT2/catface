@@ -12,14 +12,15 @@ extern "C" {
 #endif // defined(__cplusplus)
 
 /// @brief neon-genesis object structure
-struct CfObject2_ {
+struct CfObject_ {
+    char    * sourceFileName;   ///< source file name
     CfLabel * labelArray;       ///< label array
     size_t    labelArrayLength; ///< label array length
     CfLink  * linkArray;        ///< link array
     size_t    linkArrayLength;  ///< link array length
     void    * code;             ///< object code
     size_t    codeLength;       ///< object length
-}; // struct CfObject2_
+}; // struct CfObject_
 
 #ifdef __cplusplus
 }

@@ -29,24 +29,24 @@ add_subdirectory(lib/assembler)
 add_subdirectory(lib/disassembler)
 
 # cf language libraries
-add_subdirectory(lib/lexer)
-add_subdirectory(lib/ast)
-add_subdirectory(lib/tir)
-add_subdirectory(lib/codegen)
+# add_subdirectory(lib/lexer)
+# add_subdirectory(lib/ast)
+# add_subdirectory(lib/tir)
+# add_subdirectory(lib/codegen)
 
 # 'implementation' librariess
 add_subdirectory(impl/sandbox_sdl2)
 
 # applications
 add_subdirectory(app/executor)
-add_subdirectory(app/assembler)
-add_subdirectory(app/disassembler)
-add_subdirectory(app/linker)
-add_subdirectory(app/compiler)
+# add_subdirectory(app/assembler)
+# add_subdirectory(app/disassembler)
+# add_subdirectory(app/linker)
+# add_subdirectory(app/compiler)
 
 # tests (debug-only)
 if (CMAKE_BUILD_TYPE MATCHES Debug)
-    add_subdirectory(test/ast)
+    # add_subdirectory(test/ast)
     add_subdirectory(test/deque)
     add_subdirectory(test/list)
     add_subdirectory(test/list_dot_dump)

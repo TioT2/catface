@@ -67,7 +67,7 @@ int main( const int _argc, const char **_argv ) {
     if (options.printHelp)
         printHelp();
 
-    CfDarr objectArray = cfDarrCtor(sizeof(CfObject));
+    CfDarr objectArray = cfDarrCtor(sizeof(CfObject *));
 
     if (objectArray == NULL) {
         printf("internal linker occured occured.\n");
@@ -78,24 +78,24 @@ int main( const int _argc, const char **_argv ) {
 
     // treat all another arguments as input file names
     for (;argIndex < argc; argIndex++) {
-        CfObject object;
-
         FILE *file = fopen(argv[argIndex], "rb");
         if (file == NULL) {
             printf("\"%s\" input file opening error: %s\n", argv[argIndex], strerror(errno));
             isOk = false;
             break;
         }
-        CfObjectReadStatus readStatus = cfObjectRead(file, &object);
+        CfObjectReadResult readResult = cfObjectRead(file, NULL);
 
-        if (CF_OBJECT_READ_STATUS_OK != readStatus) {
-            printf("object from file reading error: %s\n", cfObjectReadStatusStr(readStatus));
+        if (readResult.status != CF_OBJECT_READ_STATUS_OK) {
+            printf("object from file reading error: ");
+            cfObjectReadResultWrite(stdout, &readResult);
+            printf("\n");
             isOk = false;
             break;
         }
         fclose(file);
 
-        if (CF_DARR_OK != cfDarrPush(&objectArray, &object)) {
+        if (CF_DARR_OK != cfDarrPush(&objectArray, &readResult.ok)) {
             printf("linker internal error occured.\n");
             isOk = false;
             break;
@@ -107,7 +107,7 @@ int main( const int _argc, const char **_argv ) {
         CfExecutable executable;
         CfLinkDetails details;
         CfLinkStatus status = cfLink(
-            (CfObject *)cfDarrData(objectArray),
+            (CfObject **)cfDarrData(objectArray),
             cfDarrLength(objectArray),
             &executable,
             &details
@@ -136,9 +136,9 @@ int main( const int _argc, const char **_argv ) {
     }
 
 
-    CfObject *objects = (CfObject *)cfDarrData(objectArray);
+    CfObject **objects = (CfObject **)cfDarrData(objectArray);
     for (size_t i = 0, n = cfDarrLength(objectArray); i < n; i++)
-        cfObjectDtor(&objects[i]);
+        cfObjectDtor(objects[i]);
 
     cfDarrDtor(objectArray);
 

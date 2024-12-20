@@ -11,10 +11,10 @@
 
 #include "cf_object_internal.h"
 
-void cfObjectDtor2( CfObject2 *object ) {
+void cfObjectDtor( CfObject *object ) {
     // literally all
     free(object);
-} // cfObjectDtor2
+} // cfObjectDtor
 
 /// @brief object builder structure declaration
 struct CfObjectBuilder_ {
@@ -79,17 +79,19 @@ void cfObjectBuilderReset( CfObjectBuilder *const self ) {
     cfDarrClear(&self->links);
 } // cfObjectBuilderReset
 
-CfObject2 * cfObjectBuilderEmit( CfObjectBuilder *self ) {
+CfObject * cfObjectBuilderEmit( CfObjectBuilder *const self, CfStr sourceFileName ) {
     assert(self != NULL);
 
-    size_t objectLengthBytes = cfObjectBuilderAlignUp(sizeof(CfObject2), sizeof(max_align_t));
+    size_t objectLengthBytes = cfObjectBuilderAlignUp(sizeof(CfObject), sizeof(max_align_t));
     size_t labelsLengthBytes = cfObjectBuilderAlignUp(cfDarrLength(self->labels), sizeof(max_align_t));
     size_t linksLengthBytes  = cfObjectBuilderAlignUp(cfDarrLength(self->links), sizeof(max_align_t));
     size_t codeLengthBytes   = cfObjectBuilderAlignUp(cfDarrLength(self->code), sizeof(max_align_t));
+    size_t nameLengthBytes   = cfObjectBuilderAlignUp(cfStrLength(sourceFileName) + 1, sizeof(max_align_t));
 
     // object allocation size
     size_t objectAlocationSize = 0
         + objectLengthBytes
+        + nameLengthBytes
         + labelsLengthBytes
         + linksLengthBytes
         + codeLengthBytes
@@ -101,10 +103,11 @@ CfObject2 * cfObjectBuilderEmit( CfObjectBuilder *self ) {
         return NULL;
 
     // set values
-    CfObject2 *object = (CfObject2 *)((uint8_t *)allocation + 0);
-    CfLabel   *labels = (  CfLabel *)((uint8_t *)object     + objectLengthBytes);
-    CfLink    *links  = (   CfLink *)((uint8_t *)labels     + labelsLengthBytes);
-    void      *code   = (     void *)((uint8_t *)links      + linksLengthBytes);
+    CfObject * object = (CfObject *)((uint8_t *)allocation + 0);
+    char     * name   = (    char *)((uint8_t *)object     + objectLengthBytes);
+    CfLabel  * labels = ( CfLabel *)((uint8_t *)name       + nameLengthBytes);
+    CfLink   * links  = (  CfLink *)((uint8_t *)labels     + labelsLengthBytes);
+    void     * code   = (    void *)((uint8_t *)links      + linksLengthBytes);
 
     // write data
     memcpy(labels, cfDarrData(self->labels), cfDarrLength(self->labels) * sizeof(CfLabel));
@@ -112,7 +115,8 @@ CfObject2 * cfObjectBuilderEmit( CfObjectBuilder *self ) {
     memcpy(code  , cfDarrData(self->code  ), cfDarrLength(self->code  )                  );
 
     // compose object
-    *object = (CfObject2) {
+    *object = (CfObject) {
+        .sourceFileName   = name,
         .labelArray       = labels,
         .labelArrayLength = cfDarrLength(self->labels),
         .linkArray        = links,
@@ -132,13 +136,13 @@ size_t cfObjectBuilderGetCodeLength( CfObjectBuilder *const self ) {
 bool cfObjectBuilderAddCode( CfObjectBuilder *const self, const void *code, size_t size ) {
     assert(self != NULL);
 
-    return cfDarrPushArray(self->code, code, size) == CF_DARR_OK;
+    return cfDarrPushArray(&self->code, code, size) == CF_DARR_OK;
 } // cfObjectBuilderAddCode
 
 bool cfObjectBuilderAddLink( CfObjectBuilder *const self, const CfLink *link ) {
     assert(self != NULL);
 
-    return cfDarrPush(self->links, link) == CF_DARR_OK;
+    return cfDarrPush(&self->links, link) == CF_DARR_OK;
 } // cfObjectBuilderAddLink
 
 bool cfObjectBuilderAddLinkArray( CfObjectBuilder *const self, const CfLink *array, size_t length ) {
@@ -151,7 +155,7 @@ bool cfObjectBuilderAddLinkArray( CfObjectBuilder *const self, const CfLink *arr
 bool cfObjectBuilderAddLabel( CfObjectBuilder *const self, const CfLabel *label ) {
     assert(self != NULL);
 
-    return cfDarrPush(self->labels, label) == CF_DARR_OK;
+    return cfDarrPush(&self->labels, label) == CF_DARR_OK;
 } // cfObjectBuilderAddLabel
 
 bool cfObjectBuilderAddLabelArray( CfObjectBuilder *const self, const CfLabel *array, size_t length ) {

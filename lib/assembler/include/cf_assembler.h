@@ -15,39 +15,61 @@ extern "C" {
 
 /// @brief Assembling status
 typedef enum CfAssemblyStatus_ {
-    CF_ASSEMBLY_STATUS_OK,                       ///< all's ok
-    CF_ASSEMBLY_STATUS_INTERNAL_ERROR,           ///< internal error (e.g. error that shouldn't occur in normal situation, such as memory allocation failure etc.)
-    CF_ASSEMBLY_STATUS_UNKNOWN_INSTRUCTION,      ///< unknown instruction occured
-    CF_ASSEMBLY_STATUS_UNEXPECTED_TEXT_END,      ///< unexpected text end (missing something)
-    CF_ASSEMBLY_STATUS_UNKNOWN_REGISTER,         ///< unknown register
-    CF_ASSEMBLY_STATUS_INVALID_PUSHPOP_ARGUMENT, ///< invalid argument of push/pop instructions
-    CF_ASSEMBLY_STATUS_UNKNOWN_OPCODE,           ///< unknown opcode
-    CF_ASSEMBLY_STATUS_UNKNOWN_TOKEN,            ///< unknown token
-
-    CF_ASSEMBLY_STATUS_INVALID_SYSCALL_ARGUMENT, ///< invalid argument of 'systemcall' instruction
-    CF_ASSEMBLY_STATUS_SYSCALL_ARGUMENT_MISSING, ///< systemcall parameter missing.
-
-    CF_ASSEMBLY_STATUS_INVALID_JUMP_ARGUMENT,    ///< invalid jump-family instructino argument
-    CF_ASSEMBLY_STATUS_JUMP_ARGUMENT_MISSING,    ///< jump-family instruction argument missing
-
-    CF_ASSEMBLY_STATUS_EMPTY_LABEL,              ///< label must not be empty
-    CF_ASSEMBLY_STATUS_TOO_LONG_LABEL,           ///< label is longer than CF_LABEL_MAX
-
-    CF_ASSEMBLY_STATUS_INVALID_CONSTANT_VALUE,   ///< invalid constant value
-
-    CF_ASSEMBLY_STATUS_UNEXPECTED_CHARACTERS,    ///< unexpected (a.k.a. unrelated to instruction) characters occured.
+    CF_ASSEMBLY_STATUS_OK,             ///< all's ok
+    CF_ASSEMBLY_STATUS_ERORRS_OCCURED, ///< assembly errors occured
+    CF_ASSEMBLY_STATUS_INTERNAL_ERROR, ///< internal error (e.g. error that shouldn't occur in normal situation, such as memory allocation failure etc.)
 } CfAssemblyStatus;
-
-/// @brief assembling result
-typedef struct CfAssemblyResult_ {
-    CfAssemblyStatus status; ///< assembling status
-} CfAssemblyResult;
 
 /// @brief detailed info about assembling process
 typedef struct CfAssemblyDetails_ {
     size_t line;     ///< index of line during parsing of error occured
     CfStr  contents; ///< line error occured at contents
 } CfAssemblyDetails;
+
+/// @brief assembler erorr kind
+typedef enum CfAssemblyErrorKind_ {
+    CF_ASSEMBLY_ERROR_KIND_NEWLINE_EXPECTED,         ///< newline expected (e.g. unexpected sh*t occured on previous line)
+    CF_ASSEMBLY_ERROR_KIND_TOO_LONG_LABEL,           ///< label is longer than CF_LABEL_MAX
+    CF_ASSEMBLY_ERROR_KIND_CONSTANT_NUMBER_EXPECTED, ///< number as constant value expected
+    CF_ASSEMBLY_ERROR_KIND_UNIDENTIFIED_CODE,        ///< cannot identify code type
+    CF_ASSEMBLY_ERROR_KIND_UNKNOWN_REGISTER,         ///< unknown register
+    CF_ASSEMBLY_ERROR_KIND_UNEXPECTED_CHARACTER,     ///< tokenization error
+    CF_ASSEMBLY_ERROR_KIND_INVALID_SYSCALL_ARGUMENT, ///< invalid syscall argument
+    CF_ASSEMBLY_ERROR_KIND_INVALID_JUMP_ARGUMENT,    ///< invalid jump-family instructino argument
+    CF_ASSEMBLY_ERROR_KIND_INVALID_PUSHPOP_ARGUMENT, ///< invalid push/pop argument
+} CfAssemblyErrorKind;
+
+/// @brief assembly process error
+typedef struct CfAssemblyError_ {
+    CfAssemblyErrorKind kind;         ///< error kind
+    size_t              lineIndex;    ///< index of line error occured at
+    CfStr               lineContents; ///< contents of line error occured at
+
+    union {
+        CfStrSpan newlineExpected;        ///< some trash code
+        CfStrSpan tooLongLabel;           ///< label span
+        CfStrSpan constantNumberExpected; ///< constant number expected
+        CfStrSpan invalidSyscallArgument; ///< invalid syscall argument
+        CfStrSpan invalidJumpArgument;    ///< invalid jump argument
+        CfStrSpan unknownRegister;        ///< unknown register
+
+        const char *unexpectedCharacter; ///< character pointer
+    };
+} CfAssemblyError;
+
+/// @brief assembly result
+typedef struct CfAssemblyResult_ {
+    CfAssemblyStatus status; ///< assembly status
+
+    union {
+        CfObject *ok; ///< success case
+
+        struct {
+            CfAssemblyError *erorrArray;       ///< assembly error array
+            size_t           errorArrayLength; ///< error array length
+        } errorsOccured;
+    };
+} CfAssemblyResult;
 
 /**
  * @brief text slice assembling function

@@ -5,11 +5,8 @@
 #ifndef CF_OBJECT_H_
 #define CF_OBJECT_H_
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-
 #include <cf_hash.h>
+#include <cf_string.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,77 +30,18 @@ typedef struct CfLink_ {
     char     label     [CF_LABEL_MAX]; ///< label
 } CfLink;
 
-/// @brief object (single .cfasm compilation result) represetnation structure
-typedef struct CfObject_ {
-    const char * sourceName; ///< name of object source name
-    size_t       codeLength; ///< length of bytecode
-    uint8_t    * code;       ///< bytecode itself
-    size_t       linkCount;  ///< count of links in bytecode
-    CfLink     * links;      ///< links itself
-    size_t       labelCount; ///< count of labels in bytecode
-    CfLabel    * labels;     ///< labels itself
-} CfObject;
-
-/// @brief object from file reading status representation enumeration
-typedef enum CfObjectReadStatus_ {
-    CF_OBJECT_READ_STATUS_OK,                   ///< succeeded
-    CF_OBJECT_READ_STATUS_INTERNAL_ERROR,       ///< internal error occured
-    CF_OBJECT_READ_STATUS_UNEXPECTED_FILE_END,  ///< reading from file failed
-    CF_OBJECT_READ_STATUS_INVALID_OBJECT_MAGIC, ///< invalid object magic
-    CF_OBJECT_READ_STATUS_INVALID_HASH,         ///< object file hash
-} CfObjectReadStatus;
-
-/**
- * @brief object from file reading function
- * 
- * @param[in]  file file to read (opened for binary reading)
- * @param[out] dst  reading destination
- * 
- * @return operation status
- */
-CfObjectReadStatus cfObjectRead( FILE *file, CfObject *dst );
-
 /// @brief object to file writing status representation enumeration
 typedef enum CfObjectWriteStatus_ {
     CF_OBJECT_WRITE_STATUS_OK,          ///< succeeded
     CF_OBJECT_WRITE_STATUS_WRITE_ERROR, ///< writing to file error
 } CfObjectWriteStatus;
 
-/**
- * @brief object to file writing function
- * 
- * @param[in] file file to read object from (opened for binary writing)
- * @param[in] src  object to write
- * 
- * @return operation status
- */
-bool cfObjectWrite( FILE *file, const CfObject *src );
-
-/**
- * @brief object data destructor
- * 
- * @param[in] object object to destroy pointer
- */
-void cfObjectDtor( CfObject *object );
-
-/**
- * @brief object read status string getting function
- * 
- * @param status status to get value for
- * 
- * @return string corresponding to status
- */
-const char * cfObjectReadStatusStr( CfObjectReadStatus status );
-
-
 
 /// @brief object
-typedef struct CfObject2_ CfObject2;
+typedef struct CfObject_ CfObject;
 
 /// @brief object builder
 typedef struct CfObjectBuilder_ CfObjectBuilder;
-
-
 
 
 /**
@@ -111,7 +49,7 @@ typedef struct CfObjectBuilder_ CfObjectBuilder;
  * 
  * @param[in] object to destroy (nullable)
  */
-void cfObjectDtor2( CfObject2 *object );
+void cfObjectDtor( CfObject *object );
 
 /*
  * @brief get object code length
@@ -120,7 +58,7 @@ void cfObjectDtor2( CfObject2 *object );
  * 
  * @return object code length
  */
-size_t cfObjectGetCodeLength( const CfObject2 *object );
+size_t cfObjectGetCodeLength( const CfObject *object );
 
 /**
  * @brief get object code
@@ -129,7 +67,7 @@ size_t cfObjectGetCodeLength( const CfObject2 *object );
  * 
  * @return object code
  */
-const void * cfObjectGetCode( const CfObject2 *object );
+const void * cfObjectGetCode( const CfObject *object );
 
 /**
  * @brief get object link array length
@@ -138,7 +76,7 @@ const void * cfObjectGetCode( const CfObject2 *object );
  * 
  * @return object link array length
  */
-size_t cfObjectGetLinkArrayLength( const CfObject2 *object );
+size_t cfObjectGetLinkArrayLength( const CfObject *object );
 
 /**
  * @brief get object link array
@@ -147,7 +85,7 @@ size_t cfObjectGetLinkArrayLength( const CfObject2 *object );
  * 
  * @return object link array contents
  */
-const CfLink * cfObjectGetLinkArray( const CfObject2 *object );
+const CfLink * cfObjectGetLinkArray( const CfObject *object );
 
 /**
  * @brief get object label array length
@@ -156,7 +94,7 @@ const CfLink * cfObjectGetLinkArray( const CfObject2 *object );
  * 
  * @return object label array length
  */
-size_t cfObjectGetLabelArrayLength( const CfObject2 *object );
+size_t cfObjectGetLabelArrayLength( const CfObject *object );
 
 /**
  * @brief get object label array
@@ -165,23 +103,32 @@ size_t cfObjectGetLabelArrayLength( const CfObject2 *object );
  * 
  * @return object label array contents
  */
-const CfLabel * cfObjectGetLabelArray( const CfObject2 *object );
+const CfLabel * cfObjectGetLabelArray( const CfObject *object );
+
+/**
+ * @brief get source file name
+ * 
+ * @param[in] object object pointer (non-null)
+ * 
+ * @return source file name
+ */
+const char * cfObjectGetSourceFileName( const CfObject *object );
 
 /// @brief object reading status
-typedef enum CfObjectReadStatus2_ {
-    CF_OBJECT_READ_STATUS_2_OK,                  ///< success
-    CF_OBJECT_READ_STATUS_2_INTERNAL_ERROR,      ///< internal error occured
-    CF_OBJECT_READ_STATUS_2_UNEXPECTED_FILE_END, ///< file ended while more bytes required
-    CF_OBJECT_READ_STATUS_2_INVALID_MAGIC,       ///< invalid object magic
-    CF_OBJECT_READ_STATUS_2_INVALID_HASH,        ///< invalid file hash
-} CfObjectReadStatus2;
+typedef enum CfObjectReadStatus_ {
+    CF_OBJECT_READ_STATUS_OK,                  ///< success
+    CF_OBJECT_READ_STATUS_INTERNAL_ERROR,      ///< internal error occured
+    CF_OBJECT_READ_STATUS_UNEXPECTED_FILE_END, ///< file ended while more bytes required
+    CF_OBJECT_READ_STATUS_INVALID_MAGIC,       ///< invalid object magic
+    CF_OBJECT_READ_STATUS_INVALID_HASH,        ///< invalid file hash
+} CfObjectReadStatus;
 
 /// @brief object reading result
-typedef struct CfObjectReadResult2_ {
-    CfObjectReadStatus2 status; ///< operation status
+typedef struct CfObjectReadResult_ {
+    CfObjectReadStatus status; ///< operation status
 
     union {
-        CfObject2 *ok; ///< read succeeded
+        CfObject *ok; ///< read succeeded
 
         struct {
             size_t offset;            ///< current file offset
@@ -190,8 +137,8 @@ typedef struct CfObjectReadResult2_ {
         } unexpectedFileEnd;
 
         struct {
-            uint32_t expected; ///< object file magic
-            uint32_t actual;   ///< actual file magic
+            uint64_t expected; ///< object file magic
+            uint64_t actual;   ///< actual file magic
         } invalidMagic;
 
         struct {
@@ -199,7 +146,7 @@ typedef struct CfObjectReadResult2_ {
             CfHash actual;   ///< actual hash
         } invalidHash;
     };
-} CfObjectReadResult2;
+} CfObjectReadResult;
 
 /**
  * @brief print object read result to file
@@ -207,7 +154,7 @@ typedef struct CfObjectReadResult2_ {
  * @param[in] out    file to print to
  * @param[in] result result pointer (non-null)
  */
-void cfObjectReadResultWrite( FILE *out, const CfObjectReadResult2 *result );
+void cfObjectReadResultWrite( FILE *out, const CfObjectReadResult *result );
 
 /**
  * @brief read object from file
@@ -217,7 +164,7 @@ void cfObjectReadResultWrite( FILE *out, const CfObjectReadResult2 *result );
  * 
  * @return object reading result
  */
-CfObjectReadResult2 cfObjectRead2( FILE *file, CfObjectBuilder *builder );
+CfObjectReadResult cfObjectRead( FILE *file, CfObjectBuilder *builder );
 
 /**
  * @brief write object to file
@@ -227,7 +174,7 @@ CfObjectReadResult2 cfObjectRead2( FILE *file, CfObjectBuilder *builder );
  * 
  * @return operation status
  */
-CfObjectWriteStatus cfObjectWrite2( FILE *file, const CfObject2 *object );
+CfObjectWriteStatus cfObjectWrite( FILE *file, const CfObject *object );
 
 
 /**
@@ -247,14 +194,15 @@ void cfObjectBuilderDtor( CfObjectBuilder *builder );
 /**
  * @brief emit new object
  * 
- * @param[in] self builder to emit object in (non-null)
+ * @param[in] self           builder to emit object in (non-null)
+ * @param[in] sourceFileName object source file name
  * 
  * @return built object (NULL if smth went wrong)
  * 
  * @note this function **does not** performs builder reset,
  * you should do it manually if you want, of course.
  */
-CfObject2 * cfObjectBuilderEmit( CfObjectBuilder *const self );
+CfObject * cfObjectBuilderEmit( CfObjectBuilder *const self, CfStr sourceFileName );
 
 /**
  * @brief reset builder
