@@ -9,10 +9,12 @@ fn __cfvm_f32_read() f32;
 // calculate square root
 fn __cfvm_f32_sqrt(n: f32) f32;
 
+// Calculate discriminant
 fn discriminant(a: f32, b: f32, c: f32) f32 {
     return b * b - 4.0 as f32 * a * c;
 }
 
+// Calculate floating-point number absolute number
 fn f32_abs(n: f32) f32 {
     if n < 0.0 as f32 {
         return 0.0 as f32 - n;
@@ -21,16 +23,19 @@ fn f32_abs(n: f32) f32 {
     }
 }
 
+// Relative equation comparison
 fn f32_is_equal(lhs: f32, rhs: f32) u32 {
     return f32_abs(lhs - rhs) < 0.001 as f32;
 }
 
 // main program function
 fn main() {
+    // Input a, b, c coefficents
     let a: f32 = __cfvm_f32_read();
     let b: f32 = __cfvm_f32_read();
     let c: f32 = __cfvm_f32_read();
 
+    // Calculate discriminant
     let discriminant: f32 = discriminant(a, b, c);
 
     if discriminant > 0.0 as f32 {
@@ -44,5 +49,4 @@ fn main() {
         }
 
     }
-
 } // main

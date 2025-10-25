@@ -7,6 +7,7 @@
 #include <assert.h>
 
 #include <cf_deque.h>
+#include <cf_logger.h>
 
 #include "compiler.h"
 
@@ -31,6 +32,8 @@ Compiler * compilerCtor( void ) {
     CfArena *tempArena = NULL;
     CfDeque *inputFileDeque = NULL;
 
+    cfLoggerPrint("Compiler initialization started\n");
+
     // 4096 as allocation block is used because of why not
 
     if (false
@@ -39,6 +42,7 @@ Compiler * compilerCtor( void ) {
         || (tempArena = cfArenaCtor(4096)) == NULL
         || (inputFileDeque = cfDequeCtor(sizeof(CompilerFile), CF_DEQUE_CHUNK_SIZE_UNDEFINED, dataArena)) == NULL
     ) {
+        cfLoggerPrint("Compiler initialization failed\n");
         cfArenaDtor(tempArena);
         cfArenaDtor(dataArena);
         return NULL;
@@ -50,10 +54,14 @@ Compiler * compilerCtor( void ) {
         .inputFileDeque = inputFileDeque,
     };
 
+    cfLoggerPrint("    Initialized (at %zu)\n", (size_t)compiler);
+
     return compiler;
 } // compilerCtor
 
 CompilerAddCfFileResult compilerAddCfFile( Compiler *const self, const char *sourceName, const char *source ) {
+    cfLoggerPrint("    File \"%s\" compilation started\n", sourceName);
+
     size_t sourceLength = strlen(source);
     size_t sourceNameLength = strlen(sourceName);
 
@@ -76,51 +84,72 @@ CompilerAddCfFileResult compilerAddCfFile( Compiler *const self, const char *sou
     CfAst        * ast             = NULL;
     CfTir        * tir             = NULL;
 
+    cfLoggerPrint("        Tokenization... ", sourceName);
+
     // parse token list
     CfLexerTokenizeTextResult tokenizeTextResult = cfLexerTokenizeText(
         (CfStr) { file.text, file.text + sourceLength }
     );
 
-    if (tokenizeTextResult.status != CF_LEXER_TOKENIZE_TEXT_OK)
+
+    if (tokenizeTextResult.status != CF_LEXER_TOKENIZE_TEXT_OK) {
+        cfLoggerPrint("failed\n");
         return (CompilerAddCfFileResult) {
             .status = COMPILER_ADD_CF_FILE_STATUS_LEXER_ERROR,
             .lexerError = tokenizeTextResult,
         };
+    }
+    cfLoggerPrint("succeeded\n");
     tokenList = tokenizeTextResult.ok.array;
     tokenListLength = tokenizeTextResult.ok.length;
+
+    cfLoggerPrint("        Building AST...");
 
     // build AST
     CfAstParseResult astParseResult = cfAstParse(tokenList, self->tempArena);
 
-    if (astParseResult.status != CF_AST_PARSE_STATUS_OK)
+    if (astParseResult.status != CF_AST_PARSE_STATUS_OK) {
+        cfLoggerPrint("failed\n");
         return (CompilerAddCfFileResult) {
             .status = COMPILER_ADD_CF_FILE_STATUS_AST_ERROR,
             .astError = astParseResult,
         };
+    }
+    cfLoggerPrint("succeeded\n");
     ast = astParseResult.ok;
 
     // free temp variables
     cfArenaFree(self->tempArena);
 
+    cfLoggerPrint("        Building TIR... ");
+
     CfTirBuildingResult tirBuildResult = cfTirBuild(ast, self->tempArena);
 
-    if (tirBuildResult.status != CF_TIR_BUILDING_STATUS_OK)
+    if (tirBuildResult.status != CF_TIR_BUILDING_STATUS_OK) {
+        cfLoggerPrint("failed\n");
         return (CompilerAddCfFileResult) {
             .status = COMPILER_ADD_CF_FILE_STATUS_TIR_ERROR,
             .tirError = tirBuildResult,
         };
+    }
+    cfLoggerPrint("succeeded\n");
     tir = tirBuildResult.ok;
 
     cfArenaFree(self->tempArena);
 
+    cfLoggerPrint("        Code generation... ");
+
     // run codegenerator
     CfCodegenResult codegenResult = cfCodegen(tir, CF_STR(sourceName), &file.object, self->tempArena);
 
-    if (codegenResult.status != CF_CODEGEN_STATUS_OK)
+    if (codegenResult.status != CF_CODEGEN_STATUS_OK) {
+        cfLoggerPrint("failed\n");
         return (CompilerAddCfFileResult) {
             .status = COMPILER_ADD_CF_FILE_STATUS_CODEGEN_ERROR,
             .codegenError = codegenResult
         };
+    }
+    cfLoggerPrint("succeeded\n");
 
     // free unused resources
     cfTirDtor(tir);
@@ -133,11 +162,15 @@ CompilerAddCfFileResult compilerAddCfFile( Compiler *const self, const char *sou
         return (CompilerAddCfFileResult) { COMPILER_ADD_CF_FILE_STATUS_INTERNAL_ERROR };
     }
 
+    cfLoggerPrint("    File \"%s\" compilation finished\n", sourceName);
+
     return (CompilerAddCfFileResult) { COMPILER_ADD_CF_FILE_STATUS_OK };
 } // compilerAddCfFile
 
 CompilerBuildResult compilerBuildExecutable( Compiler *const self ) {
     CfDequeCursor fileCursor = {};
+
+    cfLoggerPrint("   Executale building started\n");
 
     if (!cfDequeFrontCursor(self->inputFileDeque, &fileCursor))
         return (CompilerBuildResult) { COMPILER_BUILD_STATUS_NO_INPUT_FILES };
@@ -169,6 +202,8 @@ CompilerBuildResult compilerBuildExecutable( Compiler *const self ) {
 
     // cfArenaFree(self->tempArena);
 
+    cfLoggerPrint("   Executale building finished\n");
+
     return (CompilerBuildResult) {
         .status = COMPILER_BUILD_STATUS_OK,
         .ok = result,
@@ -177,6 +212,9 @@ CompilerBuildResult compilerBuildExecutable( Compiler *const self ) {
 
 
 void compilerDtor( Compiler *const self ) {
+    if (self == NULL)
+        return;
+
     CfDequeCursor inputFileCursor = {};
 
     if (cfDequeFrontCursor(self->inputFileDeque, &inputFileCursor)) {
@@ -191,6 +229,8 @@ void compilerDtor( Compiler *const self ) {
 
     cfArenaDtor(self->tempArena);
     cfArenaDtor(self->dataArena);
+
+    cfLoggerPrint("Compiler destroyed (at %zu)\n", (size_t)self);
 } // compilerDtor
 
 

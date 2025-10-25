@@ -1,3 +1,4 @@
+#!/bin/python3
 # Project size (in code lines) counting script
 
 import os

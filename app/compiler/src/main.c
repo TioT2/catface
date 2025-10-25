@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include <cf_logger.h>
+
 #include "compiler.h"
 
 /**
@@ -59,16 +61,7 @@ void printHelp( void ) {
  * 
  * @return exit status (0 on success)
  */
-int main( int argc_, const char **argv_ ) {
-    // int argc = argc_;
-    // const char **argv = argv_;
-    int argc = 4;
-    const char *argv[] = {
-        "amogus",
-        "-o",
-        "temp/main.cfexe",
-        "examples/lang/square_equation_solver.cf",
-    };
+int doAnythingGood( int argc, const char **argv ) {
 
     if (argc <= 1) {
         printHelp();
@@ -181,6 +174,30 @@ int main( int argc_, const char **argv_ ) {
     cfExecutableDtor(&executable);
 
     return 0;
+} // main
+
+/**
+ * @brief main program function
+ * 
+ * @param[in] argc argument count
+ * @param[in] argv argument values
+ */
+int main( int argc, const char **argv ) {
+    cfLoggerInitialize();
+
+    // int argc_ = 4;
+    // const char *argv_[] = {
+    //     "amogus",
+    //     "-o",
+    //     "temp/main.cfexe",
+    //     "examples/lang/square_equation_solver.cf",
+    // };
+
+    int status = doAnythingGood(argc, argv);
+
+    cfLoggerTerminate();
+
+    return status;
 } // main
 
 // main.c
